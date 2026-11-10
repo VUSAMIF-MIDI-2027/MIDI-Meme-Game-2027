@@ -1,0 +1,27 @@
+@import "tailwindcss";
+@import "./midi-colors.css";
+
+:root {
+  --background: var(--midi-white);
+  --foreground: var(--midi-black);
+}
+
+@theme inline {
+  --color-midi-blue: var(--midi-blue);
+  --color-midi-charcoal: var(--midi-charcoal);
+  --color-midi-black: var(--midi-black);
+  --color-midi-gray: var(--midi-gray);
+  --color-midi-white: var(--midi-white);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--midi-black);
+    --foreground: var(--midi-white);
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
