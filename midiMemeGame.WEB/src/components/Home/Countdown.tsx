@@ -3,6 +3,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
+import { text } from "@/components/Home/CountdownText";
 
 const TARGET = new Date("2026-11-27T19:30:00+02:00").getTime();
 
@@ -19,6 +21,9 @@ function getTimeLeft() {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export default function Countdown() {
+  const { lang } = useLanguage();
+  const t = text[lang];
+
   const [timeLeft, setTimeLeft] = useState<ReturnType<typeof getTimeLeft> | null>(null);
 
   useEffect(() => {
@@ -28,10 +33,10 @@ export default function Countdown() {
   }, []);
 
   const items = [
-    { value: timeLeft?.days, label: "Dienos" },
-    { value: timeLeft?.hours, label: "Valandos" },
-    { value: timeLeft?.minutes, label: "Minutės" },
-    { value: timeLeft?.seconds, label: "Sekundės" },
+    { value: timeLeft?.days, label: t.days },
+    { value: timeLeft?.hours, label: t.hours },
+    { value: timeLeft?.minutes, label: t.minutes },
+    { value: timeLeft?.seconds, label: t.seconds },
   ];
 
   return (

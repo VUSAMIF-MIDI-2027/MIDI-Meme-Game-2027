@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 // import { useState } from "react";
 // import { MobileMenu } from "../MobileMenu";
 
-import logoMidiBlack from "../../../public/logos/MIDI-Logotipas-melyna-balta.png"
+import logoMidiBlack from "#/public/logos/MIDI-Logotipas-melyna-balta.png"
 import Image from "next/image";
 import Link from "next/link";
 // import burgerIcon from "../../../public/icons/burgerIcon.svg"

@@ -5,7 +5,7 @@ import { Lang, useLanguage } from "@/context/LanguageContext";
 export function LangToggle() {
   const { lang, setLang } = useLanguage();
 
-  const languages:Lang[] = ["en", "lt"];
+  const languages : Lang[] = ["en", "lt"];
 
   return (
     <div className="ml-3 inline-flex shrink-0 items-center gap-1.5">

@@ -1,14 +1,21 @@
+"use client";
+
 import Countdown from "@/components/Home/Countdown";
-import logoMidiFullWhite from "../../public/logos/MIDI-Logotipas-pilnas-baltas.png"
+import logoMidiFullWhite from "#/public/logos/MIDI-Logotipas-pilnas-baltas.png"
 import Image from "next/image";
+import { useLanguage } from "@/context/LanguageContext";
+import { text } from "@/app/pageText";
 
 // HOME SCREENE KOL KAS VIBE CODED MOCK CONTENTAS, LAUKIAM KOMOS DIZAINO ATNAUJINTO
 
 export default function Home() {
+  const { lang } = useLanguage();
+  const t = text[lang];
+
   const steps = [
-    { number: "01", title: "Pasirink nuotrauką." },
-    { number: "02", title: "Parašyk prierašą." },
-    { number: "03", title: "Pateik memą." },
+    { number: "01", title: t.step1 },
+    { number: "02", title: t.step2 },
+    { number: "03", title: t.step3 },
   ];
 
   return (
@@ -23,34 +30,30 @@ export default function Home() {
         />
 
         <p className="text-xs font-semibold uppercase tracking-[0.2em]">
-          Naktis su MIDI · Memų konkursas
+          {t.miniTitle}
         </p>
 
         <h1 className="text-5xl font-bold leading-tight sm:text-7xl">
-          Mock content'as
+          {t.titleWhite}
           <br />
-          <span className="text-midi-blue">Mock content'as</span>
+          <span className="text-midi-blue">{t.titleBlue}</span>
         </h1>
 
         <p className="max-w-xl text-midi-gray/70">
-          Naktis su MIDI kviečia kurti memus! Pasirink nuotrauką, sugalvok
-          juokingą prierašą ir dalyvauk — trijų geriausių memų kūrėjų laukia
-          prizai.
+          {t.description}
         </p>
       </section>
 
-      {/* Countdown */}
       <section className="mt-12 flex w-full max-w-4xl flex-col items-center gap-4 px-6">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-midi-blue">
-          Jau greitai · Prasideda po
+          {t.startsSoon}
         </p>
 
-        
         <Countdown />
 
-        <p className="font-semibold">2026 m. lapkričio 27 d. · 19:30</p>
+        <p className="font-semibold">{t.dateTime}</p>
         <p className="text-xs text-midi-gray/60">
-          Registracija ir memų kūrimas atsidarys renginio metu.
+          {t.registrationNotice}
         </p>
       </section>
 
