@@ -28,6 +28,12 @@ export function Header() {
 
     const pathname = usePathname();
 
+    const validRoutes = ["/", "/meme-game", "/activities", "/naktis-su-midi"];
+
+    const isNotFound = !validRoutes.some((route) =>
+        isCurrentPath(pathname, route)
+    );
+
     return (
         <header className="fixed top-0 left-0 right-0 z-50 flex h-17 items-center justify-between border-b border-midi-charcoal bg-midi-black px-4 sm:px-10">
             <Link href="/" className="flex items-center gap-3">
@@ -43,7 +49,7 @@ export function Header() {
                         {t.titleTop}
                     </div>
 
-                    <div className="text-[9px] font-medium uppercase leading-[1.4] tracking-[0.08em] text-midi-white/70">
+                    <div className="text-[9px] font-medium uppercase leading-[1.4] tracking-[0.08em] text-midi-white/80">
                         {t.titleBottom}
                     </div>
                 </div>
@@ -84,7 +90,12 @@ export function Header() {
             <div className="hidden items-center gap-2 min-[1100px]:flex">
                 <nav className="flex gap-1 ">
                     {links
-                        .filter(({ href }) => !(isCurrentPath(pathname, href) && href === "/"))
+                        .filter(({ href }) => {
+                            if (isNotFound) return false;
+
+                            const hideWhenActive = href === "/" || href === "/meme-game";
+                            return !(hideWhenActive && isCurrentPath(pathname, href));
+                        })
                         .map(({ href, label }) => {
                             const active = isCurrentPath(pathname, href);
 
