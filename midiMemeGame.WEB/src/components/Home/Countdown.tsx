@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { text } from "@/components/Home/CountdownText";
 
-const TARGET = new Date("2026-11-27T19:30:00+02:00").getTime();
+const TARGET = new Date("2026-11-27T21:00:00+02:00").getTime();
 
 function getTimeLeft() {
   const totalSeconds = Math.floor(Math.max(0, TARGET - Date.now()) / 1000);
@@ -49,20 +49,20 @@ export default function Countdown() {
   ];
 
   return (
-    <div className="flex w-full items-start justify-between border-y border-midi-charcoal py-8">
+    <div className="mt-4 flex w-full items-start border-y border-white/15 py-[22px] sm:pt-[25px]">
       {items.map((item, i) => (
         <div key={item.label} className="contents">
-          <div className="flex flex-1 flex-col items-center gap-2">
-            <span className="text-5xl font-bold tabular-nums sm:text-7xl">
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
+            <span className="text-[clamp(36px,11.5vw,64px)] leading-[1.1] font-extrabold tabular-nums sm:text-[clamp(52px,8vw,100px)]">
               {item.value === undefined ? "--" : pad(item.value)}
             </span>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-midi-gray/60">
+            <span className="text-[9px] font-bold tracking-[0.06em] text-[#929da8] uppercase sm:text-[11px] sm:tracking-[0.16em]">
               {item.label}
             </span>
           </div>
 
           {i < items.length - 1 && (
-            <span className="text-5xl font-bold text-midi-blue sm:text-7xl">:</span>
+            <span className="pt-1 text-[26px] leading-none font-bold text-[#467fbd] sm:pt-2 sm:text-5xl">:</span>
           )}
         </div>
       ))}
