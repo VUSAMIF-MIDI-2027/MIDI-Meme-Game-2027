@@ -14,12 +14,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: midi-production
+  group: naktis-midi-production
   cancel-in-progress: false
 
 defaults:
   run:
-    working-directory: midi2027.WEB
+    working-directory: midiMemeGame.WEB
 
 jobs:
   lint:
@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: 22.x
           cache: npm
-          cache-dependency-path: midi2027.WEB/package-lock.json
+          cache-dependency-path: midiMemeGame.WEB/package-lock.json
       - run: npm ci
       - name: Check source code
         run: npm run lint -- src
@@ -51,17 +51,17 @@ jobs:
         with:
           node-version: 22.x
           cache: npm
-          cache-dependency-path: midi2027.WEB/package-lock.json
+          cache-dependency-path: midiMemeGame.WEB/package-lock.json
       - run: npm ci
       - name: Build static website
         run: npm run build -- --webpack
         env:
-          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://midi.lt' }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://naktis.midi.lt' }}
       - name: Upload website
         uses: actions/upload-artifact@v4
         with:
-          name: midi-website
-          path: midi2027.WEB/out/
+          name: naktis-midi-website
+          path: midiMemeGame.WEB/out/
           if-no-files-found: error
           retention-days: 7
 
@@ -74,7 +74,7 @@ jobs:
       - name: Download website
         uses: actions/download-artifact@v4
         with:
-          name: midi-website
+          name: naktis-midi-website
           path: website/
       - name: Validate deployment settings
         env:
