@@ -46,7 +46,7 @@ const dosis = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "MIDI meme žaidimas",
+  title: "Naktis su MIDI",
   description: "„Naktis su MIDI“ renginio meme žaidimo puslapis",
 };
 

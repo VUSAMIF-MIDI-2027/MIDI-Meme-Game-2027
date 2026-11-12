@@ -49,6 +49,12 @@ export function Header() {
                 </div>
             </Link>
 
+            <div className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 min-[1100px]:block">
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-midi-gray">
+                    {t.headerCenter}
+                </span>
+            </div>
+
             <div className="flex items-center gap-3 sm:gap-6 min-[1100px]:hidden">
 
                 <LangToggle />
@@ -67,7 +73,7 @@ export function Header() {
                 </button> */}
 
             </div>
-            
+
             {/* COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER */}
             {/* <MobileMenu
                 menuOpen={menuOpen}
@@ -77,23 +83,26 @@ export function Header() {
 
             <div className="hidden items-center gap-2 min-[1100px]:flex">
                 <nav className="flex gap-1 ">
-                    {links.map(({ href, label }) => {
-                        const active = isCurrentPath(pathname, href);
+                    {links
+                        .filter(({ href }) => !(isCurrentPath(pathname, href) && href === "/"))
+                        .map(({ href, label }) => {
+                            const active = isCurrentPath(pathname, href);
 
-                        return (
-                            <Link
-                                key={href}
-                                href={href}
-                                aria-current={active ? "page" : undefined}
-                                className={`rounded px-4 py-1.75 text-sm font-medium uppercase tracking-[0.08em] transition-all duration-150 ${active
-                                    ? "bg-[#080808] font-bold text-midi-blue"
-                                    : "text-midi-gray hover:bg-[#0d0d0d]"
-                                    }`}
-                            >
-                                {label[lang]}
-                            </Link>
-                        );
-                    })}
+                            return (
+                                <Link
+                                    key={href}
+                                    href={href}
+                                    aria-current={active ? "page" : undefined}
+                                    className={`rounded px-4 py-1.75 text-sm font-medium uppercase tracking-[0.08em] transition-all duration-150 ${active
+                                        ? "bg-[#080808] font-bold text-midi-blue"
+                                        : "text-midi-gray hover:bg-[#0d0d0d]"
+                                        }`}
+                                >
+                                    {label[lang]}
+                                </Link>
+
+                            );
+                        })}
                 </nav>
 
                 <LangToggle />

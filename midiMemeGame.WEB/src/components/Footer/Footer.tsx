@@ -24,12 +24,12 @@ export function Footer() {
                         className="h-8 w-auto object-contain"
                     />
                     <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-midi-gray/60">
+                        <span className="text-sm font-semibold text-midi-white/60">
                             {t.title}
                         </span>
                     </div>
                 </div>
-                <span className="text-center text-sm text-midi-gray/40 min-[530px]:max-[669px]:justify-self-end">
+                <span className="text-center text-sm text-midi-white/50 min-[530px]:max-[669px]:justify-self-end">
                     {t.copyright}
                 </span>
                 <Link
@@ -44,11 +44,11 @@ export function Footer() {
                     />
 
                     <div className="flex flex-col">
-                        <span className="text-sm text-midi-gray/40">
+                        <span className="text-sm text-midi-white/60">
                             {t.organisedBy}
                         </span>
 
-                        <span className="text-sm font-semibold text-midi-gray/60">
+                        <span className="text-sm font-semibold text-midi-white/80">
                             VU SA MIF
                         </span>
                     </div>
