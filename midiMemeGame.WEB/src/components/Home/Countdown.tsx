@@ -27,9 +27,18 @@ export default function Countdown() {
   const [timeLeft, setTimeLeft] = useState<ReturnType<typeof getTimeLeft> | null>(null);
 
   useEffect(() => {
-    setTimeLeft(getTimeLeft());
-    const id = setInterval(() => setTimeLeft(getTimeLeft()), 1000);
-    return () => clearInterval(id);
+    const initialUpdate = setTimeout(() => {
+      setTimeLeft(getTimeLeft());
+    }, 0);
+
+    const interval = setInterval(() => {
+      setTimeLeft(getTimeLeft());
+    }, 1000);
+
+    return () => {
+      clearTimeout(initialUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   const items = [
