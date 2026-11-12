@@ -49,7 +49,7 @@ export default function Countdown() {
   ];
 
   return (
-    <div className="mt-4 flex w-full items-start border-y border-white/15 py-[22px] sm:pt-[25px]">
+    <div className="mt-4 flex w-full items-start border-y border-white/15 py-5.5 sm:pt-6.25">
       {items.map((item, i) => (
         <div key={item.label} className="contents">
           <div className="flex min-w-0 flex-1 flex-col items-center gap-2">

@@ -9,7 +9,7 @@ export function Moon() {
       aria-hidden="true"
       priority
       sizes="(max-width: 640px) 620px, 950px"
-      className="pointer-events-none absolute top-[-20px] -right-[390px] z-0 h-auto w-[620px] max-w-none opacity-[0.18] sm:top-[-130px] sm:-right-[420px] sm:w-[min(950px,85vw)] sm:opacity-[0.24]"
+      className="pointer-events-none absolute -top-5 -right-97.5 z-0 h-auto w-155 max-w-none opacity-[0.18] sm:-top-32.5 sm:-right-105 sm:w-[min(950px,85vw)] sm:opacity-[0.24]"
     />
   );
 }
