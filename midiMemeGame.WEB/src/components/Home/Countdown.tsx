@@ -62,7 +62,7 @@ export default function Countdown() {
           </div>
 
           {i < items.length - 1 && (
-            <span className="pt-1 text-[26px] leading-none font-bold text-[#467fbd] sm:pt-2 sm:text-5xl">:</span>
+            <span className="pt-1 text-[26px] leading-none font-bold text-midi-blue sm:pt-2 sm:text-5xl">:</span>
           )}
         </div>
       ))}

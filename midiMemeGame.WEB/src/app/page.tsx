@@ -36,7 +36,7 @@ export default function Home() {
           className="mt-6 text-[clamp(42px,11.6vw,68px)] leading-[1.08] font-extrabold tracking-[-0.035em] [&>span]:block sm:mt-5 sm:text-[clamp(52px,7.5vw,104px)] sm:leading-[1.02]"
         >
           <span>{t.titleWhite}</span>
-          <span className="text-[#467fbd]">{t.titleBlue}</span>
+          <span className="text-midi-blue">{t.titleBlue}</span>
         </h1>
         <p className="mx-auto mt-6 max-w-187.5 text-base leading-[1.65] text-pretty text-[#afb4ba] sm:mt-6.5 sm:text-lg sm:leading-[1.7]">
           {t.description}
@@ -56,7 +56,7 @@ export default function Home() {
         <Countdown />
         <p className="mt-5.75 flex flex-wrap items-center justify-center gap-1.25 text-base font-bold sm:gap-1.75 sm:text-[19px]">
           <svg
-            className="mr-1 size-5.5 shrink-0 text-[#467fbd]"
+            className="mr-1 size-5.5 shrink-0 text-midi-blue"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -68,7 +68,7 @@ export default function Home() {
           </svg>
           <time dateTime="2026-11-27T21:00:00+02:00">{t.dateTime}</time>
         </p>
-        <p className="mx-auto mt-3 max-w-75 text-[15px] font-semibold text-[#739ed5] sm:mt-2 sm:max-w-none sm:text-[17px]">
+        <p className="mx-auto mt-3 max-w-75 text-[15px] font-semibold text-midi-blue sm:mt-2 sm:max-w-none sm:text-[17px]">
           {t.registrationNotice}
         </p>
       </section>
@@ -79,7 +79,7 @@ export default function Home() {
             key={step}
             className="flex items-center gap-3.5 px-2 py-4 text-lg not-first:border-t not-first:border-white/10 sm:justify-center sm:px-3 sm:py-5 sm:text-[19px] sm:not-first:border-t-0 sm:not-first:border-l"
           >
-            <span className="text-[13px] font-bold tracking-widest text-[#739ed5]">
+            <span className="text-[13px] font-bold tracking-widest text-midi-blue">
               {String(index + 1).padStart(2, "0")}
             </span>
             <span>{step}</span>
