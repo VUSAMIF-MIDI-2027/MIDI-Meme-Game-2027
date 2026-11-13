@@ -48,7 +48,7 @@ export function MobileMenu({
                         aria-current={active ? "page" : undefined}
                         className={`block w-full border-b border-zinc-200 px-12 py-4 text-left font-medium uppercase tracking-wide transition-colors duration-150
                             ${active
-                                ? "bg-[#e8f4fb] font-bold text-[#0075b5]"
+                                ? "bg-[#e8f4fb] font-bold text-midi-blue"
                                 : "bg-white text-[#404041] hover:bg-[#f2f2f2]"
                             }`}
                     >

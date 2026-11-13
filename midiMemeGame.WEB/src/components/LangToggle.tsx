@@ -25,7 +25,7 @@ export function LangToggle() {
             className={`p-0 text-[13px] uppercase tracking-[0.12em] leading-none transition-opacity duration-200
               ${
                 lang === language
-                  ? "cursor-default font-extrabold text-[#0075b5] opacity-100"
+                  ? "cursor-default font-extrabold text-midi-blue opacity-100"
                   : "cursor-pointer font-normal text-midi-gray opacity-40 hover:opacity-75"
               }
             `}
