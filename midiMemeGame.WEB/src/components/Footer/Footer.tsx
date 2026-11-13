@@ -18,7 +18,7 @@ export function Footer() {
                 <div
                     className="flex items-center gap-3 min-[530px]:max-[669px]:justify-self-start"
                 >
-                    <Image
+                    <Image loading="eager"
                         src={logoMidiBlack}
                         alt="MIDI"
                         className="h-8 w-auto object-contain"
@@ -37,7 +37,7 @@ export function Footer() {
                     target="_blank"
                     className="flex items-center gap-3 min-[530px]:max-[669px]:col-span-2 min-[530px]:max-[669px]:justify-self-center"
                 >
-                    <Image
+                    <Image loading="eager"
                         src={logoVusaMif}
                         alt="VU SA MIF"
                         className="h-12 w-auto opacity-80"
@@ -57,3 +57,4 @@ export function Footer() {
         </footer>
     )
 }
+

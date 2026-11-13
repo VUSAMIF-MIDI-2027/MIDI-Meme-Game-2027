@@ -12,6 +12,12 @@
   --color-midi-black: var(--midi-black);
   --color-midi-gray: var(--midi-gray);
   --color-midi-white: var(--midi-white);
+
+  --color-page-background: var(--page-background);
+  --color-auth-hero-background: var(--auth-hero-background);
+  --color-auth-panel-background: var(--auth-panel-background);
+
+  --color-text-muted: var(--text-muted);
 }
 
 @media (prefers-color-scheme: dark) {

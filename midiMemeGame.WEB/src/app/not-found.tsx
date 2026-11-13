@@ -9,9 +9,9 @@ import { useLanguage } from "@/context/LanguageContext";
 export default function NotFound() {
     const { lang } = useLanguage();
     const t = text[lang];
-    
+
     return (
-        <div className="flex min-h-[calc(100vh-4.25rem)] flex-col">
+        <div className="flex min-h-[calc(100vh-4.25rem)] flex-col bg-page-background">
             <div className="flex flex-1 items-center justify-between px-12 max-[700px]:flex-col max-[700px]:justify-center max-[700px]:gap-12">
 
                 <Image
@@ -22,11 +22,11 @@ export default function NotFound() {
                 />
 
                 <div>
-                    <h1 className="font-extrabold text-7xl text-[#0075b5] max-[920px]:text-6xl max-[820px]:text-5xl max-[440px]:text-4xl text-right">
+                    <h1 className="font-extrabold text-7xl text-midi-blue max-[920px]:text-6xl max-[820px]:text-5xl max-[440px]:text-4xl text-right">
                         {t.titleTop}
                     </h1>
 
-                    <h1 className="font-extrabold text-7xl text-[#ffffff] max-[920px]:text-6xl max-[820px]:text-5xl max-[440px]:text-4xl text-right">
+                    <h1 className="font-extrabold text-7xl text-midi-white max-[920px]:text-6xl max-[820px]:text-5xl max-[440px]:text-4xl text-right">
                         {t.titleBottom}
                     </h1>
 
@@ -36,7 +36,7 @@ export default function NotFound() {
                     <div className="mt-6 flex justify-end">
                         <Link
                             href="/"
-                            className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.08em] text-[#ffffff] transition-all duration-200 hover:gap-4 outline-2 outline-offset-6 outline-dotted rounded-lg"
+                            className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.08em] text-white transition-all duration-200 hover:gap-4 outline-2 outline-offset-6 outline-dotted rounded-lg"
                         >
                             {t.backHome}
                             <span className="relative -top-px inline-block leading-none transition-transform duration-200 group-hover:translate-x-2">

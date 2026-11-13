@@ -4,4 +4,10 @@
   --midi-black: #000000;
   --midi-gray: #dcdcdc;
   --midi-white: #ffffff;
+
+  --page-background: #050607;
+  --auth-hero-background: #050505;
+  --auth-panel-background: #0a0a0a;
+
+  --text-muted: #959b9f;
 }

@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { Header } from "@/components/Header/Header";
 import { Footer } from "@/components/Footer/Footer";
+import { LocalizedClerkProvider } from "@/components/Auth/LocalizedClerkProvider";
 
 const dosis = localFont({
   src: [
@@ -55,16 +56,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="lt">
       <body className={`${dosis.className} min-h-screen antialiased`}>
         <LanguageProvider>
-          <div className="flex min-h-screen flex-col">
-            <main className="flex-1 pt-17">
-              {children}
-            </main>
+          <LocalizedClerkProvider>
+            <div className="flex min-h-screen flex-col">
+              <main className="flex flex-1 flex-col pt-17">
+                {children}
+              </main>
 
-            <Footer />
-          </div>
-          <Header />
+              <Footer />
+            </div>
+            <Header />
+          </LocalizedClerkProvider>
         </LanguageProvider>
       </body>
     </html>
   );
 }
+
+
