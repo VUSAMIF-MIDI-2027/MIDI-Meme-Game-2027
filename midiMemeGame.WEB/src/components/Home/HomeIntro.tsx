@@ -16,8 +16,8 @@ export default function HomeIntro() {
                 src={logo}
                 alt="Matematikų ir informatikų dienos"
                 priority
-                sizes="(max-width: 640px) 160px, 210px"
-                className="relative z-10 mx-auto mb-10 h-auto w-40 sm:mb-11 sm:w-52.5"
+                sizes="(max-width: 640px) 160px, 176px"
+                className="relative z-10 mx-auto mb-10 h-auto w-40 sm:mb-7 sm:w-44"
             />
             <section
                 className="relative z-10 mx-auto w-full max-w-230 text-center"
@@ -28,7 +28,7 @@ export default function HomeIntro() {
                 </p>
                 <h1
                     id="hero-title"
-                    className="mt-6 text-[clamp(42px,11.6vw,68px)] leading-[1.08] font-extrabold tracking-[-0.035em] [&>span]:block sm:mt-5 sm:text-[clamp(52px,7.5vw,104px)] sm:leading-[1.02]"
+                    className="mt-6 text-[clamp(42px,11.6vw,68px)] leading-[1.08] font-extrabold tracking-[-0.035em] [&>span]:block sm:mt-5 sm:text-[clamp(52px,6vw,80px)] sm:leading-[1.02]"
                 >
                     <span>{t.titleWhite}</span>
                     <span className="text-midi-blue">{t.titleBlue}</span>

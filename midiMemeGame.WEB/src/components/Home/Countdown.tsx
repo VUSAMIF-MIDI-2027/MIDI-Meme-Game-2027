@@ -53,7 +53,7 @@ export default function Countdown() {
       {items.map((item, i) => (
         <div key={item.label} className="contents">
           <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
-            <span className="text-[clamp(36px,11.5vw,64px)] leading-[1.1] font-extrabold tabular-nums sm:text-[clamp(52px,8vw,100px)]">
+            <span className="text-[clamp(36px,11.5vw,64px)] leading-[1.1] font-extrabold tabular-nums sm:text-[clamp(52px,6vw,76px)]">
               {item.value === undefined ? "--" : pad(item.value)}
             </span>
             <span className="text-[9px] font-bold tracking-[0.06em] text-[#929da8] uppercase sm:text-[11px] sm:tracking-[0.16em]">

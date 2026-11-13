@@ -11,7 +11,7 @@ export default function EventCountdown() {
 
     return (
         <section
-            className="relative z-10 mx-auto mt-8.5 w-full max-w-242.5 text-center sm:mt-10"
+            className="relative z-10 mx-auto mt-8.5 w-full max-w-190 text-center sm:mt-8"
             aria-labelledby="countdown-heading"
         >
             <h2

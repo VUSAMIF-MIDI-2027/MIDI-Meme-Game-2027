@@ -16,11 +16,11 @@ type PageText = {
 
 export const text: Record<Lang, PageText> = {
   en: {
-    miniTitle: "Night with MIDI · Meme competition",
-    titleWhite: "Your caption.",
-    titleBlue: "Pure comedy.",
+    miniTitle: "Meme competition",
+    titleWhite: "Create your own",
+    titleBlue: "MIDI meme.",
     description: 'MIDI invites you to create memes! Choose a photo, come up with a funny caption, and take part — prizes await the creators of the three best memes.',
-    startsSoon: "Coming soon · Starts in",
+    startsSoon: "Coming soon",
     dateTime: "November 27th 2026 · 21:00 · Vilnius time",
     registrationNotice: "Registration and meme creation open during the event.",
 
@@ -30,11 +30,11 @@ export const text: Record<Lang, PageText> = {
   },
 
   lt: {
-    miniTitle: "Naktis su MIDI · Memų konkursas",
-    titleWhite: "Tavo prierašas.",
-    titleBlue: "Visų juokas.",
+    miniTitle: "Memų konkursas",
+    titleWhite: "Sukurk savo",
+    titleBlue: "MIDI memą.",
     description: "MIDI kviečia kurti memus! Pasirink nuotrauką, sugalvok juokingą prierašą ir dalyvauk — trijų geriausių memų kūrėjų laukia prizai.",
-    startsSoon: "Jau greitai · Prasideda po",
+    startsSoon: "Jau greitai",
     dateTime: "2026 m. lapkričio 27 d. · 21:00 · Vilniaus laiku",
     registrationNotice: "Registracija ir memų kūrimas atsidarys renginio metu.",
 
