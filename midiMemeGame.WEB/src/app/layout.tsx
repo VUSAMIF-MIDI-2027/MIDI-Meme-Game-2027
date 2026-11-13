@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     url: "/",
     type: "website",
     images: [{
-      url: "/images/share-preview.jpg",
+      url: "/images/share-preview.png",
       width: 1200,
       height: 630,
       alt: "Naktis su MIDI · Memų konkursas",
