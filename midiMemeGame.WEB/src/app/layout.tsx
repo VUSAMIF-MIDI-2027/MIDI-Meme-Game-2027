@@ -47,8 +47,22 @@ const dosis = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://naktis.midi.lt"),
   title: "Naktis su MIDI",
-  description: "„Naktis su MIDI“ renginio meme žaidimo puslapis",
+  description: "Sukurk savo MIDI memą.",
+
+  openGraph: {
+    title: "Naktis su MIDI · Memų konkursas",
+    description: "Sukurk savo MIDI memą.",
+    url: "/",
+    type: "website",
+    images: [{
+      url: "/images/share-preview.jpg",
+      width: 1200,
+      height: 630,
+      alt: "Naktis su MIDI · Memų konkursas",
+    }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
