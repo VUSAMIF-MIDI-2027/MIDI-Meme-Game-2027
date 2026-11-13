@@ -4,6 +4,8 @@ import pointingPhoto from "#/public/images/how-it-works/midi-photo-close.webp";
 import groupPhoto from "#/public/images/how-it-works/midi-group.webp";
 import portraitPhoto from "#/public/images/how-it-works/midi-portrait.webp";
 
+import explainingPhoto from "#/public/images/how-it-works/midi-explaining.webp";
+
 type PhotoText = { alt: string; caption: string };
 
 export type DemoPhoto = {
@@ -52,6 +54,20 @@ export const demoPhotos: DemoPhoto[] = [
             en: {
                 alt: "A MIDI participant looking at the camera with a hand near his chin",
                 caption: "When the lecturer says “you should already know this”",
+            },
+        },
+    },
+    {
+        id: "explaining",
+        image: explainingPhoto,
+        text: {
+            lt: {
+                alt: "MIDI dalyvis kalba ir gestikuliuoja rankomis",
+                caption: "Aš aiškinu, kodėl grupiniam darbe buvau tik morališkai",
+            },
+            en: {
+                alt: "A MIDI participant talking and gesturing",
+                caption: "Me explaining why my only contribution to the group project was moral support",
             },
         },
     },

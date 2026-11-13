@@ -11,7 +11,8 @@ type PageText = {
 
   step1: string,
   step2: string,
-  step3: string
+  step3: string,
+  step4: string
 };
 
 export const text: Record<Lang, PageText> = {
@@ -26,7 +27,8 @@ export const text: Record<Lang, PageText> = {
 
     step1: "Choose a photo.",
     step2: "Write a caption.",
-    step3: "Submit your meme."
+    step3: "Submit your meme.",
+    step4: "Vote for the best meme."
   },
 
   lt: {
@@ -40,6 +42,7 @@ export const text: Record<Lang, PageText> = {
 
     step1: "Pasirink nuotrauką.",
     step2: "Parašyk prierašą.",
-    step3: "Pateik memą."
+    step3: "Pateik memą.",
+    step4: "Balsuok už geriausią memą."
   },
 };

@@ -29,7 +29,7 @@ export default function PhotoPicker({ selectedPhoto, onSelect, lang }: PhotoPick
                 <MousePointer2 aria-hidden="true" className="size-3.5 text-midi-blue" />
                 {t.choosePhotoHint}
             </p>
-            <div className="grid shrink-0 grid-cols-3 gap-2" role="group" aria-label={t.choosePhotoHint}>
+            <div className="grid shrink-0 grid-cols-4 gap-2" role="group" aria-label={t.choosePhotoHint}>
                 {demoPhotos.map((photo) => {
                     const isSelected = selectedPhoto.id === photo.id;
                     const selectionStyle = isSelected
