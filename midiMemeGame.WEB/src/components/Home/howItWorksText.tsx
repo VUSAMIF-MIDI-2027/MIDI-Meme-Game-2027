@@ -11,7 +11,7 @@ type HowItWorksText = {
 
 export const howItWorksText: Record<Lang, HowItWorksText> = {
     lt: {
-        eyebrow: "Kaip tai veiks?",
+        eyebrow: "Kaip tai veikia?",
         title: "Viena nuotrauka. Trys paprasti žingsniai.",
         descriptions: [
             "Išsirink organizatorių įkeltą renginio kadrą.",

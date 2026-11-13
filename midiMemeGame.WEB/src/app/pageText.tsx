@@ -22,7 +22,7 @@ export const text: Record<Lang, PageText> = {
     description: 'MIDI invites you to create memes! Choose a photo, come up with a funny caption, and take part — prizes await the creators of the three best memes.',
     startsSoon: "Coming soon",
     dateTime: "November 27th 2026 · 21:00 · Vilnius time",
-    registrationNotice: "Registration and meme creation open during the event.",
+    registrationNotice: "Registration and meme creation will open during the event.",
 
     step1: "Choose a photo.",
     step2: "Write a caption.",
