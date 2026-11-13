@@ -26,7 +26,6 @@ export default function HowItWorks() {
         >
             <div className="mx-auto max-w-6xl">
                 <div className="mx-auto mb-10 max-w-xl text-center lg:mb-12">
-                    <p className={ui.eyebrow}>{t.eyebrow}</p>
                     <h2 id="how-it-works-title" className="mt-4 text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
                         {t.title}
                     </h2>
