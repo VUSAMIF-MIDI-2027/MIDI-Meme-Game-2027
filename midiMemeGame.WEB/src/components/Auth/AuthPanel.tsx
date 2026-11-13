@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LockKeyhole } from "lucide-react";
-import { SignIn, SignUp } from "@clerk/nextjs";
+import { SignIn, SignUp } from "@clerk/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { authText } from "@/app/login/pageText";
 import { authAppearance } from "./authAppearance";

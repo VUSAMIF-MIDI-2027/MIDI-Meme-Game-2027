@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import type { SignUp } from "@clerk/nextjs";
+import type { SignUp } from "@clerk/react";
 import styles from "./AuthPanel.module.css";
 
 type AuthAppearance = NonNullable<ComponentProps<typeof SignUp>["appearance"]>;
