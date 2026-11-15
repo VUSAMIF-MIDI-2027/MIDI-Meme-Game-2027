@@ -2,8 +2,9 @@
 
 import { useLanguage } from "@/context/LanguageContext";
 import { text } from "@/app/pageText";
-import { Clock } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Clock } from "lucide-react";
 import Countdown from "./Countdown";
+import Link from "next/link";
 
 export default function EventCountdown() {
     const { lang } = useLanguage();
@@ -32,6 +33,17 @@ export default function EventCountdown() {
             <p className="mx-auto mt-3 max-w-75 text-[15px] font-semibold text-midi-blue sm:mt-2 sm:max-w-none sm:text-[17px]">
                 {t.registrationNotice}
             </p>
+            <div className="mt-6 flex justify-center">
+                <Link
+                    href="login"
+                    className="cta-main-btn group inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-lg bg-midi-blue px-8 py-3 
+                            text-base font-bold text-white transition-colors duration-150 hover:bg-midi-blue/85 focus-visible:outline-2 
+                            focus-visible:outline-offset-4 focus-visible:outline-midi-blue sm:w-auto"
+                >
+                    {t.registerButton}
+                    <ArrowUpRight size={20} className="shrink-0" aria-hidden="true" />
+                </Link>
+            </div>
         </section>
     )
 }

@@ -1,14 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-// import { useState } from "react";
-// import { MobileMenu } from "../MobileMenu";
+import { useState } from "react";
+import { MobileMenu } from "../MobileMenu";
 
 import logoMidiBlack from "#/public/logos/MIDI-Logotipas-naktis.png"
 import Image from "next/image";
 import Link from "next/link";
-// import burgerIcon from "../../../public/icons/burgerIcon.svg"
-// import closeIcon from "../../../public/icons/closeIcon.svg"
+import burgerIcon from "#/public/icons/burgerIcon.svg"
+import closeIcon from "#/public/icons/closeIcon.svg"
 import { useLanguage } from "@/context/LanguageContext";
 import { LangToggle } from "../LangToggle";
 import { links, text } from "@/components/Header/HeaderText";
@@ -22,7 +22,7 @@ function isCurrentPath(pathname: string, href: string) {
 
 export function Header() {
     // COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER
-    // const [menuOpen, setMenuOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     const { lang } = useLanguage();
     const t = text[lang];
 
@@ -30,9 +30,9 @@ export function Header() {
 
     const validRoutes = ["/", "/meme-game", "/activities", "/naktis-su-midi"];
 
-    const isNotFound = !validRoutes.some((route) =>
-        isCurrentPath(pathname, route)
-    );
+    // const isNotFound = !validRoutes.some((route) =>
+    //     isCurrentPath(pathname, route)
+    // );
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 flex h-17 items-center justify-between border-b border-midi-charcoal bg-midi-black px-4 sm:px-10">
@@ -66,7 +66,7 @@ export function Header() {
                 <LangToggle />
 
                 {/* COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER */}
-                {/* <button
+                <button
                     className="shrink-0"
                     onClick={() => setMenuOpen(!menuOpen)}
                     aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -76,26 +76,26 @@ export function Header() {
                         alt={menuOpen ? "Close menu" : "Open menu"}
                         className="h-8 w-auto transition-transform active:scale-90 shrink-0"
                     />
-                </button> */}
+                </button>
 
             </div>
 
             {/* COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER */}
-            {/* <MobileMenu
+            <MobileMenu
                 menuOpen={menuOpen}
                 links={links}
                 onClose={() => setMenuOpen(false)}
-            /> */}
+            />
 
             <div className="hidden items-center gap-2 min-[1100px]:flex">
                 <nav className="flex gap-1 ">
                     {links
-                        .filter(({ href }) => {
-                            if (isNotFound) return false;
+                        // .filter(({ href }) => {
+                        //     if (isNotFound) return false;
 
-                            const hideWhenActive = href === "/" || href === "/meme-game";
-                            return !(hideWhenActive && isCurrentPath(pathname, href));
-                        })
+                        //     const hideWhenActive = href === "/" || href === "/meme-game";
+                        //     return !(hideWhenActive && isCurrentPath(pathname, href));
+                        // })
                         .map(({ href, label }) => {
                             const active = isCurrentPath(pathname, href);
 

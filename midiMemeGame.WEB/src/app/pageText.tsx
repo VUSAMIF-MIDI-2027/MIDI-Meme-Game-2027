@@ -8,6 +8,7 @@ type PageText = {
   startsSoon: string,
   dateTime: string,
   registrationNotice: string,
+  registerButton: string,
 
   step1: string,
   step2: string,
@@ -23,7 +24,8 @@ export const text: Record<Lang, PageText> = {
     description: 'MIDI invites you to create memes! Choose a photo, come up with a funny caption, and take part — prizes await the creators of the three best memes.',
     startsSoon: "Coming soon",
     dateTime: "November 27th 2026 · 21:00 · Vilnius time",
-    registrationNotice: "Registration and meme creation will open during the event.",
+    registrationNotice: "Register now. Meme creation opens when the event starts.",
+    registerButton: "Register",
 
     step1: "Choose a photo.",
     step2: "Write a caption.",
@@ -38,7 +40,8 @@ export const text: Record<Lang, PageText> = {
     description: "MIDI kviečia kurti memus! Pasirink nuotrauką, sugalvok juokingą prierašą ir dalyvauk — trijų geriausių memų kūrėjų laukia prizai.",
     startsSoon: "Jau greitai",
     dateTime: "2026 m. lapkričio 27 d. · 21:00 · Vilniaus laiku",
-    registrationNotice: "Registracija ir memų kūrimas atsidarys renginio metu.",
+    registrationNotice: "Registruokis jau dabar. Memų kūrimas prasidės renginio metu.",
+    registerButton: "Registruotis",
 
     step1: "Pasirink nuotrauką.",
     step2: "Sukurk prierašą.",
