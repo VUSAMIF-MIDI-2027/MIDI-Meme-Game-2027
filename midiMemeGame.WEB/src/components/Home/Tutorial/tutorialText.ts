@@ -1,6 +1,6 @@
 import type { Lang } from "@/context/LanguageContext";
 
-type HowItWorksText = {
+type TutorialText = {
     eyebrow: string;
     title: string;
     descriptions: [string, string, string, string];
@@ -10,7 +10,7 @@ type HowItWorksText = {
 
 };
 
-export const howItWorksText: Record<Lang, HowItWorksText> = {
+export const tutorialText: Record<Lang, TutorialText> = {
     lt: {
         eyebrow: "Kaip tai veikia?",
         title: "Viena nuotrauka. Keturi paprasti žingsniai.",

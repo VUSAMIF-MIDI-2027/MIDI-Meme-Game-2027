@@ -1,10 +1,10 @@
 import type { StaticImageData } from "next/image";
 import type { Lang } from "@/context/LanguageContext";
-import pointingPhoto from "#/public/images/how-it-works/midi-photo-close.webp";
-import groupPhoto from "#/public/images/how-it-works/midi-group.webp";
-import portraitPhoto from "#/public/images/how-it-works/midi-portrait.webp";
+import pointingPhoto from "#/public/images/tutorial/midi-photo-close.webp";
+import groupPhoto from "#/public/images/tutorial/midi-group.webp";
+import portraitPhoto from "#/public/images/tutorial/midi-portrait.webp";
 
-import explainingPhoto from "#/public/images/how-it-works/midi-explaining.webp";
+import explainingPhoto from "#/public/images/tutorial/midi-explaining.webp";
 
 type PhotoText = { alt: string; caption: string };
 

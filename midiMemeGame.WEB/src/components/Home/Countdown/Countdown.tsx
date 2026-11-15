@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { text } from "@/components/Home/CountdownText";
+import { text } from "@/components/Home/Countdown/CountdownText";
 
 const TARGET = new Date("2026-11-27T21:00:00+02:00").getTime();
 

@@ -2,7 +2,7 @@ import Image from "next/image";
 import { Check, MousePointer2 } from "lucide-react";
 import type { Lang } from "@/context/LanguageContext";
 import { demoPhotos, type DemoPhoto } from "./demoPhotos";
-import { howItWorksText } from "./howItWorksText";
+import { tutorialText } from "./tutorialText";
 
 type PhotoPickerProps = {
     selectedPhoto: DemoPhoto;
@@ -11,7 +11,7 @@ type PhotoPickerProps = {
 };
 
 export default function PhotoPicker({ selectedPhoto, onSelect, lang }: PhotoPickerProps) {
-    const t = howItWorksText[lang];
+    const t = tutorialText[lang];
 
     return (
         <div className="flex aspect-[4/3] flex-col gap-2 rounded-xl border border-white/20 bg-[#0a0a0a] p-2">

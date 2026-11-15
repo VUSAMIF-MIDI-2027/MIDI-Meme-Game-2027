@@ -41,7 +41,7 @@ export const text: Record<Lang, PageText> = {
     registrationNotice: "Registracija ir memų kūrimas atsidarys renginio metu.",
 
     step1: "Pasirink nuotrauką.",
-    step2: "Parašyk prierašą.",
+    step2: "Sukurk prierašą.",
     step3: "Pateik memą.",
     step4: "Balsuok už geriausią memą."
   },

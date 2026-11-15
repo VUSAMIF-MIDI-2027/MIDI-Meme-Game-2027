@@ -7,11 +7,11 @@ import VotePreview from "./VotePreview";
 import { demoPhotos } from "./demoPhotos";
 import { text } from "@/app/pageText";
 import { useLanguage } from "@/context/LanguageContext";
-import { howItWorksText } from "./howItWorksText";
+import { tutorialText } from "./tutorialText";
 
-export default function HowItWorks() {
+export default function Tutorial() {
     const { lang } = useLanguage();
-    const t = howItWorksText[lang];
+    const t = tutorialText[lang];
     const page = text[lang];
     const [selectedPhoto, setSelectedPhoto] = useState(demoPhotos[0]);
     const votingPhotos = demoPhotos.filter((photo) => photo.id !== selectedPhoto.id);
@@ -19,13 +19,13 @@ export default function HowItWorks() {
 
     return (
         <section
-            id="how-it-works"
-            aria-labelledby="how-it-works-title"
+            id="tutorial"
+            aria-labelledby="tutorial-title"
             className="scroll-mt-17 bg-black px-5 py-16 sm:px-6 lg:py-24"
         >
             <div className="mx-auto max-w-6xl">
                 <div className="mx-auto mb-10 max-w-xl text-center lg:mb-12">
-                    <h2 id="how-it-works-title" className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+                    <h2 id="tutorial-title" className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
                         {t.title}
                     </h2>
                 </div>

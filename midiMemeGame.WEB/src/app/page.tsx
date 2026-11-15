@@ -1,11 +1,11 @@
 "use client";
 
 import { ArrowDown } from "lucide-react";
-import { Moon } from "@/components/Home/Moon";
-import HomeIntro from "@/components/Home/HomeIntro";
-import EventCountdown from "@/components/Home/EventCountdown";
-import HowItWorks from "@/components/Home/HowItWorks";
-import { howItWorksText } from "@/components/Home/howItWorksText";
+import { Moon } from "@/components/Home/Hero/Moon";
+import HomeIntro from "@/components/Home/Hero/HomeIntro";
+import EventCountdown from "@/components/Home/Countdown/EventCountdown";
+import Tutorial from "@/components/Home/Tutorial/Tutorial";
+import { tutorialText } from "@/components/Home/Tutorial/tutorialText";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function Home() {
@@ -23,14 +23,14 @@ export default function Home() {
                 <HomeIntro />
                 <EventCountdown />
                 <a
-                    href="#how-it-works"
+                    href="#tutorial"
                     className="relative z-10 mx-auto mt-8 flex w-fit flex-col items-center gap-2 rounded-md p-2 text-xs font-bold uppercase tracking-widest text-text-muted transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-midi-blue"
                 >
-                    {howItWorksText[lang].eyebrow}
+                    {tutorialText[lang].eyebrow}
                     <ArrowDown aria-hidden="true" className="size-5 text-midi-blue" />
                 </a>
             </div>
-            <HowItWorks />
+            <Tutorial />
         </div>
     );
 }
