@@ -1,0 +1,12 @@
+bin/
+obj/
+App_Data/
+logs/
+
+.env
+.env.*
+*.db
+*.db-*
+failed-startup.log
+
+appsettings.Development.json

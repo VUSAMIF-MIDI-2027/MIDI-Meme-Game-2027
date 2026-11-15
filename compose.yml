@@ -1,0 +1,58 @@
+name: midi-meme-game
+
+services:
+  api:
+    build:
+      context: ./midiMemeGame.API
+      dockerfile: Dockerfile
+
+    image: midi-meme-api:latest
+    restart: unless-stopped
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      DOTNET_gcServer: "0"
+      DOTNET_GCNoAffinitize: "1"
+      ConnectionStrings__DefaultConnection: "Data Source=/app/App_Data/Sqlite.db"
+
+    ports:
+      - "127.0.0.1:5001:8080"
+
+    volumes:
+      - /home/midi/web/naktis.midi.lt/private/data:/app/App_Data
+      - /home/midi/web/naktis.midi.lt/private/logs:/app/logs
+
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  web:
+    build:
+      context: ./midiMemeGame.WEB
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?Missing Clerk publishable key}"
+        NEXT_PUBLIC_API_BASE_URL: "${NEXT_PUBLIC_API_BASE_URL:-https://naktis.midi.lt}"
+
+    image: midi-meme-web:latest
+    restart: unless-stopped
+
+    environment:
+      NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
+      PORT: "4000"
+
+    ports:
+      - "127.0.0.1:4000:4000"
+
+    depends_on:
+      - api
+
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
