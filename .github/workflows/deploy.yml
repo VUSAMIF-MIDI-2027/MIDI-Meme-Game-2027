@@ -139,7 +139,7 @@ jobs:
 
       - name: Upload deployment bundle
         run: |
-          release="/home/midi/web/naktis.midi.lt/private/backend/releases/$GITHUB_SHA"
+          release="/home/midi/web/naktis.midi.lt/private/deploy/releases/$GITHUB_SHA"
 
           ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$release'"
 
@@ -151,7 +151,7 @@ jobs:
           ssh "$SSH_USER@$SSH_HOST" bash -s -- "$GITHUB_SHA" <<'REMOTE'
           set -Eeuo pipefail
 
-          release="/home/midi/web/naktis.midi.lt/private/backend/releases/$1"
+          release="/home/midi/web/naktis.midi.lt/private/deploy/releases/$1"
           cd "$release"
 
           compose=(
