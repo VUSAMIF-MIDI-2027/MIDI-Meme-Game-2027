@@ -20,7 +20,7 @@ namespace midiMemeGame.API
                     configuration.ReadFrom.Configuration(context.Configuration);
                 });
 
-                builder.WebHost.UseUrls("http://localhost:5000");
+                // builder.WebHost.UseUrls("http://localhost:5000");
 
                 // Add services to the container.
 
@@ -48,11 +48,11 @@ namespace midiMemeGame.API
                 app.UseMiddleware<ExceptionMiddleware>();
 
                 // Configure the HTTP request pipeline.
-                if (app.Environment.IsDevelopment())
-                {
+                // if (app.Environment.IsDevelopment())
+                // {
                     app.UseSwagger();
                     app.UseSwaggerUI();
-                }
+                // }
 
                 app.UseHttpsRedirection();
 
@@ -69,6 +69,7 @@ namespace midiMemeGame.API
                 startupLogger.WriteLine("Application failed to start");
                 startupLogger.WriteLine("Exception message: " + ex.Message);
                 startupLogger.WriteLine("Inner exception message:" + ex.InnerException?.Message);
+                throw;
             }
         }
     }

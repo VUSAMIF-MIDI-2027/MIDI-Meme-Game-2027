@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+.git
+.vscode
+build
+.env
+.env.*
+*.pfx
+*.p12
+npm-debug.log*
