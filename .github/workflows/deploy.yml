@@ -14,8 +14,12 @@ on:
 permissions:
   contents: read
 
+env:
+  DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+  COMPOSE_PROJECT_NAME: ${{ vars.COMPOSE_PROJECT_NAME }}
+
 concurrency:
-  group: naktis-midi-production
+  group: ${{ github.repository }}-production
   cancel-in-progress: false
 
 jobs:
@@ -71,8 +75,11 @@ jobs:
         run: |
           mkdir -p bundle
 
-          docker save midi-meme-api:latest midi-meme-web:latest \
-            | gzip > bundle/images.tar.gz
+          docker compose config --images | sort -u > bundle/images.txt
+
+          mapfile -t images < bundle/images.txt
+
+          docker save "${images[@]}" | gzip > bundle/images.tar.gz
 
           cp compose.yml bundle/compose.yml
 
@@ -84,7 +91,7 @@ jobs:
       - name: Upload deployment bundle
         uses: actions/upload-artifact@v4
         with:
-          name: midi-meme-deployment
+          name: deployment-bundle
           path: bundle/
           if-no-files-found: error
           retention-days: 3
@@ -139,25 +146,35 @@ jobs:
 
       - name: Upload deployment bundle
         run: |
-          release="/home/midi/web/naktis.midi.lt/private/deploy/releases/$GITHUB_SHA"
+          set -euo pipefail
+
+          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9_./-]+$ ]]
+          [[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]]
+
+          release="$DEPLOY_PATH/releases/$GITHUB_SHA"
 
           ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$release'"
 
           scp bundle/images.tar.gz bundle/compose.yml bundle/public.env \
             "$SSH_USER@$SSH_HOST:$release/"
 
-      - name: Start containers and check application
+            - name: Deploy containers
         run: |
-          ssh "$SSH_USER@$SSH_HOST" bash -s -- "$GITHUB_SHA" <<'REMOTE'
+          ssh "$SSH_USER@$SSH_HOST" bash -s -- \
+            "$DEPLOY_PATH" "$GITHUB_SHA" "$COMPOSE_PROJECT_NAME" <<'REMOTE'
           set -Eeuo pipefail
 
-          release="/home/midi/web/naktis.midi.lt/private/deploy/releases/$1"
+          deploy_path="$1"
+          commit_sha="$2"
+          project_name="$3"
+
+          release="$deploy_path/releases/$commit_sha"
           cd "$release"
 
           compose=(
               docker compose
               --env-file public.env
-              --project-name midi-meme-game
+              --project-name "$project_name"
               --file compose.yml
           )
 
@@ -167,17 +184,11 @@ jobs:
 
           gzip -dc images.tar.gz | docker load
 
-          "${compose[@]}" up -d --no-build
-
-          curl --fail --silent --show-error \
-              --retry 20 --retry-all-errors --retry-delay 3 \
-              --retry-max-time 120 --max-time 5 \
-              http://127.0.0.1:5001/api/health
-
-          curl --fail --silent --show-error --output /dev/null \
-              --retry 20 --retry-all-errors --retry-delay 3 \
-              --retry-max-time 120 --max-time 5 \
-              http://127.0.0.1:4000/
+          "${compose[@]}" up \
+              --detach \
+              --no-build \
+              --wait \
+              --wait-timeout 120
 
           "${compose[@]}" ps -a
 
