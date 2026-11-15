@@ -12,6 +12,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
+      DOTNET_gcServer: "0"
+      DOTNET_GCNoAffinitize: "1"
       ConnectionStrings__DefaultConnection: "Data Source=/app/App_Data/Sqlite.db"
 
     ports:
