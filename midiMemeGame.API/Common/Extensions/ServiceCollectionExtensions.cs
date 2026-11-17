@@ -95,19 +95,16 @@ public static class ServiceCollectionExtensions
                     {
                         var userId = context.Principal?.FindFirst("sub")?.Value;
                         var sessionId = context.Principal?.FindFirst("sid")?.Value;
-                        var authorizedParty =
-                            context.Principal?.FindFirst("azp")?.Value;
+                        var authorizedParty = context.Principal?.FindFirst("azp")?.Value;
 
-                        if (string.IsNullOrWhiteSpace(userId)
-                            || string.IsNullOrWhiteSpace(sessionId))
+                        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(sessionId))
                         {
                             context.Fail("Clerk session identity is missing.");
 
                             return Task.CompletedTask;
                         }
 
-                        if (authorizedParty == null
-                            || !settings.AuthorizedParties.Contains(
+                        if (authorizedParty == null || !settings.AuthorizedParties.Contains(
                                 authorizedParty,
                                 StringComparer.Ordinal
                             ))

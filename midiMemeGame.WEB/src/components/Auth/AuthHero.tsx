@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { ui } from "@/styles/ui";
 import { Clock } from "lucide-react";
 import Image from "next/image";
+import { FlyingCat } from "@/components/FlyingCat";
 import moon from "#/public/images/moon-current.webp";
 
 export function AuthHero() {
@@ -35,7 +36,8 @@ export function AuthHero() {
                 className="pointer-events-none absolute -bottom-16 -right-20 -z-10 size-[260px] object-contain opacity-35 lg:-bottom-24 lg:-right-28 lg:size-[460px] 2xl:size-[720px] 2xl:-right-36 2xl:-bottom-40"
             />
 
-            <div className={ui.contentLayer}>
+            <FlyingCat />
+            <div className={`${ui.contentLayer} pointer-events-none`}>
                 <p className={ui.eyebrow}>
                     {t.miniTitle}
                 </p>
@@ -52,19 +54,7 @@ export function AuthHero() {
                     {t.description}
                 </p>
             </div>
-            <div
-                aria-hidden="true"
-                className="pointer-events-none relative z-0 mt-6 flex min-h-24 shrink-0 justify-end pr-4 lg:mt-auto lg:min-h-36"
-            >
-                <Image
-                    src="/cats/kosmonautas.svg"
-                    alt=""
-                    width={240}
-                    height={240}
-                    className="h-auto w-28 -rotate-12 self-center select-none lg:w-44 2xl:w-60"
-                />
-            </div>
-            <div className="relative z-10 flex flex-wrap items-center gap-3 pt-6 lg:pt-8">
+            <div className="pointer-events-none relative z-10 flex flex-wrap items-center gap-3 pt-6 lg:pt-8">
                 <Clock
                     aria-hidden="true"
                     className="size-4 shrink-0 text-midi-blue"

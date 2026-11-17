@@ -2,7 +2,8 @@
 
 import { useLanguage } from "@/context/LanguageContext";
 import { text } from "@/app/pageText";
-import Image from "next/image";
+import { SleepingCat } from "./SleepingCat";
+import catStyles from "./SleepingCat.module.css";
 import { ArrowUpRight, Clock } from "lucide-react";
 import Countdown from "./Countdown";
 import Link from "next/link";
@@ -13,7 +14,7 @@ export default function EventCountdown() {
 
     return (
         <section
-            className="relative z-10 mx-auto mt-8.5 w-full max-w-190 text-center sm:mt-8"
+            className="pointer-events-none relative z-10 mx-auto mt-8.5 w-full max-w-190 text-center sm:mt-8"
             aria-labelledby="countdown-heading"
         >
             <h2
@@ -23,15 +24,7 @@ export default function EventCountdown() {
                 {t.startsSoon}
             </h2>
             <div className="relative flow-root">
-                <Image
-                    src="/cats/sleepy.svg"
-                    alt=""
-                    width={224}
-                    height={224}
-                    aria-hidden="true"
-                    loading="eager"
-                    className="pointer-events-none absolute -top-11 -left-6 z-10 h-auto w-32 select-none sm:-top-23 sm:-left-11 sm:w-56"
-                />
+                <SleepingCat className={catStyles.perched} />
                 <Countdown />
             </div>
             <p className="mt-5.75 flex flex-wrap items-center justify-center gap-1.25 text-base font-bold sm:gap-1.75 sm:text-[19px]">
@@ -48,7 +41,7 @@ export default function EventCountdown() {
             <div className="mt-6 flex justify-center">
                 <Link
                     href="login"
-                    className="cta-main-btn group inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-lg bg-midi-blue px-8 py-3 
+                    className="pointer-events-auto cta-main-btn group inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-lg bg-midi-blue px-8 py-3 
                             text-base font-bold text-white transition-colors duration-150 hover:bg-midi-blue/85 focus-visible:outline-2 
                             focus-visible:outline-offset-4 focus-visible:outline-midi-blue sm:w-auto"
                 >

@@ -5,6 +5,7 @@ import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import { useAuth } from "@clerk/react";
 import { useRouter } from "next/navigation";
 import { ArrowDown } from "lucide-react";
+import { FlyingCat } from "@/components/FlyingCat";
 import { Moon } from "@/components/Home/Hero/Moon";
 import HomeIntro from "@/components/Home/Hero/HomeIntro";
 import EventCountdown from "@/components/Home/Countdown/EventCountdown";
@@ -32,7 +33,10 @@ export default function Home() {
                     style={{ background: "radial-gradient(ellipse at 72% 48%, rgba(0, 117, 181, 0.16), transparent 58%)" }}
                 />
                 <Moon />
-                <HomeIntro />
+                <div className="relative isolate z-10">
+                    <FlyingCat />
+                    <HomeIntro />
+                </div>
                 <EventCountdown />
 
                 <a

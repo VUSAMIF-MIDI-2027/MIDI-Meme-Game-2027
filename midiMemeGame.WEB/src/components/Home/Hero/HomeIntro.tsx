@@ -17,10 +17,10 @@ export default function HomeIntro() {
                 alt="Matematikų ir informatikų dienos"
                 priority
                 sizes="(max-width: 640px) 160px, 176px"
-                className="relative z-10 mx-auto mb-10 h-auto w-40 sm:mb-7 sm:w-44"
+                className="pointer-events-none relative z-10 mx-auto mb-10 h-auto w-40 sm:mb-7 sm:w-44"
             />
             <section
-                className="relative z-10 mx-auto w-full max-w-230 text-center"
+                className="pointer-events-none relative z-10 mx-auto w-full max-w-230 text-center"
                 aria-labelledby="hero-title"
             >
                 <p className="text-[11px] font-extrabold tracking-widest uppercase sm:text-sm sm:tracking-[0.12em]">

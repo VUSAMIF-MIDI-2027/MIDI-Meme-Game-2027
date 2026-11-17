@@ -1,0 +1,48 @@
+.sky {
+  --cat-size: 100px;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.flight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--cat-size);
+  height: var(--cat-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.cat {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+@media (min-width: 640px) {
+  .sky {
+    --cat-size: 120px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sky {
+    --cat-size: 160px;
+  }
+}
+
+@media (max-width: 639px) {
+  .sky {
+    inset-inline: -20px;
+  }
+}
