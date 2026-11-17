@@ -35,6 +35,14 @@ export function AuthHero() {
                 className="pointer-events-none absolute -bottom-16 -right-20 -z-10 size-[260px] object-contain opacity-35 lg:-bottom-24 lg:-right-28 lg:size-[460px] 2xl:size-[720px] 2xl:-right-36 2xl:-bottom-40"
             />
 
+            <Image
+                src="/cats/kosmonautas.svg"
+                alt=""
+                aria-hidden="true"
+                width={240}
+                height={240}
+                className="pointer-events-none absolute right-4 bottom-14 z-0 h-auto w-28 -rotate-12 select-none lg:right-16 lg:bottom-64 lg:w-44 2xl:right-36 2xl:bottom-[420px] 2xl:w-60"
+            />
             <div className={ui.contentLayer}>
                 <p className={ui.eyebrow}>
                     {t.miniTitle}
