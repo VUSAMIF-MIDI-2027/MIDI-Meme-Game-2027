@@ -78,3 +78,25 @@
 .otpInput[aria-invalid="true"] {
     border-color: #e66b64 !important;
 }
+
+.actionLink {
+    color: #70cfff !important;
+    font-size: 0.9375rem !important;
+    font-weight: 600 !important;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.actionLink:hover:not(:disabled) {
+    color: #ffffff !important;
+}
+
+.actionLink:focus-visible {
+    outline: 2px solid #70cfff;
+    outline-offset: 4px;
+}
+
+.actionLink:disabled {
+    color: #b2b7bb !important;
+    cursor: not-allowed;
+}
