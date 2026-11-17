@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 env:
-  DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-  COMPOSE_PROJECT_NAME: ${{ vars.COMPOSE_PROJECT_NAME }}
+  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+  COMPOSE_PROJECT_NAME: ${{ secrets.COMPOSE_PROJECT_NAME }}
 
 concurrency:
   group: ${{ github.repository }}-production
@@ -65,7 +65,10 @@ jobs:
 
       - name: Validate configuration
         run: |
-          test -n "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+          case "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" in
+            pk_live_*) ;;
+            *) echo "Set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to the production pk_live_ key"; exit 1 ;;
+          esac
           docker compose config --quiet
 
       - name: Build API and website
@@ -113,8 +116,42 @@ jobs:
       - name: Download deployment bundle
         uses: actions/download-artifact@v4
         with:
-          name: midi-meme-deployment
+          name: deployment-bundle
           path: bundle/
+
+      - name: Prepare API runtime configuration
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_AUTHORITY: ${{ vars.CLERK_AUTHORITY }}
+          CLERK_AUTHORIZED_PARTY: ${{ vars.CLERK_AUTHORIZED_PARTY || 'https://naktis.midi.lt' }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+          from urllib.parse import urlsplit
+
+          secret = os.environ["CLERK_SECRET_KEY"]
+          if not re.fullmatch(r"sk_live_[A-Za-z0-9_-]+", secret):
+              raise SystemExit("Set CLERK_SECRET_KEY to the production Clerk secret key")
+
+          values = {"Clerk__SecretKey": secret}
+          for source, target in [
+              ("CLERK_AUTHORITY", "Clerk__Authority"),
+              ("CLERK_AUTHORIZED_PARTY", "Clerk__AuthorizedParties__0"),
+          ]:
+              value = os.environ[source]
+              url = urlsplit(value)
+              if (not re.fullmatch(r"https://[a-zA-Z0-9.-]+(?::[0-9]+)?", value)
+                  or not url.hostname or url.hostname.endswith(".clerk.accounts.dev")):
+                  raise SystemExit(source + " must be a production HTTPS origin without a trailing slash")
+              values[target] = value
+
+          target = Path("bundle/api.env")
+          target.touch(mode=0o600)
+          target.chmod(0o600)
+          target.write_text("".join(key + "=" + value + "\n" for key, value in values.items()))
+          PY
 
       - name: Configure SSH
         env:
@@ -153,12 +190,12 @@ jobs:
 
           release="$DEPLOY_PATH/releases/$GITHUB_SHA"
 
-          ssh "$SSH_USER@$SSH_HOST" "mkdir -p '$release'"
+          ssh "$SSH_USER@$SSH_HOST" "umask 077; mkdir -p '$release'; chmod 700 '$release'"
 
-          scp bundle/images.tar.gz bundle/compose.yml bundle/public.env \
+          scp bundle/images.tar.gz bundle/compose.yml bundle/public.env bundle/api.env \
             "$SSH_USER@$SSH_HOST:$release/"
 
-            - name: Deploy containers
+      - name: Deploy containers
         run: |
           ssh "$SSH_USER@$SSH_HOST" bash -s -- \
             "$DEPLOY_PATH" "$GITHUB_SHA" "$COMPOSE_PROJECT_NAME" <<'REMOTE'
@@ -170,6 +207,8 @@ jobs:
 
           release="$deploy_path/releases/$commit_sha"
           cd "$release"
+          test -s api.env
+          chmod 600 api.env
 
           compose=(
               docker compose
@@ -191,6 +230,9 @@ jobs:
               --wait-timeout 120
 
           "${compose[@]}" ps -a
+
+          curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:5001/api/health
+          curl --fail --silent --show-error --output /dev/null --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:4000/
 
           rm -- images.tar.gz
           REMOTE
