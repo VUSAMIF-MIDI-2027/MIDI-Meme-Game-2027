@@ -29,7 +29,7 @@ public class ExceptionMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.CAUGHT_EXCEPTION, ex.Message);
-
+             
             await WriteErrorResponseAsync(context);
         }
     }

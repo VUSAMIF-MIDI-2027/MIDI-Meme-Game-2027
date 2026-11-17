@@ -625,3 +625,5 @@ publish-linux/
 *.db
 *.db-wal
 *.db-shm
+# Runtime Clerk configuration generated during deployment
+api.env

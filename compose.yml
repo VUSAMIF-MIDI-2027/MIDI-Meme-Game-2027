@@ -6,6 +6,10 @@ services:
       context: ./midiMemeGame.API
       dockerfile: Dockerfile
 
+    env_file:
+      - path: ./api.env
+        required: false
+
     image: midi-meme-api:latest
     restart: unless-stopped
 

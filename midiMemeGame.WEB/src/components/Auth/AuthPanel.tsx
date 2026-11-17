@@ -39,9 +39,9 @@ export function AuthPanel() {
             </div>
 
             {mode === "register" ? (
-                <SignUp routing="hash" appearance={authAppearance} />
+                <SignUp routing="hash" forceRedirectUrl="/dashboard" appearance={authAppearance} />
             ) : (
-                <SignIn routing="hash" appearance={authAppearance} />
+                <SignIn routing="hash" forceRedirectUrl="/dashboard" appearance={authAppearance} />
             )}
             <div className="mt-6 flex items-start gap-3 rounded-xl bg-[#111111] p-3 text-xs leading-relaxed text-[#898f93]">
                 <LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0" />

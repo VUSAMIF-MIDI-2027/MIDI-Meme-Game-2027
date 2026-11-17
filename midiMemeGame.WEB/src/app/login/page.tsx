@@ -1,13 +1,24 @@
 "use client"
 
 import { useLanguage } from "@/context/LanguageContext";
-import { authText } from "./pageText";
+import { useAuth } from "@clerk/react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AuthPanel } from "@/components/Auth/AuthPanel";
 import { AuthHero } from "@/components/Auth/AuthHero";
 
 export default function LoginPage() {
     const { lang } = useLanguage();
-    const t = authText[lang];
+    const { isLoaded, isSignedIn } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (isLoaded && isSignedIn) router.replace("/dashboard");
+    }, [isLoaded, isSignedIn, router]);
+
+    if (!isLoaded || isSignedIn) {
+        return <p role="status" className="p-12 text-center text-text-muted">{lang === "lt" ? "Kraunama…" : "Loading…"}</p>;
+    }
 
     return (
         <section className="grid min-h-[calc(100svh-4.25rem)] items-start lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">

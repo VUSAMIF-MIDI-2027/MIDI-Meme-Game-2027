@@ -30,10 +30,10 @@ export function MobileMenu({
 
     return (
         <nav
-            className={`fixed top-17 left-0 right-0 z-40 overflow-hidden bg-white border-b border-zinc-200 transition-all duration-300 min-[1100px]:hidden
-                ${menuOpen
-                    ? "max-h-80 shadow-lg"
-                    : "max-h-0 shadow-none"
+            className={`fixed top-17 left-0 right-0 z-40 overflow-hidden bg-midi-black transition-all duration-300 min-[1100px]:hidden
+                    ${menuOpen
+                    ? "max-h-80 border-b border-white/10 shadow-xl shadow-black/40"
+                    : "max-h-0 border-b-0 shadow-none"
                 }`}
         >
             {links.map(({ href, label }) => {
@@ -46,10 +46,10 @@ export function MobileMenu({
                         href={href}
                         onClick={onClose}
                         aria-current={active ? "page" : undefined}
-                        className={`block w-full border-b border-zinc-200 px-12 py-4 text-left font-medium uppercase tracking-wide transition-colors duration-150
-                            ${active
-                                ? "bg-[#e8f4fb] font-bold text-midi-blue"
-                                : "bg-white text-[#404041] hover:bg-[#f2f2f2]"
+                        className={`block w-full border-b border-white/10 border-l-2 px-12 py-4 text-left font-medium uppercase tracking-wide transition-colors duration-150 last:border-b-0
+                                ${active
+                                ? "border-l-midi-blue bg-midi-blue/10 font-bold text-midi-blue"
+                                : "border-l-transparent bg-midi-black text-midi-white hover:bg-white/5 hover:text-midi-white"
                             }`}
                     >
                         {label[lang]}
@@ -57,6 +57,6 @@ export function MobileMenu({
                 );
             })}
         </nav>
-        
+
     );
 }

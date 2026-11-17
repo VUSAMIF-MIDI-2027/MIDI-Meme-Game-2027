@@ -1,14 +1,16 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-// import { useState } from "react";
-// import { MobileMenu } from "../MobileMenu";
+import { useState } from "react";
+import { useAuth } from "@clerk/react";
+import { LogoutButton } from "@/components/Auth/LogoutButton";
+import { MobileMenu } from "../MobileMenu";
 
 import logoMidiBlack from "#/public/logos/MIDI-Logotipas-naktis.png"
 import Image from "next/image";
 import Link from "next/link";
-// import burgerIcon from "../../../public/icons/burgerIcon.svg"
-// import closeIcon from "../../../public/icons/closeIcon.svg"
+import burgerIcon from "#/public/icons/burgerIcon.svg"
+import closeIcon from "#/public/icons/closeIcon.svg"
 import { useLanguage } from "@/context/LanguageContext";
 import { LangToggle } from "../LangToggle";
 import { links, text } from "@/components/Header/HeaderText";
@@ -22,21 +24,22 @@ function isCurrentPath(pathname: string, href: string) {
 
 export function Header() {
     // COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER
-    // const [menuOpen, setMenuOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     const { lang } = useLanguage();
     const t = text[lang];
+    const { isLoaded, isSignedIn } = useAuth();
+    const navigationLinks = links.map(link => ({ ...link, href: link.href === "/login" && isSignedIn ? "/dashboard" : link.href }));
 
     const pathname = usePathname();
 
-    const validRoutes = ["/", "/meme-game", "/activities", "/naktis-su-midi"];
 
-    const isNotFound = !validRoutes.some((route) =>
-        isCurrentPath(pathname, route)
-    );
+    // const isNotFound = !validRoutes.some((route) =>
+    //     isCurrentPath(pathname, route)
+    // );
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 flex h-17 items-center justify-between border-b border-midi-charcoal bg-midi-black px-4 sm:px-10">
-            <Link href="/" className="flex items-center gap-3">
+            <Link href={isSignedIn ? "/dashboard" : "/"} className="flex items-center gap-3">
                 <Image loading="eager"
                     src={logoMidiBlack}
                     alt="MIDI logo"
@@ -61,12 +64,15 @@ export function Header() {
                 </span>
             </div>
 
+            {isLoaded && isSignedIn && <LogoutButton />}
+            {isLoaded && !isSignedIn && <>
             <div className="flex items-center gap-3 sm:gap-6 min-[1100px]:hidden">
+
 
                 <LangToggle />
 
                 {/* COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER */}
-                {/* <button
+                <button
                     className="shrink-0"
                     onClick={() => setMenuOpen(!menuOpen)}
                     aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -76,26 +82,26 @@ export function Header() {
                         alt={menuOpen ? "Close menu" : "Open menu"}
                         className="h-8 w-auto transition-transform active:scale-90 shrink-0"
                     />
-                </button> */}
+                </button>
 
             </div>
 
             {/* COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER */}
-            {/* <MobileMenu
+            <MobileMenu
                 menuOpen={menuOpen}
-                links={links}
+                links={navigationLinks}
                 onClose={() => setMenuOpen(false)}
-            /> */}
+            />
 
             <div className="hidden items-center gap-2 min-[1100px]:flex">
                 <nav className="flex gap-1 ">
-                    {links
-                        .filter(({ href }) => {
-                            if (isNotFound) return false;
+                    {navigationLinks
+                        // .filter(({ href }) => {
+                        //     if (isNotFound) return false;
 
-                            const hideWhenActive = href === "/" || href === "/meme-game";
-                            return !(hideWhenActive && isCurrentPath(pathname, href));
-                        })
+                        //     const hideWhenActive = href === "/" || href === "/meme-game";
+                        //     return !(hideWhenActive && isCurrentPath(pathname, href));
+                        // })
                         .map(({ href, label }) => {
                             const active = isCurrentPath(pathname, href);
 
@@ -116,9 +122,11 @@ export function Header() {
                         })}
                 </nav>
 
+
                 <LangToggle />
             </div>
 
+            </>}
         </header>
     );
 }

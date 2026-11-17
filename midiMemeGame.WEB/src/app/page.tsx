@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { useAuth } from "@clerk/react";
+import { useRouter } from "next/navigation";
 import { ArrowDown } from "lucide-react";
 import { Moon } from "@/components/Home/Hero/Moon";
 import HomeIntro from "@/components/Home/Hero/HomeIntro";
@@ -10,6 +13,14 @@ import { useLanguage } from "@/context/LanguageContext";
 
 export default function Home() {
     const { lang } = useLanguage();
+    const { isLoaded, isSignedIn } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (isLoaded && isSignedIn) router.replace("/dashboard");
+    }, [isLoaded, isSignedIn, router]);
+
+    if (!isLoaded || isSignedIn) return null;
 
     return (
         <div className="flex flex-1 flex-col bg-black text-white">
@@ -22,9 +33,10 @@ export default function Home() {
                 <Moon />
                 <HomeIntro />
                 <EventCountdown />
+
                 <a
                     href="#tutorial"
-                    className="relative z-10 mx-auto mt-8 flex w-fit flex-col items-center gap-2 rounded-md p-2 text-xs font-bold uppercase tracking-widest text-text-muted transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-midi-blue"
+                    className="relative z-10 mx-auto mt-4 flex w-fit flex-col items-center gap-2 rounded-md p-2 text-xs font-bold uppercase tracking-widest text-text-muted transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-midi-blue"
                 >
                     {tutorialText[lang].eyebrow}
                     <ArrowDown aria-hidden="true" className="size-5 text-midi-blue" />

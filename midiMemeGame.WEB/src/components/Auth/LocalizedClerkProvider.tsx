@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { ClerkProvider } from "@clerk/react";
 import { useLanguage } from "@/context/LanguageContext";
+import { UserSync } from "./UserSync";
 import { enUS, ltLT } from "./authLocalization";
 
 const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -19,6 +20,7 @@ export function LocalizedClerkProvider({ children }: { children: ReactNode }) {
             publishableKey={publishableKey}
             localization={lang === "lt" ? ltLT : enUS}
         >
+            <UserSync />
             {children}
         </ClerkProvider>
     );

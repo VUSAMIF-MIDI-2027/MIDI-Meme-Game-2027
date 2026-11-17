@@ -5,6 +5,12 @@ export const ltLT = {
     locale: "lt-LT",
     unstable__errors: {
         ...enUS.unstable__errors,
+        zxcvbn: {
+            ...enUS.unstable__errors?.zxcvbn,
+            goodPassword: "Slaptažodis atitinka visus reikalavimus.",
+            couldBeStronger: "Slaptažodis tinkamas, bet galėtų būti stipresnis. Pridėk daugiau simbolių.",
+            notEnough: "Slaptažodis nepakankamai stiprus.",
+        },
         form_password_length_too_short:
             "Slaptažodis per trumpas. Naudok bent 8 simbolius.",
         form_password_not_strong_enough:
@@ -49,6 +55,8 @@ export const ltLT = {
     formFieldAction__forgotPassword: "Pamiršai slaptažodį?",
     formFieldAction__showPassword: "Rodyti slaptažodį",
     formFieldAction__hidePassword: "Slėpti slaptažodį",
+    formFieldError__matchingPasswords: "Slaptažodžiai sutampa.",
+    formFieldError__notMatchingPasswords: "Slaptažodžiai nesutampa.",
     formFieldHintText__optional: "Neprivaloma",
     socialButtonsBlockButton: "Tęsti su {{provider|titleize}}",
     socialButtonsBlockButtonManyInView: "{{provider|titleize}}",

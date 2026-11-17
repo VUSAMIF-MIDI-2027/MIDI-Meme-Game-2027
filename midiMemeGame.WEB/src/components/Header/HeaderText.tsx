@@ -1,11 +1,10 @@
 import { Lang } from "@/context/LanguageContext";
 
 export const links = [
-  { href: "/", label: { en: "Home", lt: "Pagrindinis" } },
+  { href: "/", label: { en: "Home", lt: "Pradžia" } },
   // COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER
-  // { href: "/contacts", label: { en: "Contacts", lt: "Kontaktai" } },
-  // { href: "/activities", label: { en: "Activities", lt: "Veiklos" } },
-  // { href: "/archives", label: { en: "Archives", lt: "Archyvai" } },
+  { href: "/login", label: { en: "Create a meme", lt: "Kurti memą" } },
+  { href: "/results", label: { en: "Results", lt: "Rezultatai" } },
 ];
 
 type PageText = {

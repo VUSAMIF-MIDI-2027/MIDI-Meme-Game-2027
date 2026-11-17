@@ -1,5 +1,3 @@
-using System;
-
 namespace MidiMemeGame.Api.Models;
 
 public class User
@@ -10,4 +8,6 @@ public class User
     public required string FirstName { get; set; }
     public required string LastName { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public bool IsDeleted { get; set; }
+    public long LastClerkUpdatedAt { get; set; }
 }
