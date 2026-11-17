@@ -15,27 +15,18 @@ import { useLanguage } from "@/context/LanguageContext";
 import { LangToggle } from "../LangToggle";
 import { links, text } from "@/components/Header/HeaderText";
 
-
-
 function isCurrentPath(pathname: string, href: string) {
     const normalize = (path: string) => path === "/" ? "/" : path.replace(/\/+$/, "");
     return normalize(pathname) === normalize(href);
 }
 
 export function Header() {
-    // COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER
     const [menuOpen, setMenuOpen] = useState(false);
     const { lang } = useLanguage();
     const t = text[lang];
     const { isLoaded, isSignedIn } = useAuth();
-    const navigationLinks = links.map(link => ({ ...link, href: link.href === "/login" && isSignedIn ? "/dashboard" : link.href }));
-
     const pathname = usePathname();
-
-
-    // const isNotFound = !validRoutes.some((route) =>
-    //     isCurrentPath(pathname, route)
-    // );
+    const showPublicNavigation = !isSignedIn && !pathname.startsWith("/dashboard");
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 flex h-17 items-center justify-between border-b border-midi-charcoal bg-midi-black px-4 sm:px-10">
@@ -65,66 +56,54 @@ export function Header() {
             </div>
 
             {isLoaded && isSignedIn && <LogoutButton />}
-            {!isSignedIn && !pathname.startsWith("/dashboard") && <>
-            <div className="flex items-center gap-3 sm:gap-6 min-[1100px]:hidden">
+            {showPublicNavigation && <>
+                <div className="flex items-center gap-3 sm:gap-6 min-[1100px]:hidden">
 
+                    <LangToggle />
+                    <button
+                        className="shrink-0"
+                        onClick={() => setMenuOpen(!menuOpen)}
+                        aria-label={menuOpen ? "Close menu" : "Open menu"}
+                    >
+                        <Image loading="eager"
+                            src={menuOpen ? closeIcon : burgerIcon}
+                            alt={menuOpen ? "Close menu" : "Open menu"}
+                            className="h-8 w-auto transition-transform active:scale-90 shrink-0"
+                        />
+                    </button>
 
-                <LangToggle />
+                </div>
+                <MobileMenu
+                    menuOpen={menuOpen}
+                    links={links}
+                    onClose={() => setMenuOpen(false)}
+                />
 
-                {/* COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER */}
-                <button
-                    className="shrink-0"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    aria-label={menuOpen ? "Close menu" : "Open menu"}
-                >
-                    <Image loading="eager"
-                        src={menuOpen ? closeIcon : burgerIcon}
-                        alt={menuOpen ? "Close menu" : "Open menu"}
-                        className="h-8 w-auto transition-transform active:scale-90 shrink-0"
-                    />
-                </button>
+                <div className="hidden items-center gap-2 min-[1100px]:flex">
+                    <nav className="flex gap-1 ">
+                        {links
+                            .map(({ href, label }) => {
+                                const active = isCurrentPath(pathname, href);
 
-            </div>
+                                return (
+                                    <Link
+                                        key={href}
+                                        href={href}
+                                        aria-current={active ? "page" : undefined}
+                                        className={`rounded px-4 py-1.75 text-sm font-medium uppercase tracking-[0.08em] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70cfff] ${active
+                                            ? "bg-[#0075b5]/20 font-bold text-[#70cfff]"
+                                            : "text-[#e5e7eb] hover:bg-white/10 hover:text-white"
+                                            }`}
+                                    >
+                                        {label[lang]}
+                                    </Link>
 
-            {/* COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER */}
-            <MobileMenu
-                menuOpen={menuOpen}
-                links={navigationLinks}
-                onClose={() => setMenuOpen(false)}
-            />
+                                );
+                            })}
+                    </nav>
 
-            <div className="hidden items-center gap-2 min-[1100px]:flex">
-                <nav className="flex gap-1 ">
-                    {navigationLinks
-                        // .filter(({ href }) => {
-                        //     if (isNotFound) return false;
-
-                        //     const hideWhenActive = href === "/" || href === "/meme-game";
-                        //     return !(hideWhenActive && isCurrentPath(pathname, href));
-                        // })
-                        .map(({ href, label }) => {
-                            const active = isCurrentPath(pathname, href);
-
-                            return (
-                                <Link
-                                    key={href}
-                                    href={href}
-                                    aria-current={active ? "page" : undefined}
-                                    className={`rounded px-4 py-1.75 text-sm font-medium uppercase tracking-[0.08em] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70cfff] ${active
-                                        ? "bg-[#0075b5]/20 font-bold text-[#70cfff]"
-                                        : "text-[#e5e7eb] hover:bg-white/10 hover:text-white"
-                                        }`}
-                                >
-                                    {label[lang]}
-                                </Link>
-
-                            );
-                        })}
-                </nav>
-
-
-                <LangToggle />
-            </div>
+                    <LangToggle />
+                </div>
 
             </>}
         </header>

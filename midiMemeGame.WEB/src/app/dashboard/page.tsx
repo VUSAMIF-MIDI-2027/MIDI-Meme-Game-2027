@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import { useAuth } from "@clerk/react";
 import { useRouter } from "next/navigation";
 
@@ -19,7 +20,7 @@ export default function DashboardPage() {
         if (isLoaded && !isSignedIn) router.replace("/login");
     }, [isLoaded, isSignedIn, router]);
 
-    if (!isLoaded || !isSignedIn) return null;
+    if (!isLoaded || !isSignedIn) return <LoadingScreen />;
 
     return (
         <section className="relative isolate flex min-h-[calc(100svh-4.25rem)] flex-col items-center justify-center overflow-hidden px-6 py-20 text-center text-white">

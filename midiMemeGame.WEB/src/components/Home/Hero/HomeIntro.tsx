@@ -30,7 +30,7 @@ export default function HomeIntro() {
                     id="hero-title"
                     className="mt-6 text-[clamp(42px,11.6vw,68px)] leading-[1.08] font-extrabold tracking-[-0.035em] [&>span]:block sm:mt-5 sm:text-[clamp(52px,6vw,80px)] sm:leading-[1.02]"
                 >
-                    <span>{t.titleWhite}</span>
+                                        <span>{t.titleWhite}</span>
                     <span className="text-midi-blue">{t.titleBlue}</span>
                 </h1>
                 <p className="mx-auto mt-6 max-w-187.5 text-base leading-[1.65] text-pretty text-[#afb4ba] sm:mt-6.5 sm:text-lg sm:leading-[1.7]">

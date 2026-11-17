@@ -1,6 +1,7 @@
 "use client"
 
-import { useLanguage } from "@/context/LanguageContext";
+
+import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import { useAuth } from "@clerk/react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -8,7 +9,7 @@ import { AuthPanel } from "@/components/Auth/AuthPanel";
 import { AuthHero } from "@/components/Auth/AuthHero";
 
 export default function LoginPage() {
-    const { lang } = useLanguage();
+
     const { isLoaded, isSignedIn } = useAuth();
     const router = useRouter();
 
@@ -17,7 +18,7 @@ export default function LoginPage() {
     }, [isLoaded, isSignedIn, router]);
 
     if (!isLoaded || isSignedIn) {
-        return <p role="status" className="p-12 text-center text-text-muted">{lang === "lt" ? "Kraunama…" : "Loading…"}</p>;
+        return <LoadingScreen />;
     }
 
     return (

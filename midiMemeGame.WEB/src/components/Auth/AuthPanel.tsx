@@ -23,7 +23,7 @@ export function AuthPanel() {
                             : "border-transparent text-[#6f7579]"
                         }`}
                 >
-                    {lang === "lt" ? "Registruotis" : "Register"}
+                    {t.registerTab}
                 </button>
 
                 <button
@@ -34,7 +34,7 @@ export function AuthPanel() {
                             : "border-transparent text-[#6f7579]"
                         }`}
                 >
-                    {lang === "lt" ? "Prisijungti" : "Sign in"}
+                    {t.loginTab}
                 </button>
             </div>
 

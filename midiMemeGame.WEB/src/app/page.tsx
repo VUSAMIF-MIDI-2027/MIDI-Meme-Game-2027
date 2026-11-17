@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import { useAuth } from "@clerk/react";
 import { useRouter } from "next/navigation";
 import { ArrowDown } from "lucide-react";
@@ -20,7 +21,7 @@ export default function Home() {
         if (isLoaded && isSignedIn) router.replace("/dashboard");
     }, [isLoaded, isSignedIn, router]);
 
-    if (!isLoaded || isSignedIn) return null;
+    if (!isLoaded || isSignedIn) return <LoadingScreen />;
 
     return (
         <div className="flex flex-1 flex-col bg-black text-white">

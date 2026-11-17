@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@clerk/react";
 import { useLanguage } from "@/context/LanguageContext";
+import { LoadingScreen } from "@/components/Loading/LoadingScreen";
+import { LogoutButton } from "./LogoutButton";
+import { accountText } from "./pageText";
 import { syncUser } from "@/services/userService";
 
 export function UserSync() {
@@ -17,8 +20,8 @@ export function UserSync() {
 function SignedInUserSync() {
     const { getToken } = useAuth();
     const { lang } = useLanguage();
-    const [failed, setFailed] = useState(false);
-
+    const t = accountText[lang];
+    const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
     const [attempt, setAttempt] = useState(0);
 
@@ -37,11 +40,11 @@ function SignedInUserSync() {
 
                 await syncUser(token, signal);
                 if (!controller.signal.aborted) {
-                    setFailed(false);
+                    setStatus("success");
 
                 }
             } catch {
-                if (!controller.signal.aborted) setFailed(true);
+                if (!controller.signal.aborted) setStatus("error");
             }
         }
 
@@ -49,25 +52,25 @@ function SignedInUserSync() {
         return () => controller.abort();
     }, [getToken, attempt]);
 
-    if (!failed) return null;
+    if (status === "loading") return <LoadingScreen message="preparingAccount" overlay />;
+    if (status === "success") return null;
 
     return (
-        <div role="alert" className="fixed bottom-4 left-4 right-4 z-50 mx-auto flex max-w-xl items-center justify-between gap-4 rounded-xl border border-[#0075b5] bg-[#171717] p-4 text-sm text-white shadow-lg">
+        <div role="alert" className="fixed inset-x-0 bottom-0 top-17 z-40 flex flex-col items-center justify-center gap-5 bg-page-background px-6 text-center text-white">
             <p>
-                {lang === "lt"
-                    ? "Nepavyko paruošti tavo paskyros. Pabandyk dar kartą."
-                    : "We couldn't prepare your account. Please try again."}
+                {t.syncFailed}
             </p>
             <button
                 type="button"
                 className="shrink-0 rounded-lg bg-[#0075b5] px-4 py-2 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 onClick={() => {
-                    setFailed(false);
+                    setStatus("loading");
                     setAttempt(value => value + 1);
                 }}
             >
-                {lang === "lt" ? "Bandyti dar kartą" : "Try again"}
+                {t.retry}
             </button>
+            <LogoutButton />
         </div>
     );
 }

@@ -2,7 +2,8 @@
 
 import { useLanguage } from "@/context/LanguageContext";
 import { text } from "@/app/pageText";
-import { ArrowRight, ArrowUpRight, Clock } from "lucide-react";
+import Image from "next/image";
+import { ArrowUpRight, Clock } from "lucide-react";
 import Countdown from "./Countdown";
 import Link from "next/link";
 
@@ -21,7 +22,17 @@ export default function EventCountdown() {
             >
                 {t.startsSoon}
             </h2>
-            <Countdown />
+            <div className="relative flow-root">
+                <Image
+                    src="/cats/sleepy.svg"
+                    alt=""
+                    width={224}
+                    height={224}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -top-11 -left-6 z-10 h-auto w-32 select-none sm:-top-23 sm:-left-11 sm:w-56"
+                />
+                <Countdown />
+            </div>
             <p className="mt-5.75 flex flex-wrap items-center justify-center gap-1.25 text-base font-bold sm:gap-1.75 sm:text-[19px]">
                 <Clock
                     aria-hidden="true"

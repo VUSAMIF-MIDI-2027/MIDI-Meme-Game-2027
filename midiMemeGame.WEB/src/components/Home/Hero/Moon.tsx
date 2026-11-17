@@ -2,7 +2,7 @@ import Image from "next/image";
 import moon from "#/public/images/moon-current.webp";
 
 export function Moon() {
-  return (
+  return (<>
     <Image
       loading="eager"
       src={moon}
@@ -18,6 +18,15 @@ export function Moon() {
         sm:right-[max(-230px,calc((100vw-1800px)/2-230px))]
       `}
     />
+    <Image
+      src="/cats/kosmonautas.svg"
+      alt=""
+      aria-hidden="true"
+      width={180}
+      height={180}
+      className="pointer-events-none absolute top-24 right-0 z-0 h-auto w-20 -rotate-12 select-none sm:top-[28%] sm:right-2 sm:w-36 lg:right-8 lg:w-44"
+    />
+    </>
   );
 }
 
