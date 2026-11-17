@@ -12,7 +12,6 @@ import Tutorial from "@/components/Home/Tutorial/Tutorial";
 import { tutorialText } from "@/components/Home/Tutorial/tutorialText";
 import { useLanguage } from "@/context/LanguageContext";
 import YourMemes from "@/components/Home/Your-Memes/YourMemes";
-import { yourMemesText } from "@/components/Home/Your-Memes/yourMemesText";
 
 export default function Home() {
   const { lang } = useLanguage();
