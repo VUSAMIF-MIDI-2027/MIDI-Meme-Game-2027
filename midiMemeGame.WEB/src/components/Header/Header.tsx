@@ -65,7 +65,7 @@ export function Header() {
             </div>
 
             {isLoaded && isSignedIn && <LogoutButton />}
-            {isLoaded && !isSignedIn && <>
+            {!isSignedIn && !pathname.startsWith("/dashboard") && <>
             <div className="flex items-center gap-3 sm:gap-6 min-[1100px]:hidden">
 
 
@@ -110,9 +110,9 @@ export function Header() {
                                     key={href}
                                     href={href}
                                     aria-current={active ? "page" : undefined}
-                                    className={`rounded px-4 py-1.75 text-sm font-medium uppercase tracking-[0.08em] transition-all duration-150 ${active
-                                        ? "bg-[#080808] font-bold text-midi-blue"
-                                        : "text-midi-gray hover:bg-[#0d0d0d]"
+                                    className={`rounded px-4 py-1.75 text-sm font-medium uppercase tracking-[0.08em] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70cfff] ${active
+                                        ? "bg-[#0075b5]/20 font-bold text-[#70cfff]"
+                                        : "text-[#e5e7eb] hover:bg-white/10 hover:text-white"
                                         }`}
                                 >
                                     {label[lang]}

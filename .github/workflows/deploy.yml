@@ -231,8 +231,29 @@ jobs:
 
           "${compose[@]}" ps -a
 
-          curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:5001/api/health
-          curl --fail --silent --show-error --output /dev/null --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:4000/
+          wait_for_http() {
+              local url="$1"
+              local attempt
+              local status
+
+              for attempt in {1..30}; do
+                  if status=$(curl --silent --show-error --output /dev/null \
+                      --write-out '%{http_code}' --connect-timeout 2 --max-time 5 "$url") \
+                      && [[ "$status" == 2* ]]; then
+                      echo "Ready: $url (HTTP $status)"
+                      return 0
+                  fi
+
+                  echo "Waiting for $url ($attempt/30)"
+                  sleep 2
+              done
+
+              echo "Application did not become ready: $url" >&2
+              return 1
+          }
+
+          wait_for_http http://127.0.0.1:5001/api/health
+          wait_for_http http://127.0.0.1:4000/
 
           rm -- images.tar.gz
           REMOTE
