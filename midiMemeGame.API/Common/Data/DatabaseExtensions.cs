@@ -18,11 +18,11 @@ public static class DatabaseExtensions
     public static void InitializeDatabase(this WebApplication app)
     {
         Directory.CreateDirectory("App_Data");
-        
+
         using var scope = app.Services.CreateScope();
 
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        db.Database.EnsureCreated();
+        db.Database.Migrate();
     }
 }

@@ -43,6 +43,7 @@ export const authAppearance: AuthAppearance = {
         headerSubtitle: { color: "#898f93", fontSize: "0.9375rem" },
         formFieldLabel: { color: "#ffffff", fontWeight: 600 },
         formFieldInput: styles.input,
+        otpCodeFieldInput: styles.otpInput,
         formFieldInputGroup: styles.inputGroup,
         formButtonPrimary: styles.primaryButton,
         socialButtonsBlockButton: {

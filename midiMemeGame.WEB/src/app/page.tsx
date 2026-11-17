@@ -1,6 +1,9 @@
 "use client";
 
-import { ArrowDown, Link } from "lucide-react";
+import { useEffect } from "react";
+import { useAuth } from "@clerk/react";
+import { useRouter } from "next/navigation";
+import { ArrowDown } from "lucide-react";
 import { Moon } from "@/components/Home/Hero/Moon";
 import HomeIntro from "@/components/Home/Hero/HomeIntro";
 import EventCountdown from "@/components/Home/Countdown/EventCountdown";
@@ -10,6 +13,14 @@ import { useLanguage } from "@/context/LanguageContext";
 
 export default function Home() {
     const { lang } = useLanguage();
+    const { isLoaded, isSignedIn } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (isLoaded && isSignedIn) router.replace("/dashboard");
+    }, [isLoaded, isSignedIn, router]);
+
+    if (!isLoaded || isSignedIn) return null;
 
     return (
         <div className="flex flex-1 flex-col bg-black text-white">

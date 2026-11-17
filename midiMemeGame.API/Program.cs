@@ -1,7 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Data;
 using MidiMemeGame.Api.Common.Extensions;
-using MidiMemeGame.Api.Data;
+using MidiMemeGame.Api.Common.Settings;
 using MidiMemeGame.Api.Middleware;
 using Serilog;
 
@@ -25,19 +24,13 @@ namespace midiMemeGame.API
                 // Add services to the container.
 
                 builder.Services.AddControllers();
-                builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
-                    policy.WithOrigins(
-                            "http://localhost:3000",
-                            "http://127.0.0.1:3000",
-                            "https://midi.lt",
-                            "https://www.naktis.midi.lt")
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()));
-
                 builder.Services.AddEndpointsApiExplorer();
                 builder.Services.AddSwaggerGen();
-                builder.Services.AddAppSettings(builder.Configuration);
 
+                builder.Services.AddAppSettings(builder.Configuration);
+                builder.Services.AddAppServices();
+                builder.Services.AddAppAuthentication();
+                builder.Services.AddAppCors();
                 builder.Services.AddDatabase(builder.Configuration);
 
                 var app = builder.Build();
@@ -50,13 +43,14 @@ namespace midiMemeGame.API
                 // Configure the HTTP request pipeline.
                 // if (app.Environment.IsDevelopment())
                 // {
-                    app.UseSwagger();
-                    app.UseSwaggerUI();
+                app.UseSwagger();
+                app.UseSwaggerUI();
                 // }
 
                 app.UseHttpsRedirection();
 
                 app.UseCors("Frontend");
+                app.UseAuthentication();
                 app.UseAuthorization();
 
                 app.MapControllers();

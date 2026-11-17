@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@clerk/react";
+import { LogoutButton } from "@/components/Auth/LogoutButton";
 import { MobileMenu } from "../MobileMenu";
 
 import logoMidiBlack from "#/public/logos/MIDI-Logotipas-naktis.png"
@@ -25,10 +27,11 @@ export function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
     const { lang } = useLanguage();
     const t = text[lang];
+    const { isLoaded, isSignedIn } = useAuth();
+    const navigationLinks = links.map(link => ({ ...link, href: link.href === "/login" && isSignedIn ? "/dashboard" : link.href }));
 
     const pathname = usePathname();
 
-    const validRoutes = ["/", "/meme-game", "/activities", "/naktis-su-midi"];
 
     // const isNotFound = !validRoutes.some((route) =>
     //     isCurrentPath(pathname, route)
@@ -36,7 +39,7 @@ export function Header() {
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 flex h-17 items-center justify-between border-b border-midi-charcoal bg-midi-black px-4 sm:px-10">
-            <Link href="/" className="flex items-center gap-3">
+            <Link href={isSignedIn ? "/dashboard" : "/"} className="flex items-center gap-3">
                 <Image loading="eager"
                     src={logoMidiBlack}
                     alt="MIDI logo"
@@ -61,7 +64,10 @@ export function Header() {
                 </span>
             </div>
 
+            {isLoaded && isSignedIn && <LogoutButton />}
+            {isLoaded && !isSignedIn && <>
             <div className="flex items-center gap-3 sm:gap-6 min-[1100px]:hidden">
+
 
                 <LangToggle />
 
@@ -83,13 +89,13 @@ export function Header() {
             {/* COMMENTED OUT SO AS TO EASILY ADD IF ANY NEEDED LATER */}
             <MobileMenu
                 menuOpen={menuOpen}
-                links={links}
+                links={navigationLinks}
                 onClose={() => setMenuOpen(false)}
             />
 
             <div className="hidden items-center gap-2 min-[1100px]:flex">
                 <nav className="flex gap-1 ">
-                    {links
+                    {navigationLinks
                         // .filter(({ href }) => {
                         //     if (isNotFound) return false;
 
@@ -116,9 +122,11 @@ export function Header() {
                         })}
                 </nav>
 
+
                 <LangToggle />
             </div>
 
+            </>}
         </header>
     );
 }
