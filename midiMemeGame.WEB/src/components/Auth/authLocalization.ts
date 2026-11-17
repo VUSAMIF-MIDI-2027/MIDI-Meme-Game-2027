@@ -102,6 +102,14 @@ export const ltLT = {
     },
     signIn: {
         ...enUS.signIn,
+        newDeviceVerificationNotice: "Jungiesi iš naujo įrenginio. Kad apsaugotume tavo paskyrą, patvirtink prisijungimą el. paštu gautu kodu.",
+        emailCodeMfa: {
+            ...enUS.signIn?.emailCodeMfa,
+            title: "Patvirtink prisijungimą",
+            subtitle: "Įvesk el. paštu atsiųstą patvirtinimo kodą.",
+            formTitle: "Patvirtinimo kodas",
+            resendButton: "Negavai kodo? Siųsti dar kartą",
+        },
         start: {
             ...enUS.signIn?.start,
             title: "Smagu, kad grįžai",
