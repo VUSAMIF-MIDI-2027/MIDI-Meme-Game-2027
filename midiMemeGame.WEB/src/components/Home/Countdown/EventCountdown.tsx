@@ -29,6 +29,7 @@ export default function EventCountdown() {
                     width={224}
                     height={224}
                     aria-hidden="true"
+                    loading="eager"
                     className="pointer-events-none absolute -top-11 -left-6 z-10 h-auto w-32 select-none sm:-top-23 sm:-left-11 sm:w-56"
                 />
                 <Countdown />
