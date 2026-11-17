@@ -100,3 +100,16 @@
     color: #b2b7bb !important;
     cursor: not-allowed;
 }
+
+.actionLink:disabled,
+.actionLink[aria-disabled="true"] {
+    color: #b2b7bb !important;
+    opacity: 1 !important;
+    text-decoration: none;
+}
+
+.alertText {
+    color: #f5d4a3 !important;
+    font-size: 0.9375rem !important;
+    line-height: 1.5 !important;
+}

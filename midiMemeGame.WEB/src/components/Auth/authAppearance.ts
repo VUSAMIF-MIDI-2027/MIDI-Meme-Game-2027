@@ -57,6 +57,8 @@ export const authAppearance: AuthAppearance = {
         footerAction: { display: "none" },
         formFieldAction: styles.actionLink,
         otpCodeFieldResendButton: styles.actionLink,
+        formResendCodeLink: styles.actionLink,
+        alertText: styles.alertText,
         identityPreviewText: { color: "#ffffff" },
     },
 };
