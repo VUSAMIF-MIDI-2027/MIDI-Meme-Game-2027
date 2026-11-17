@@ -26,8 +26,8 @@ export default function LoginPage() {
 
             <AuthHero />
 
-            <div className="flex w-full flex-col items-center justify-center bg-auth-panel-background px-6 py-12 lg:min-h-[calc(100svh-4.25rem)] lg:px-12 lg:py-16">
-                <div className="w-full max-w-[440px]">
+            <div className="flex min-w-0 w-full flex-col items-center justify-center bg-auth-panel-background px-4 py-8 sm:px-6 sm:py-12 lg:min-h-[calc(100svh-4.25rem)] lg:px-8 lg:py-16 xl:px-12">
+                <div className="min-w-0 w-full max-w-[440px]">
                     <AuthPanel />
                 </div>
             </div>
