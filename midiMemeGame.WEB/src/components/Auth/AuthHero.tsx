@@ -16,7 +16,7 @@ export function AuthHero() {
             className={`
                     relative isolate flex flex-col overflow-hidden
                     bg-auth-hero-background px-6 py-10
-                    lg:sticky lg:top-17 lg:h-[calc(100svh-4.25rem)]
+                    lg:sticky lg:top-17 lg:min-h-[calc(100svh-4.25rem)]
                     lg:px-16 lg:py-16 2xl:px-24 2xl:py-24
                 `}
         >
@@ -35,14 +35,6 @@ export function AuthHero() {
                 className="pointer-events-none absolute -bottom-16 -right-20 -z-10 size-[260px] object-contain opacity-35 lg:-bottom-24 lg:-right-28 lg:size-[460px] 2xl:size-[720px] 2xl:-right-36 2xl:-bottom-40"
             />
 
-            <Image
-                src="/cats/kosmonautas.svg"
-                alt=""
-                aria-hidden="true"
-                width={240}
-                height={240}
-                className="pointer-events-none absolute right-4 bottom-14 z-0 h-auto w-28 -rotate-12 select-none lg:right-16 lg:bottom-64 lg:w-44 2xl:right-36 2xl:bottom-[420px] 2xl:w-60"
-            />
             <div className={ui.contentLayer}>
                 <p className={ui.eyebrow}>
                     {t.miniTitle}
@@ -60,7 +52,19 @@ export function AuthHero() {
                     {t.description}
                 </p>
             </div>
-            <div className="relative z-10 mt-auto flex flex-wrap items-center gap-3 pt-32 lg:pt-8">
+            <div
+                aria-hidden="true"
+                className="pointer-events-none relative z-0 mt-6 flex min-h-24 shrink-0 justify-end pr-4 lg:mt-auto lg:min-h-36"
+            >
+                <Image
+                    src="/cats/kosmonautas.svg"
+                    alt=""
+                    width={240}
+                    height={240}
+                    className="h-auto w-28 -rotate-12 self-center select-none lg:w-44 2xl:w-60"
+                />
+            </div>
+            <div className="relative z-10 flex flex-wrap items-center gap-3 pt-6 lg:pt-8">
                 <Clock
                     aria-hidden="true"
                     className="size-4 shrink-0 text-midi-blue"
