@@ -10,6 +10,9 @@ const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const OBSTACLE_GAP = 6;
 const POSITION_SEARCH_STEP = 8;
 const MAX_FRAME_SECONDS = 0.05;
+const TURN_LOOKAHEAD_SECONDS = 1.2;
+const TURN_SMOOTHING = 2;
+const FLIGHT_SPEED = { x: 17, y: 11 };
 
 // Only the visible pixels collide; the SVG has transparent margins.
 const SPRITE_BOUNDS = { left: 0.175, right: 0.9, top: 0.2, bottom: 0.925 };
@@ -60,7 +63,8 @@ function startFlyingCatMotion(
   const mobileScreen = window.matchMedia(MOBILE_QUERY);
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
   const position = { x: 0, y: 0 };
-  const velocity = { x: -18, y: 12 };
+  const targetVelocity = { x: -FLIGHT_SPEED.x, y: FLIGHT_SPEED.y };
+  const velocity = { ...targetVelocity };
   let maxX = 0;
   let maxY = 0;
   let catSize = 100;
@@ -90,16 +94,15 @@ function startFlyingCatMotion(
       initialized = true;
     }
 
-    if (position.x <= 0) velocity.x = Math.abs(velocity.x);
-    if (position.x >= maxX) velocity.x = -Math.abs(velocity.x);
-    if (position.y <= 0) velocity.y = Math.abs(velocity.y);
-    if (position.y >= maxY) velocity.y = -Math.abs(velocity.y);
-
     position.x = Math.max(0, Math.min(maxX, position.x));
     position.y = Math.max(0, Math.min(maxY, position.y));
 
-    // Integer coordinates keep the pixel artwork sharp.
-    cat.style.transform = `translate(${Math.round(position.x)}px, ${Math.round(position.y)}px)`;
+    // Keep fractional positions so slow flight does not jump one pixel at a time.
+    cat.style.transform = `translate3d(${position.x.toFixed(3)}px, ${position.y.toFixed(3)}px, 0)`;
+  }
+
+  function isBlocked(x: number, y: number) {
+    return x < 0 || x > maxX || y < 0 || y > maxY || hitsObstacle(x, y);
   }
 
   function findNearestClearPosition(): Position | undefined {
@@ -143,13 +146,39 @@ function startFlyingCatMotion(
       : 0;
     previousFrameTime = now;
 
+    // Start turning before contact, and avoid flipping directions every frame
+    // when a narrow gap blocks both lookahead probes.
+    const lookaheadX = targetVelocity.x * TURN_LOOKAHEAD_SECONDS;
+    if (
+      isBlocked(position.x + lookaheadX, position.y) &&
+      !isBlocked(position.x - lookaheadX, position.y)
+    ) {
+      targetVelocity.x *= -1;
+    }
+
+    const lookaheadY = targetVelocity.y * TURN_LOOKAHEAD_SECONDS;
+    if (
+      isBlocked(position.x, position.y + lookaheadY) &&
+      !isBlocked(position.x, position.y - lookaheadY)
+    ) {
+      targetVelocity.y *= -1;
+    }
+
+    const turnAmount = 1 - Math.exp(-TURN_SMOOTHING * elapsed);
+    velocity.x += (targetVelocity.x - velocity.x) * turnAmount;
+    velocity.y += (targetVelocity.y - velocity.y) * turnAmount;
+
     const nextX = position.x + velocity.x * elapsed;
-    if (hitsObstacle(nextX, position.y)) velocity.x *= -1;
-    else position.x = nextX;
+    if (isBlocked(nextX, position.y)) {
+      targetVelocity.x = velocity.x > 0 ? -FLIGHT_SPEED.x : FLIGHT_SPEED.x;
+      velocity.x = 0;
+    } else position.x = nextX;
 
     const nextY = position.y + velocity.y * elapsed;
-    if (hitsObstacle(position.x, nextY)) velocity.y *= -1;
-    else position.y = nextY;
+    if (isBlocked(position.x, nextY)) {
+      targetVelocity.y = velocity.y > 0 ? -FLIGHT_SPEED.y : FLIGHT_SPEED.y;
+      velocity.y = 0;
+    } else position.y = nextY;
 
     paintPosition();
     animationFrame = requestAnimationFrame(animate);
