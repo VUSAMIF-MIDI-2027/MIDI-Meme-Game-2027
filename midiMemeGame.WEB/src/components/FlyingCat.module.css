@@ -26,6 +26,8 @@
   width: 100%;
   height: auto;
   image-rendering: pixelated;
+  transform: rotate(var(--flight-rotation, 0deg));
+  transform-origin: center;
   pointer-events: none;
 }
 

@@ -13,6 +13,7 @@ const MAX_FRAME_SECONDS = 0.05;
 const TURN_LOOKAHEAD_SECONDS = 1.2;
 const TURN_SMOOTHING = 2;
 const FLIGHT_SPEED = { x: 17, y: 11 };
+const ROTATION_DEGREES_PER_SECOND = 12;
 
 // Only the visible pixels collide; the SVG has transparent margins.
 const SPRITE_BOUNDS = { left: 0.175, right: 0.9, top: 0.2, bottom: 0.925 };
@@ -74,12 +75,14 @@ function startFlyingCatMotion(
   let visible = true;
   let animationFrame = 0;
   let previousFrameTime = 0;
+  let rotation = 0;
 
   function hitsObstacle(x: number, y: number) {
-    const left = x + catSize * SPRITE_BOUNDS.left;
-    const right = x + catSize * SPRITE_BOUNDS.right;
-    const top = y + catSize * SPRITE_BOUNDS.top;
-    const bottom = y + catSize * SPRITE_BOUNDS.bottom;
+    const rotationMargin = catSize * 0.07;
+    const left = x + catSize * SPRITE_BOUNDS.left - rotationMargin;
+    const right = x + catSize * SPRITE_BOUNDS.right + rotationMargin;
+    const top = y + catSize * SPRITE_BOUNDS.top - rotationMargin;
+    const bottom = y + catSize * SPRITE_BOUNDS.bottom + rotationMargin;
 
     return obstacles.some((obstacle) => (
       left < obstacle.right && right > obstacle.left &&
@@ -168,6 +171,9 @@ function startFlyingCatMotion(
     velocity.x += (targetVelocity.x - velocity.x) * turnAmount;
     velocity.y += (targetVelocity.y - velocity.y) * turnAmount;
 
+    // One continuous full turn every 30 seconds.
+    rotation = (rotation + ROTATION_DEGREES_PER_SECOND * elapsed) % 360;
+    cat.style.setProperty("--flight-rotation", `${rotation.toFixed(3)}deg`);
     const nextX = position.x + velocity.x * elapsed;
     if (isBlocked(nextX, position.y)) {
       targetVelocity.x = velocity.x > 0 ? -FLIGHT_SPEED.x : FLIGHT_SPEED.x;
@@ -187,6 +193,10 @@ function startFlyingCatMotion(
   function updatePlayback() {
     cancelAnimationFrame(animationFrame);
     previousFrameTime = 0;
+    if (reducedMotion.matches) {
+      rotation = 0;
+      cat.style.setProperty("--flight-rotation", "0deg");
+    }
 
     if (visible && !reducedMotion.matches && !document.hidden) {
       animationFrame = requestAnimationFrame(animate);
