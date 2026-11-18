@@ -13,17 +13,17 @@ namespace MidiMemeGame.Api.Services;
 public class ClerkUserService
 {
     private readonly HttpClient _httpClient;
-    private readonly AppDbContext _db;
+    private readonly UserQueries _userQueries;
     private readonly ILogger<ClerkUserService> _logger;
 
     public ClerkUserService(
         HttpClient httpClient,
-        AppDbContext db,
+        UserQueries userQueries,
         ILogger<ClerkUserService> logger
     )
     {
         _httpClient = httpClient;
-        _db = db;
+        _userQueries = userQueries;
         _logger = logger;
     }
 
@@ -88,14 +88,12 @@ public class ClerkUserService
                 LastClerkUpdatedAt = clerkUser.UpdatedAt.Value
             };
 
-            await UserQueries.UpsertFromClerkAsync(
-                _db,
+            await _userQueries.UpsertFromClerkAsync(
                 user,
                 cancellationToken
             );
 
-            var userId = await UserQueries.GetActiveIdByClerkIdAsync(
-                _db,
+            var userId = await _userQueries.GetActiveIdByClerkIdAsync(
                 clerkId,
                 cancellationToken
             );

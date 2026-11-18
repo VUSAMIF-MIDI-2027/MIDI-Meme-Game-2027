@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services;
 
@@ -26,6 +27,9 @@ public static class ServiceCollectionExtensions
                     settings.SecretKey
                 );
         });
+
+        services.AddScoped<UserQueries>();
+        services.AddScoped<SourcePhotoQueries>();
 
         return services;
     }
@@ -86,7 +90,8 @@ public static class ServiceCollectionExtensions
                     ClockSkew = TimeSpan.FromSeconds(5),
 
                     ValidateAudience = false,
-                    NameClaimType = "sub"
+                    NameClaimType = "sub",
+                    RoleClaimType = "role"
                 };
 
                 options.Events = new JwtBearerEvents

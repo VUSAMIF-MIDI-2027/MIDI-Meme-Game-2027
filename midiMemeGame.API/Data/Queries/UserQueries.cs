@@ -1,15 +1,28 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using MidiMemeGame.Api.Common.Constants;
+using MidiMemeGame.Api.Common.Enums;
+using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Models;
 
 namespace MidiMemeGame.Api.Data.Queries;
 
-public static class UserQueries
+public class UserQueries
 {
-    public static Task<int> UpsertFromClerkAsync(
+    private readonly AppDbContext _db;
+    private readonly ILogger<UserQueries> _logger;
+
+    public UserQueries(
         AppDbContext db,
+        ILogger<UserQueries> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
+
+    public async Task<Result<int>> UpsertFromClerkAsync(
         User user,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         FormattableString query =
             $"""
@@ -44,17 +57,34 @@ public static class UserQueries
                     AND "Users"."LastClerkUpdatedAt" < {user.LastClerkUpdatedAt};
             """;
 
-        return db.Database.ExecuteSqlInterpolatedAsync(
-            query,
-            cancellationToken
-        );
+        try
+        {
+            var affectedRows = await _db.Database.ExecuteSqlInterpolatedAsync(
+                query,
+                cancellationToken);
+
+            return affectedRows;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_EXCEPTION;
+        }
     }
-    public static Task<int> MarkDeletedFromClerkAsync(
-        AppDbContext db,
+
+    public async Task<Result<int>> MarkDeletedFromClerkAsync(
         string clerkId,
         CancellationToken cancellationToken)
     {
-        FormattableString query = $"""
+        FormattableString query =
+            $"""
             UPDATE "Users"
             SET
                 "IsDeleted" = 1
@@ -62,20 +92,61 @@ public static class UserQueries
                 "ClerkId" = {clerkId};
             """;
 
-        return db.Database.ExecuteSqlInterpolatedAsync(
-            query,
-            cancellationToken
-        );
+        try
+        {
+            var affectedRows = await _db.Database.ExecuteSqlInterpolatedAsync(
+                query,
+                cancellationToken);
+
+            return affectedRows;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_EXCEPTION;
+        }
     }
 
-    public static Task<int?> GetActiveIdByClerkIdAsync(
-        AppDbContext db,
-        string clerkId,
-        CancellationToken cancellationToken)
+    public async Task<Result<int>> GetActiveIdByClerkIdAsync(
+    string clerkId,
+    CancellationToken cancellationToken)
     {
-        return db.Users
-            .Where(user => user.ClerkId == clerkId && !user.IsDeleted)
-            .Select(user => (int?)user.Id)
-            .SingleOrDefaultAsync(cancellationToken);
+        FormattableString query =
+            $"""
+        SELECT "Id" AS "Value"
+        FROM "Users"
+        WHERE
+            "ClerkId" = {clerkId}
+            AND "IsDeleted" = 0
+        """;
+
+        try
+        {
+            var userId = await _db.Database.SqlQuery<int?>(query).SingleOrDefaultAsync(cancellationToken);
+
+            if (userId is null)
+                return ErrorType.NOT_FOUND;
+
+            return userId.Value;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_EXCEPTION;
+        }
     }
 }
