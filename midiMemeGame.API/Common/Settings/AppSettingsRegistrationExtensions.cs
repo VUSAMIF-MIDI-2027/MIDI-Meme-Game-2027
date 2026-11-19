@@ -1,4 +1,7 @@
 using System;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Options;
 using MidiMemeGame.Api.Models.Settings;
 
 namespace MidiMemeGame.Api.Common.Settings;
@@ -47,6 +50,20 @@ public static class AppSettingsRegistrationExtensions
             .Validate(settings => settings.MaxFileSizeBytes > 0 && settings.MaxRequestSizeBytes >= settings.MaxFileSizeBytes,
                 "PhotoUpload size limits are invalid")
             .ValidateOnStart();
+
+        services.AddOptions<KestrelServerOptions>()
+            .Configure<IOptions<PhotoUploadSettings>>((options, upload) =>
+            {
+                options.Limits.MaxRequestBodySize =
+                    upload.Value.MaxRequestSizeBytes;
+            });
+
+        services.AddOptions<FormOptions>()
+            .Configure<IOptions<PhotoUploadSettings>>((options, upload) =>
+            {
+                options.MultipartBodyLengthLimit =
+                    upload.Value.MaxRequestSizeBytes;
+            });
 
         return services;
     }

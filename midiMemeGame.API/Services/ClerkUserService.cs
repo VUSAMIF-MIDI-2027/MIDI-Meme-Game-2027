@@ -1,9 +1,7 @@
-using System;
 using System.Net;
 using System.Text.Json;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
-using MidiMemeGame.Api.Data;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Clerk;
 using MidiMemeGame.Api.Models;
@@ -41,13 +39,13 @@ public class ClerkUserService
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogWarning("Clerk user {ClerkId} was not found.",clerkId);
+                _logger.LogWarning("Clerk user {ClerkId} was not found.", clerkId);
                 return ErrorType.NOT_FOUND;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Clerk user request failed with status {StatusCode}.",(int)response.StatusCode);
+                _logger.LogError("Clerk user request failed with status {StatusCode}.", (int)response.StatusCode);
 
                 return ErrorType.CLERK_API_UNAVAILABLE;
             }
@@ -71,7 +69,7 @@ public class ClerkUserService
                 || clerkUser.CreatedAt == null
                 || clerkUser.UpdatedAt == null)
             {
-                _logger.LogWarning("Clerk returned incomplete user data for {ClerkId}.",clerkId);
+                _logger.LogWarning("Clerk returned incomplete user data for {ClerkId}.", clerkId);
 
                 return ErrorType.CLERK_USER_DATA_INVALID;
             }
@@ -88,27 +86,25 @@ public class ClerkUserService
                 LastClerkUpdatedAt = clerkUser.UpdatedAt.Value
             };
 
-            await _userQueries.UpsertFromClerkAsync(
+            var upsertResult = await _userQueries.UpsertFromClerkAsync(
                 user,
                 cancellationToken
             );
 
-            var userId = await _userQueries.GetActiveIdByClerkIdAsync(
-                clerkId,
-                cancellationToken
-            );
+            if (upsertResult.IsError)
+                return upsertResult.Error;
 
-            if (userId == null)
+            var userIdResult = await _userQueries.GetActiveIdByClerkIdAsync(clerkId, cancellationToken);
+
+            if (userIdResult.IsError)
             {
-                _logger.LogWarning(
-                    "Local user {ClerkId} is unavailable after synchronization.",
-                    clerkId
-                );
+                if (userIdResult.Error == ErrorType.NOT_FOUND)
+                    return ErrorType.USER_ACCESS_DENIED;
 
-                return ErrorType.USER_ACCESS_DENIED;
+                return userIdResult.Error;
             }
 
-            return userId.Value;
+            return userIdResult.Value;
         }
         catch (HttpRequestException exception)
         {

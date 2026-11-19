@@ -31,33 +31,43 @@ namespace MidiMemeGame.Api.Controllers
                 cancellationToken: cancellationToken);
 
             if (result.IsError)
-            {
                 return StatusCode(
                     StatusCodes.Status500InternalServerError, ErrorResponse.Create(result.Error));
-            }
 
-            return Ok(result.Value.Select(PhotoResponse.From));
+            return Ok(result.Value.Select(photo => new PhotoResponse
+            {
+                Id = photo.Id
+            }));
         }
 
         [HttpGet("{id:int}/file")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetPhotoFile(int id, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetPhotoFile(
+            int id,
+            CancellationToken cancellationToken)
         {
-            var result = await _sourcePhotoQueries.GetFileAccessAsync(
-                id, User.Identity?.IsAuthenticated == true, cancellationToken);
-            if (result.IsError) return result.Error == ErrorType.NOT_FOUND
-                ? NotFound(ErrorResponse.Create(result.Error))
-                : StatusCode(StatusCodes.Status500InternalServerError, ErrorResponse.Create(result.Error));
-            try
+
+            var photoResult = await _sourcePhotoQueries.GetByIdAsync(id, cancellationToken);
+
+            if (photoResult.IsError)
             {
-                var path = _photoFiles.ResolvePath(result.Value.RelativeFilePath);
-                if (!System.IO.File.Exists(path)) return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND, "The photo file is missing."));
-                return PhysicalFile(path, result.Value.ContentType);
+                if (photoResult.Error == ErrorType.NOT_FOUND)
+                    return NotFound(ErrorResponse.Create(photoResult.Error));
+
+                return StatusCode(StatusCodes.Status500InternalServerError, ErrorResponse.Create(photoResult.Error));
             }
-            catch (InvalidDataException)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ErrorResponse.Create(ErrorType.INTERNAL_SERVER_ERROR));
-            }
+
+            var photo = photoResult.Value;
+            var pathResult = _photoFiles.ResolvePath(photo.RelativeFilePath);
+
+            if (pathResult.IsError)
+                return StatusCode(StatusCodes.Status500InternalServerError, ErrorResponse.Create(pathResult.Error));
+
+            if (!System.IO.File.Exists(pathResult.Value))
+                return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
+
+            return PhysicalFile(
+                pathResult.Value,
+                photo.ContentType);
         }
     }
 }

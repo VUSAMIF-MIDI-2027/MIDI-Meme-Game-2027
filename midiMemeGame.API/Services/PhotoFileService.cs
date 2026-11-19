@@ -1,72 +1,152 @@
+using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
+using MidiMemeGame.Api.Common.Enums;
+using MidiMemeGame.Api.Common.Models;
+using MidiMemeGame.Api.Helpers;
+using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Models.Settings;
 
 namespace MidiMemeGame.Api.Services;
 
-public sealed class PhotoFileService
+public class PhotoFileService
 {
     private readonly string _root;
-    private readonly PhotoUploadSettings _upload;
+    private readonly PhotoUploadSettings _settings;
+    private readonly ILogger<PhotoFileService> _logger;
 
-    public PhotoFileService(IWebHostEnvironment environment, IOptions<FileStorageSettings> storage, IOptions<PhotoUploadSettings> upload)
+    public PhotoFileService(
+        IWebHostEnvironment environment,
+        IOptions<FileStorageSettings> storage,
+        IOptions<PhotoUploadSettings> uploadSettings,
+        ILogger<PhotoFileService> logger)
     {
-        _root = Path.GetFullPath(Path.IsPathRooted(storage.Value.RootPath)
-            ? storage.Value.RootPath
-            : Path.Combine(environment.ContentRootPath, storage.Value.RootPath));
-        _upload = upload.Value;
+        var rootPath = storage.Value.RootPath;
+
+        if (!Path.IsPathRooted(rootPath))
+            rootPath = Path.Combine(environment.ContentRootPath, rootPath);
+
+        _root = Path.GetFullPath(rootPath);
+        Directory.CreateDirectory(_root);
+
+        _settings = uploadSettings.Value;
+        _logger = logger;
     }
 
-    public long MaxFileSizeBytes => _upload.MaxFileSizeBytes;
-
-    public async Task<(string RelativePath, string ContentType, string Extension)?> SaveUploadAsync(IFormFile file, CancellationToken cancellationToken)
+    public async Task<Result<SavedPhotoFile>> SaveUploadAsync(IFormFile file, CancellationToken cancellationToken)
     {
-        if (file.Length <= 0 || file.Length > _upload.MaxFileSizeBytes) return null;
+        if (file.Length <= 0)
+            return ErrorType.PHOTO_FILE_EMPTY;
 
-        var (contentType, extension) = await DetectTypeAsync(file, cancellationToken);
-        if (contentType is null || !_upload.AllowedContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase)) return null;
+        if (file.Length > _settings.MaxFileSizeBytes)
+            return ErrorType.PHOTO_FILE_TOO_LARGE;
 
-        Directory.CreateDirectory(_root);
-        var relativePath = $"{Guid.NewGuid():N}{extension}";
-        var destination = ResolvePath(relativePath);
+        string? destination = null;
+        var fileCreated = false;
+
         try
         {
-            await using var source = file.OpenReadStream();
-            await using var target = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-            await source.CopyToAsync(target, cancellationToken);
-            return (relativePath, contentType, extension);
+            var typeResult = await PhotoFileHelper.DetectTypeAsync(file, cancellationToken);
+
+            if (typeResult.IsError)
+                return typeResult.Error;
+
+            var fileType = typeResult.Value;
+
+            if (!_settings.AllowedContentTypes.Contains(fileType.ContentType, StringComparer.OrdinalIgnoreCase))
+                return ErrorType.PHOTO_FILE_TYPE_INVALID;
+
+            var fileId = Convert.ToHexString(RandomNumberGenerator.GetBytes(6)).ToLowerInvariant();
+            var relativePath = $"{fileId}{fileType.Extension}";
+
+            var destinationResult = ResolvePath(relativePath);
+
+            if (destinationResult.IsError)
+                return destinationResult.Error;
+
+            destination = destinationResult.Value;
+
+                await using (var uploadedFile = file.OpenReadStream())
+                {
+                    await using var savedFile = new FileStream(
+                        destination,
+                        FileMode.CreateNew,
+                        FileAccess.Write,
+                        FileShare.None);
+
+                    fileCreated = true;
+
+                    await uploadedFile.CopyToAsync(
+                        savedFile,
+                        cancellationToken);
+                }
+
+            return new SavedPhotoFile
+            {
+                FileId = fileId,
+                RelativePath = relativePath,
+                ContentType = fileType.ContentType,
+                Extension = fileType.Extension
+            };
+
         }
-        catch
+        catch (Exception ex)
         {
-            if (File.Exists(destination)) File.Delete(destination);
-            throw;
+            if (fileCreated)
+                DeleteIncompleteFile(destination!);
+
+            _logger.LogError(ex, "Failed to save uploaded photo.");
+
+            return ErrorType.PHOTO_FILE_SAVE_FAILED;
         }
     }
+    public Result Delete(string relativePath)
+    {
+        try
+        {
+            var pathResult = ResolvePath(relativePath);
 
-    public string ResolvePath(string relativePath)
+            if (pathResult.IsError)
+                return pathResult.Error;
+
+            File.Delete(pathResult.Value);
+
+            return Result.Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete photo.");
+
+            return ErrorType.PHOTO_FILE_DELETE_FAILED;
+        }
+    }
+    public Result<string> ResolvePath(string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
-            throw new InvalidDataException("Invalid stored photo path.");
+            return ErrorType.PHOTO_FILE_PATH_INVALID;
+
         var fullPath = Path.GetFullPath(Path.Combine(_root, relativePath));
-        var rootPrefix = _root.EndsWith(Path.DirectorySeparatorChar) ? _root : _root + Path.DirectorySeparatorChar;
-        if (!fullPath.StartsWith(rootPrefix, StringComparison.Ordinal))
-            throw new InvalidDataException("Stored photo path is outside the storage directory.");
+
+        var rootPrefix = Path.TrimEndingDirectorySeparator(_root) + Path.DirectorySeparatorChar;
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (!fullPath.StartsWith(rootPrefix, comparison))
+            return ErrorType.PHOTO_FILE_PATH_INVALID;
+
         return fullPath;
     }
 
-    public void Delete(string relativePath)
+    private void DeleteIncompleteFile(string path)
     {
-        var path = ResolvePath(relativePath);
-        if (File.Exists(path)) File.Delete(path);
-    }
-
-    private static async Task<(string? ContentType, string Extension)> DetectTypeAsync(IFormFile file, CancellationToken cancellationToken)
-    {
-        var header = new byte[12];
-        await using var stream = file.OpenReadStream();
-        var read = await stream.ReadAsync(header.AsMemory(), cancellationToken);
-        if (read >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF) return ("image/jpeg", ".jpg");
-        if (read >= 8 && header.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 })) return ("image/png", ".png");
-        if (read >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') return ("image/webp", ".webp");
-        return (null, string.Empty);
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete incomplete photo: {Path}", path);
+        }
     }
 }

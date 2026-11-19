@@ -65,36 +65,103 @@ public class SourcePhotoQueries
         }
     }
 
-    public async Task<Result<SourcePhoto>> GetFileAccessAsync(int id, bool isAuthenticated, CancellationToken cancellationToken)
+    public async Task<Result<SourcePhoto>> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
+        FormattableString query = $"""
+            SELECT
+                "Id",
+                "FileId",
+                "OriginalFileName",
+                "RelativeFilePath",
+                "ContentType",
+                "SizeBytes",
+                "IsEnabled",
+                "UploadedAtUtc"
+            FROM "SourcePhotos"
+            WHERE "Id" = {id}
+            """;
+
         try
         {
-            var photo = await _db.SourcePhotos.AsNoTracking()
-                .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
-            if (photo is null) return ErrorType.NOT_FOUND;
-            var isUsedByApprovedMeme = await _db.Memes.AsNoTracking().AnyAsync(
-                meme => meme.SourcePhotoId == id.ToString() && meme.Status == MemeStatus.Approved && !meme.IsDeleted,
-                cancellationToken);
-            return isUsedByApprovedMeme || (isAuthenticated && photo.IsEnabled) ? photo : ErrorType.NOT_FOUND;
+            var photo = await _db.SourcePhotos
+                .FromSqlInterpolated(query)
+                .AsNoTracking()
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (photo is null)
+                return ErrorType.NOT_FOUND;
+
+            return photo;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
             return ErrorType.DB_EXCEPTION;
         }
     }
 
-    public async Task<Result<SourcePhoto>> AddAsync(SourcePhoto photo, CancellationToken cancellationToken)
+    public async Task<Result<SourcePhoto>> AddAsync(
+        SourcePhoto photo,
+        CancellationToken cancellationToken = default)
     {
+        FormattableString query = $"""
+            INSERT INTO "SourcePhotos"
+            (
+                "FileId",
+                "OriginalFileName",
+                "RelativeFilePath",
+                "ContentType",
+                "SizeBytes",
+                "IsEnabled",
+                "UploadedAtUtc"
+            )
+            VALUES
+            (
+                {photo.FileId},
+                {photo.OriginalFileName},
+                {photo.RelativeFilePath},
+                {photo.ContentType},
+                {photo.SizeBytes},
+                {photo.IsEnabled},
+                {photo.UploadedAtUtc}
+            )
+            RETURNING
+                "Id",
+                "FileId",
+                "OriginalFileName",
+                "RelativeFilePath",
+                "ContentType",
+                "SizeBytes",
+                "IsEnabled",
+                "UploadedAtUtc";
+            """;
+
         try
         {
-            _db.SourcePhotos.Add(photo);
-            await _db.SaveChangesAsync(cancellationToken);
-            return photo;
+            var photos = await _db.SourcePhotos
+                .FromSqlInterpolated(query)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            return photos.Single();
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
             return ErrorType.DB_EXCEPTION;
         }
     }
