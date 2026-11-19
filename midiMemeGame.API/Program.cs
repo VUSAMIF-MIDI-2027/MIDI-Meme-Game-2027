@@ -3,6 +3,7 @@ using MidiMemeGame.Api.Common.Extensions;
 using MidiMemeGame.Api.Common.Settings;
 using MidiMemeGame.Api.Middleware;
 using Serilog;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace midiMemeGame.API
 {
@@ -25,11 +26,35 @@ namespace midiMemeGame.API
 
                 builder.Services.AddControllers();
                 builder.Services.AddEndpointsApiExplorer();
-                builder.Services.AddSwaggerGen();
+                builder.Services.AddSwaggerGen(options =>
+                {
+                    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
+                    {
+                        Name = "Authorization",
+                        Type = Microsoft.OpenApi.SecuritySchemeType.Http,
+                        Scheme = "bearer",
+                        BearerFormat = "JWT",
+                        In = Microsoft.OpenApi.ParameterLocation.Header,
+                        Description = "Development: use dev-user or dev-admin. Otherwise provide a Clerk JWT."
+                    });
+                    options.AddSecurityRequirement(document => new Microsoft.OpenApi.OpenApiSecurityRequirement
+                    {
+                        [new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
+                    });
+                });
 
                 builder.Services.AddAppSettings(builder.Configuration);
+                builder.Services.Configure<FormOptions>(options =>
+                {
+                    var maxRequestSize = builder.Configuration.GetValue<long>("PhotoUpload:MaxRequestSizeBytes", 11534336);
+                    options.MultipartBodyLengthLimit = maxRequestSize;
+                });
                 builder.Services.AddAppServices();
                 builder.Services.AddAppAuthentication();
+                if (builder.Environment.IsDevelopment())
+                {
+                    builder.Services.AddDevelopmentBearerIdentities();
+                }
                 builder.Services.AddAppCors();
                 builder.Services.AddDatabase(builder.Configuration);
 
