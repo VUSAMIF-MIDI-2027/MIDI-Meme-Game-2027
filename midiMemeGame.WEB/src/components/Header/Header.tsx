@@ -89,7 +89,7 @@ export function Header() {
                         </Link>
                         </div>
                     )}
-                    <div className="hidden items-center gap-3 min-[1100px]:flex">
+                    <div className={`hidden items-center gap-3 min-[1100px]:flex ${!isAdmin ? "ml-2 border-l border-midi-charcoal pl-5" : ""}`}>
                         <AccountMenu />
                         <LogoutButton />
                     </div>
@@ -159,6 +159,7 @@ export function Header() {
         </header>
     );
 }
+
 
 
 
