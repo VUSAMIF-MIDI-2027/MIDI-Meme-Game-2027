@@ -2,13 +2,13 @@
 
 import { Lang, useLanguage } from "@/context/LanguageContext";
 
-export function LangToggle() {
+export function LangToggle({ compact = false }: { compact?: boolean }) {
   const { lang, setLang } = useLanguage();
 
   const languages : Lang[] = ["en", "lt"];
 
   return (
-    <div className="ml-3 inline-flex shrink-0 items-center gap-1.5">
+    <div role="group" aria-label={lang === "lt" ? "Kalba" : "Language"} className={`inline-flex shrink-0 items-center gap-1.5 ${compact ? "" : "ml-2 min-h-8 border-l border-midi-charcoal pl-4"}`}>
       {languages.map((language, index) => (
         <span
           key={language}
@@ -21,8 +21,11 @@ export function LangToggle() {
           )}
 
           <button
+            type="button"
+            aria-pressed={lang === language}
+            aria-label={language === "lt" ? "Lietuvių" : "English"}
             onClick={() => setLang(language)}
-            className={`p-0 text-[13px] uppercase tracking-[0.12em] leading-none transition-opacity duration-200
+            className={`${compact ? "min-h-7 text-[11px]" : "min-h-9 text-[13px]"} px-0.5 uppercase tracking-[0.12em] leading-none transition-opacity duration-200 focus-visible:outline-2 focus-visible:outline-midi-blue
               ${
                 lang === language
                   ? "cursor-default font-extrabold text-midi-blue opacity-100"

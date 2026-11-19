@@ -25,7 +25,58 @@ public class ClerkUserService
         _userQueries = userQueries;
         _logger = logger;
     }
+    public async Task<Result> GrantAdminAsync(
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        var userResult = await _userQueries.GetActiveClerkIdByIdAsync(
+            userId,
+            cancellationToken);
 
+        if (userResult.IsError)
+            return userResult.Error;
+
+        try
+        {
+            var payload = new
+            {
+                public_metadata = new
+                {
+                    role = "admin"
+                }
+            };
+
+            using var response = await _httpClient.PatchAsJsonAsync(
+                $"users/{Uri.EscapeDataString(userResult.Value)}/metadata",
+                payload,
+                cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return ErrorType.NOT_FOUND;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "Failed to grant admin role. Clerk status: {StatusCode}",
+                    (int)response.StatusCode);
+
+                return ErrorType.CLERK_API_UNAVAILABLE;
+            }
+
+            return Result.Ok();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Clerk API request failed.");
+            return ErrorType.CLERK_API_UNAVAILABLE;
+        }
+        catch (OperationCanceledException ex)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Clerk API request timed out.");
+            return ErrorType.CLERK_API_UNAVAILABLE;
+        }
+    }
     public async Task<Result<int>> SyncAsync(
         string clerkId,
         CancellationToken cancellationToken

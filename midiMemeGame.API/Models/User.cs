@@ -10,4 +10,5 @@ public class User
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; }
     public long LastClerkUpdatedAt { get; set; }
+    public DateTime? RulesAcknowledgedAtUtc { get; set; }
 }
