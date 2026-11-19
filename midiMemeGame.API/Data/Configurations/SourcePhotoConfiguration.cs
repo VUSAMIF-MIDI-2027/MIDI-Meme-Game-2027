@@ -20,6 +20,9 @@ public class SourcePhotoConfiguration : IEntityTypeConfiguration<SourcePhoto>
             .IsRequired()
             .HasMaxLength(12);
 
+        builder.Property(photo => photo.RelativeFilePath)
+            .IsRequired();
+
         builder.Property(photo => photo.OriginalFileName)
             .IsRequired();
 

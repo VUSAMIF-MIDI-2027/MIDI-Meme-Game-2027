@@ -27,6 +27,20 @@ namespace MidiMemeGame.Api.Migrations
                     b.ToTable("DeletedClerkUsers", (string)null);
                 });
 
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Meme", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
+                    b.Property<string>("Caption").IsRequired().HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("TEXT");
+                    b.Property<bool>("IsDeleted").HasColumnType("INTEGER");
+                    b.Property<string>("SourcePhotoId").IsRequired().HasColumnType("TEXT");
+                    b.Property<int>("Status").HasColumnType("INTEGER");
+                    b.Property<string>("UserId").IsRequired().HasColumnType("TEXT");
+                    b.HasKey("Id");
+                    b.HasIndex("SourcePhotoId", "Status", "IsDeleted");
+                    b.ToTable("Memes", (string)null);
+                });
+
             modelBuilder.Entity("MidiMemeGame.Api.Models.SourcePhoto", b =>
                 {
                     b.Property<int>("Id")
@@ -46,6 +60,10 @@ namespace MidiMemeGame.Api.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RelativeFilePath")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

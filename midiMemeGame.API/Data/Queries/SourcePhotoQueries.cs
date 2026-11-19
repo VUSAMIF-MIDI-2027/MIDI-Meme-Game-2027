@@ -21,7 +21,7 @@ public class SourcePhotoQueries
     }
 
     public async Task<Result<List<SourcePhoto>>> GetAllAsync(
-        bool IsEnabled,
+        bool? IsEnabled,
         CancellationToken cancellationToken = default)
     {
         FormattableString query =
@@ -30,12 +30,13 @@ public class SourcePhotoQueries
                 "Id",
                 "FileId",
                 "OriginalFileName",
+                "RelativeFilePath",
                 "ContentType",
                 "SizeBytes",
                 "IsEnabled",
                 "UploadedAtUtc"
             FROM "SourcePhotos"
-            WHERE "IsEnabled" = {IsEnabled}
+            WHERE ({IsEnabled} IS NULL OR "IsEnabled" = {IsEnabled})
             ORDER BY
                 "UploadedAtUtc" DESC,
                 "Id" DESC
@@ -60,6 +61,57 @@ public class SourcePhotoQueries
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
 
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    public async Task<Result<SourcePhoto>> GetFileAccessAsync(int id, bool isAuthenticated, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var photo = await _db.SourcePhotos.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+            if (photo is null) return ErrorType.NOT_FOUND;
+            var isUsedByApprovedMeme = await _db.Memes.AsNoTracking().AnyAsync(
+                meme => meme.SourcePhotoId == id.ToString() && meme.Status == MemeStatus.Approved && !meme.IsDeleted,
+                cancellationToken);
+            return isUsedByApprovedMeme || (isAuthenticated && photo.IsEnabled) ? photo : ErrorType.NOT_FOUND;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    public async Task<Result<SourcePhoto>> AddAsync(SourcePhoto photo, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _db.SourcePhotos.Add(photo);
+            await _db.SaveChangesAsync(cancellationToken);
+            return photo;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    public async Task<Result<SourcePhoto>> UpdateEnabledAsync(int id, bool isEnabled, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var photo = await _db.SourcePhotos.SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+            if (photo is null) return ErrorType.NOT_FOUND;
+            photo.IsEnabled = isEnabled;
+            await _db.SaveChangesAsync(cancellationToken);
+            return photo;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
         }
     }
