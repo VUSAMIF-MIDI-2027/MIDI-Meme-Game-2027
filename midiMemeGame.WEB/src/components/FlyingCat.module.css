@@ -3,7 +3,6 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  overflow: hidden;
   pointer-events: none;
   user-select: none;
 }
@@ -19,16 +18,6 @@
   background: transparent;
   pointer-events: none;
   will-change: transform;
-}
-
-.cat {
-  display: block;
-  width: 100%;
-  height: auto;
-  image-rendering: pixelated;
-  transform: rotate(var(--flight-rotation, 0deg));
-  transform-origin: center;
-  pointer-events: none;
 }
 
 @media (min-width: 640px) {

@@ -1,0 +1,82 @@
+.reaction {
+  pointer-events: none;
+  user-select: none;
+}
+
+.button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.button:focus-visible {
+  border-radius: 20%;
+  outline: 2px solid #70cfff;
+  outline-offset: -4px;
+}
+
+.cat {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  transform: rotate(var(--flight-rotation, 0deg));
+}
+
+.button:active .cat {
+  scale: 0.92;
+}
+
+.status {
+  position: absolute;
+  bottom: 80%;
+  left: 54%;
+  z-index: 1;
+  transform: translateX(-50%);
+  pointer-events: none;
+  filter: drop-shadow(0 2px 0 #0075b5) drop-shadow(0 3px 5px #000b);
+}
+
+.cloud {
+  display: block;
+  padding: 8px 13px 15px;
+  background: #e7f7ff;
+  color: #092437;
+  font: 700 12px/1.1 ui-monospace, monospace;
+  white-space: nowrap;
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0, calc(100% - 8px) 4px,
+    calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px,
+    100% calc(100% - 15px), calc(100% - 4px) calc(100% - 15px),
+    calc(100% - 4px) calc(100% - 11px), calc(50% + 6px) calc(100% - 11px),
+    calc(50% + 6px) calc(100% - 6px), calc(50% + 2px) calc(100% - 6px),
+    calc(50% + 2px) 100%, calc(50% - 2px) 100%,
+    calc(50% - 2px) calc(100% - 11px), 4px calc(100% - 11px),
+    4px calc(100% - 15px), 0 calc(100% - 15px), 0 8px, 4px 8px, 4px 4px, 8px 4px
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hovering {
+    animation: hover-in-orbit 5s ease-in-out infinite;
+  }
+
+  .cloud {
+    animation: cloud-pop 160ms ease-out both;
+    transform-origin: center bottom;
+  }
+}
+
+@keyframes hover-in-orbit {
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes cloud-pop {
+  from { transform: translateY(5px) scale(0.85); opacity: 0; }
+}

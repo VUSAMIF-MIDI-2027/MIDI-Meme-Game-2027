@@ -1,7 +1,10 @@
 "use client";
 
 import { ArrowDown, Check, X } from "lucide-react";
+import Image from "next/image";
+import moon from "#/public/images/moon-current.webp";
 import stars from "../account/account.module.css";
+import { CatReaction } from "@/components/CatReaction";
 import Tutorial from "@/components/Home/Tutorial/Tutorial";
 import { rulesText } from "@/components/Home/rulesText";
 import { useLanguage } from "@/context/LanguageContext";
@@ -49,12 +52,28 @@ export default function RulesPage() {
     return (
         <div className={`${stars.page} flex-1 text-white`}>
             <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:py-20">
-                <header className="max-w-3xl">
-                    <p className="text-xs font-semibold tracking-widest text-[#70cfff]">{t.eyebrow}</p>
-                    <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">{rulesText[lang].title}</h1>
-                    <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/80">{t.intro}</p>
+                <header className="grid items-center gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] md:gap-8">
+                    <div>
+                        <p className="text-xs font-semibold tracking-widest text-[#70cfff]">{t.eyebrow}</p>
+                        <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">{rulesText[lang].title}</h1>
+                        <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/80">{t.intro}</p>
+                    </div>
+                    <div className="pointer-events-none relative isolate mx-auto h-36 w-full max-w-md select-none md:h-56">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_57%_50%,#0075b534,transparent_68%)]" />
+                        <div className="absolute top-1/2 left-1/2 h-18 w-52 -translate-1/2 -rotate-15 rounded-[50%] border border-[#70cfff]/25 md:h-28 md:w-[88%]" />
+                        <Image
+                            src={moon}
+                            alt=""
+                            sizes="(min-width: 768px) 224px, 144px"
+                            className="absolute top-1/2 left-[58%] size-36 -translate-1/2 object-contain opacity-70 md:size-56"
+                        />
+                        <CatReaction
+                            hovering
+                            className="absolute top-[54%] left-[36%] size-26 -translate-1/2 [--flight-rotation:-12deg] drop-shadow-[0_4px_12px_#000] md:size-38"
+                        />
+                    </div>
                 </header>
-                <ul className="mt-10 grid grid-cols-3 border-y border-white/15 py-6 sm:mt-12 sm:py-8">
+                <ul className="mt-6 grid grid-cols-3 border-y border-white/15 py-6 sm:py-8 md:mt-8">
                     {t.stats.map(([number, label, detail]) => <li key={label} className="px-3 first:pl-0 last:pr-0 sm:px-8">
                         <span className="block text-5xl font-bold leading-none text-[#18a9ec] sm:text-7xl">{number}</span>
                         <span className="mt-2 block text-lg font-bold sm:text-2xl">{label}</span>
@@ -86,9 +105,11 @@ export default function RulesPage() {
                             <h2 id="content-title" className="text-xl font-bold">{t.content}</h2>
                             <p className="mt-4 font-semibold text-amber-200">{t.banned}</p>
                             <p className="mt-2 text-base leading-relaxed text-white/80">{t.explanation}</p>
-                            <h3 className="mt-6 text-lg font-bold">{t.consequence}</h3>
-                            <p className="mt-2 text-base leading-relaxed text-white/85">{t.consequenceDetail}</p>
-                            <p className="mt-4 border-l-2 border-midi-blue pl-4 text-sm leading-relaxed text-[#70cfff]">{t.example}</p>
+                            <div className="mt-6 rounded-lg border border-midi-blue/20 bg-midi-blue/6 p-4 sm:p-5">
+                                <h3 className="text-lg leading-snug font-semibold text-white/90">{t.consequence}</h3>
+                                <p className="mt-2 text-base leading-relaxed text-white/85">{t.consequenceDetail}</p>
+                                <p className="mt-3 text-sm leading-relaxed text-white/70">{t.example}</p>
+                            </div>
                         </section>
                     </div>
                 </div>

@@ -42,7 +42,7 @@ function collectObstacles(content: HTMLElement, flightArea: HTMLElement): Obstac
       '[aria-hidden="true"], script, style',
     );
 
-    if (!node.textContent?.trim() || isDecoration) continue;
+    if (!node.textContent?.trim() || isDecoration || flightArea.contains(node)) continue;
 
     textRange.selectNodeContents(node);
     for (const rect of textRange.getClientRects()) addObstacle(rect);
