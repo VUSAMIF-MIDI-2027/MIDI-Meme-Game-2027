@@ -6,21 +6,68 @@ import { useLanguage } from "@/context/LanguageContext";
 import styles from "./CatReaction.module.css";
 
 const reactions = [
-  { id: "meow", lt: "Miau!", en: "Meow!" },
-  { id: "brrr", lt: "Brrr!", en: "Brrr!" },
-  { id: "longMeow", lt: "Miaaau!", en: "Meeow!" },
+  { sound: "/cats/meow-soft.mp3", lt: "Miau!", en: "Meow!" },
+  { sound: "/cats/purr-1.mp3", lt: "Brrr!", en: "Brrr!" },
+  { sound: "/cats/meow-long.mp3", lt: "Miaaau!", en: "Meeow!" },
 ] as const;
 
 type Reaction = (typeof reactions)[number];
 
-const sounds: Partial<Record<Reaction["id"], string>> = {
-  meow: "/cats/meow-soft.wav",
-  brrr: "/cats/purr-1.wav",
-  longMeow: "/cats/meow-long.wav"
-};
 const BUBBLE_DURATION_MS = 1800;
 const INVITATION_DELAY_MS = 5000;
 const invitation = { lt: "Paglostyk mane!", en: "Pet me!" };
+
+function createSoundPlayer() {
+  const context = typeof AudioContext === "function" ? new AudioContext() : null;
+  const preload = new AbortController();
+  const buffers = new Map<Reaction["sound"], AudioBuffer>();
+  let stopPlaying: (() => void) | undefined;
+
+  if (context) {
+    for (const { sound } of reactions) {
+      void fetch(sound, { signal: preload.signal })
+        .then((response) => {
+          if (!response.ok) throw new Error("Cat sound unavailable");
+          return response.arrayBuffer();
+        })
+        .then((bytes) => context.decodeAudioData(bytes))
+        .then((buffer) => {
+          if (!preload.signal.aborted) buffers.set(sound, buffer);
+        })
+        .catch(() => {
+          // A tap can still use the media element if preloading fails.
+        });
+    }
+  }
+
+  return {
+    play(sound: Reaction["sound"]) {
+      stopPlaying?.();
+      const buffer = buffers.get(sound);
+      if (context && buffer) {
+        if (context.state !== "running") {
+          // Unlock audio inside the button's user gesture.
+          void context.resume().catch(() => {});
+        }
+        const source = context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(context.destination);
+        source.onended = () => source.disconnect();
+        source.start();
+        stopPlaying = () => source.stop();
+      } else {
+        const clip = new Audio(sound);
+        void clip.play().catch(() => {});
+        stopPlaying = () => clip.pause();
+      }
+    },
+    dispose() {
+      preload.abort();
+      stopPlaying?.();
+      if (context) void context.close().catch(() => {});
+    },
+  };
+}
 
 export function CatReaction({
   className = "",
@@ -32,65 +79,35 @@ export function CatReaction({
   const { lang } = useLanguage();
   const [reaction, setReaction] = useState<Reaction | null>(null);
   const [showInvitation, setShowInvitation] = useState(false);
-  const catImage = useRef<HTMLImageElement>(null);
   const nextReaction = useRef(0);
   const invitationTimeout = useRef<number | undefined>(undefined);
   const reactionTimeout = useRef<number | undefined>(undefined);
-  const clips = useRef<Partial<Record<Reaction["id"], HTMLAudioElement>>>({});
-  const playing = useRef<HTMLAudioElement | null>(null);
+  const player = useRef<ReturnType<typeof createSoundPlayer> | null>(null);
 
   useEffect(() => {
     invitationTimeout.current = window.setTimeout(() => setShowInvitation(true), INVITATION_DELAY_MS);
-    const preloaded: typeof clips.current = {};
-    for (const { id } of reactions) {
-      const url = sounds[id];
-      if (!url) continue;
-
-      const clip = new Audio();
-      clip.preload = "auto";
-      clip.src = url;
-      preloaded[id] = clip;
-    }
-    clips.current = preloaded;
+    const soundPlayer = createSoundPlayer();
+    player.current = soundPlayer;
 
     return () => {
       window.clearTimeout(invitationTimeout.current);
       window.clearTimeout(reactionTimeout.current);
-      for (const clip of Object.values(preloaded)) {
-        clip.pause();
-        clip.removeAttribute("src");
-        clip.load();
-      }
-      clips.current = {};
-      playing.current = null;
+      soundPlayer.dispose();
+      player.current = null;
     };
   }, []);
 
   function react() {
-    if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
-      catImage.current?.animate([{ scale: "0.92" }, { scale: "1" }], {
-        duration: 180,
-        easing: "ease-out",
-      });
-    }
-    window.clearTimeout(invitationTimeout.current);
-    setShowInvitation(false);
     const next = reactions[nextReaction.current];
     nextReaction.current = (nextReaction.current + 1) % reactions.length;
+
+    player.current?.play(next.sound);
+    window.clearTimeout(invitationTimeout.current);
+    setShowInvitation(false);
 
     setReaction(next);
     window.clearTimeout(reactionTimeout.current);
     reactionTimeout.current = window.setTimeout(() => setReaction(null), BUBBLE_DURATION_MS);
-
-    playing.current?.pause();
-    const clip = clips.current[next.id];
-    playing.current = clip ?? null;
-    if (clip) {
-      if (clip.currentTime > 0) clip.currentTime = 0;
-      void clip.play().catch(() => {
-        // Keep the speech bubble available when audio cannot play.
-      });
-    }
   }
 
   return (
@@ -102,7 +119,6 @@ export function CatReaction({
         onClick={react}
       >
         <Image
-          ref={catImage}
           src="/cats/kosmonautas.svg"
           alt=""
           width={160}
@@ -113,7 +129,7 @@ export function CatReaction({
       </button>
       <span role="status" className={styles.status}>
         {showInvitation && <span key="invitation" className={styles.cloud}>{invitation[lang]}</span>}
-        {reaction && <span key={reaction.id} className={styles.cloud}>{reaction[lang]}</span>}
+        {reaction && <span key={reaction.sound} className={styles.cloud}>{reaction[lang]}</span>}
       </span>
     </div>
   );

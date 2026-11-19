@@ -13,7 +13,6 @@ const MAX_FRAME_SECONDS = 0.05;
 const TURN_LOOKAHEAD_SECONDS = 1.2;
 const TURN_SMOOTHING = 2;
 const FLIGHT_SPEED = { x: 17, y: 11 };
-const ROTATION_DEGREES_PER_SECOND = 12;
 
 // Only the visible pixels collide; the SVG has transparent margins.
 const SPRITE_BOUNDS = { left: 0.175, right: 0.9, top: 0.2, bottom: 0.925 };
@@ -75,7 +74,6 @@ function startFlyingCatMotion(
   let visible = true;
   let animationFrame = 0;
   let previousFrameTime = 0;
-  let rotation = 0;
 
   function hitsObstacle(x: number, y: number) {
     const rotationMargin = catSize * 0.07;
@@ -91,15 +89,6 @@ function startFlyingCatMotion(
   }
 
   function paintPosition() {
-    if (!initialized) {
-      position.x = maxX * 0.95;
-      position.y = maxY * 0.18;
-      initialized = true;
-    }
-
-    position.x = Math.max(0, Math.min(maxX, position.x));
-    position.y = Math.max(0, Math.min(maxY, position.y));
-
     // Keep fractional positions so slow flight does not jump one pixel at a time.
     cat.style.transform = `translate3d(${position.x.toFixed(3)}px, ${position.y.toFixed(3)}px, 0)`;
   }
@@ -132,7 +121,14 @@ function startFlyingCatMotion(
     maxX = Math.max(0, flightArea.clientWidth - catSize);
     maxY = Math.max(0, flightArea.clientHeight - catSize);
     obstacles = mobileScreen.matches ? [] : collectObstacles(content, flightArea);
-    paintPosition();
+
+    if (!initialized) {
+      position.x = maxX * 0.95;
+      position.y = maxY * 0.18;
+      initialized = true;
+    }
+    position.x = Math.max(0, Math.min(maxX, position.x));
+    position.y = Math.max(0, Math.min(maxY, position.y));
 
     // Text can move over the cat after resizing, loading fonts or switching language.
     if (hitsObstacle(position.x, position.y)) {
@@ -171,9 +167,6 @@ function startFlyingCatMotion(
     velocity.x += (targetVelocity.x - velocity.x) * turnAmount;
     velocity.y += (targetVelocity.y - velocity.y) * turnAmount;
 
-    // One continuous full turn every 30 seconds.
-    rotation = (rotation + ROTATION_DEGREES_PER_SECOND * elapsed) % 360;
-    cat.style.setProperty("--flight-rotation", `${rotation.toFixed(3)}deg`);
     const nextX = position.x + velocity.x * elapsed;
     if (isBlocked(nextX, position.y)) {
       targetVelocity.x = velocity.x > 0 ? -FLIGHT_SPEED.x : FLIGHT_SPEED.x;
@@ -193,23 +186,27 @@ function startFlyingCatMotion(
   function updatePlayback() {
     cancelAnimationFrame(animationFrame);
     previousFrameTime = 0;
-    if (reducedMotion.matches) {
-      rotation = 0;
-      cat.style.setProperty("--flight-rotation", "0deg");
-    }
+    const flying = visible && !reducedMotion.matches && !document.hidden;
+    cat.toggleAttribute("data-flying", flying);
 
-    if (visible && !reducedMotion.matches && !document.hidden) {
+    if (flying) {
       animationFrame = requestAnimationFrame(animate);
     }
   }
 
   const resizeObserver = new ResizeObserver(measureLayout);
   resizeObserver.observe(flightArea);
+  resizeObserver.observe(cat);
   content.querySelectorAll("img, h1, p").forEach((element) => {
-    resizeObserver.observe(element);
+    if (!flightArea.contains(element)) resizeObserver.observe(element);
   });
 
-  const textObserver = new MutationObserver(measureLayout);
+  const textObserver = new MutationObserver((records) => {
+    // The reaction bubble moves with the cat and cannot be a flight obstacle.
+    if (!mobileScreen.matches && records.some(({ target }) => !flightArea.contains(target))) {
+      measureLayout();
+    }
+  });
   textObserver.observe(content, {
     subtree: true,
     characterData: true,
