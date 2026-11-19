@@ -40,16 +40,24 @@
   z-index: 1;
   transform: translateX(-50%);
   pointer-events: none;
-  filter: drop-shadow(0 2px 0 #0075b5) drop-shadow(0 3px 5px #000b);
 }
 
 .cloud {
+  position: relative;
+  isolation: isolate;
   display: block;
   padding: 8px 13px 15px;
-  background: #e7f7ff;
   color: #092437;
   font: 700 12px/1.1 ui-monospace, monospace;
   white-space: nowrap;
+}
+
+.cloud::before,
+.cloud::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   clip-path: polygon(
     8px 0, calc(100% - 8px) 0, calc(100% - 8px) 4px,
     calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px,
@@ -60,6 +68,15 @@
     calc(50% - 2px) calc(100% - 11px), 4px calc(100% - 11px),
     4px calc(100% - 15px), 0 calc(100% - 15px), 0 8px, 4px 8px, 4px 4px, 8px 4px
   );
+}
+
+.cloud::before {
+  background: #0075b5;
+  transform: translateY(2px);
+}
+
+.cloud::after {
+  background: #e7f7ff;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -78,5 +95,5 @@
 }
 
 @keyframes cloud-pop {
-  from { transform: translateY(5px) scale(0.85); opacity: 0; }
+  from { transform: translateY(5px) scale(0.85); }
 }
