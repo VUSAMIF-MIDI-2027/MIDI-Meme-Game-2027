@@ -27,6 +27,34 @@ namespace MidiMemeGame.Api.Migrations
                     b.ToTable("DeletedClerkUsers", (string)null);
                 });
 
+            modelBuilder.Entity("MidiMemeGame.Api.Models.MemeTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RelativePath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MemeTemplates");
+                });
+
             modelBuilder.Entity("MidiMemeGame.Api.Models.User", b =>
                 {
                     b.Property<int>("Id")

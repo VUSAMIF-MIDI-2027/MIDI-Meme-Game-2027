@@ -11,6 +11,8 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<User> Users { get; set; }
+
+    public DbSet<MemeTemplate> MemeTemplates { get; set; } = null!;
     public DbSet<DeletedClerkUser> DeletedClerkUsers => Set<DeletedClerkUser>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
