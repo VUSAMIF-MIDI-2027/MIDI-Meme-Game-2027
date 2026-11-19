@@ -8,7 +8,7 @@ export function LangToggle({ compact = false }: { compact?: boolean }) {
   const languages : Lang[] = ["en", "lt"];
 
   return (
-    <div role="group" aria-label={lang === "lt" ? "Kalba" : "Language"} className={`inline-flex shrink-0 items-center gap-1.5 ${compact ? "" : "ml-2 min-h-8 border-l border-midi-charcoal pl-4"}`}>
+    <div role="group" aria-label={lang === "lt" ? "Kalba" : "Language"} className={`inline-flex shrink-0 items-center gap-1.5 ${compact ? "" : "min-h-8 border-midi-charcoal max-[1100px]:border-r max-[1100px]:pr-4 min-[1100px]:ml-2 min-[1100px]:border-l min-[1100px]:pl-4"}`}>
       {languages.map((language, index) => (
         <span
           key={language}

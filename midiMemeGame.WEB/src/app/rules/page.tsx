@@ -59,7 +59,7 @@ export default function RulesPage() {
                         <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/80">{t.intro}</p>
                     </div>
                     <div className="pointer-events-none relative isolate mx-auto h-36 w-full max-w-md select-none md:h-56">
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_57%_50%,#0075b534,transparent_68%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_closest-side_at_57%_50%,#0075b534,transparent)]" />
                         <div className="absolute top-1/2 left-1/2 h-18 w-52 -translate-1/2 -rotate-15 rounded-[50%] border border-[#70cfff]/25 md:h-28 md:w-[88%]" />
                         <Image
                             src={moon}

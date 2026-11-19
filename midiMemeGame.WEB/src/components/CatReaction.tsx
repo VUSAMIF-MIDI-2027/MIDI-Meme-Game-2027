@@ -14,9 +14,9 @@ const reactions = [
 type Reaction = (typeof reactions)[number];
 
 const sounds: Partial<Record<Reaction["id"], string>> = {
-  meow: "/cats/meow-soft.wav",
-  brrr: "/cats/purr-1.wav",
-  longMeow: "/cats/meow-long.wav"
+  meow: "/cats/meow-soft.mp3",
+  brrr: "/cats/purr-1.mp3",
+  longMeow: "/cats/meow-long.mp3",
 };
 const BUBBLE_DURATION_MS = 1800;
 const INVITATION_DELAY_MS = 5000;
@@ -67,20 +67,8 @@ export function CatReaction({
   }, []);
 
   function react() {
-    if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
-      catImage.current?.animate([{ scale: "0.92" }, { scale: "1" }], {
-        duration: 180,
-        easing: "ease-out",
-      });
-    }
-    window.clearTimeout(invitationTimeout.current);
-    setShowInvitation(false);
     const next = reactions[nextReaction.current];
     nextReaction.current = (nextReaction.current + 1) % reactions.length;
-
-    setReaction(next);
-    window.clearTimeout(reactionTimeout.current);
-    reactionTimeout.current = window.setTimeout(() => setReaction(null), BUBBLE_DURATION_MS);
 
     playing.current?.pause();
     const clip = clips.current[next.id];
@@ -91,6 +79,19 @@ export function CatReaction({
         // Keep the speech bubble available when audio cannot play.
       });
     }
+
+    if (window.matchMedia("(prefers-reduced-motion: no-preference)").matches) {
+      catImage.current?.animate([{ scale: "0.92" }, { scale: "1" }], {
+        duration: 180,
+        easing: "ease-out",
+      });
+    }
+    window.clearTimeout(invitationTimeout.current);
+    setShowInvitation(false);
+
+    setReaction(next);
+    window.clearTimeout(reactionTimeout.current);
+    reactionTimeout.current = window.setTimeout(() => setReaction(null), BUBBLE_DURATION_MS);
   }
 
   return (

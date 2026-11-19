@@ -20,6 +20,20 @@
   will-change: transform;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .flight img {
+    animation: spin-in-flight 30s linear infinite paused;
+  }
+
+  .flight[data-flying] img {
+    animation-play-state: running;
+  }
+}
+
+@keyframes spin-in-flight {
+  to { transform: rotate(1turn); }
+}
+
 @media (min-width: 640px) {
   .sky {
     --cat-size: 120px;
