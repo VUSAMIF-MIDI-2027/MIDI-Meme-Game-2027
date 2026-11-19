@@ -2,8 +2,7 @@
 
 import { useLanguage } from "@/context/LanguageContext";
 import MemeCard from "@/components/Shared/MemeCard";
-import { ui } from "@/styles/ui";
-import { yourMemes, type MemeStatus } from "./yourMemesMock";
+import type { YourMeme, MemeStatus } from "./yourMemesMock";
 import { yourMemesText } from "./yourMemesText";
 
 const statusStyles: Record<MemeStatus, string> = {
@@ -12,39 +11,51 @@ const statusStyles: Record<MemeStatus, string> = {
   rejected: "text-red-400",
 };
 
-const YourMemes = () => {
+type YourMemesProps = {
+  memes?: readonly YourMeme[];
+};
+
+const YourMemes = ({ memes = [] }: YourMemesProps) => {
   const { lang } = useLanguage();
   const t = yourMemesText[lang];
-  const dateTimeFormatter = new Intl.DateTimeFormat(lang, {
+  const dateTimeFormatter = new Intl.DateTimeFormat(lang === "lt" ? "lt-LT" : "en-GB", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Europe/Vilnius",
   });
 
   return (
     <section
       id="your-memes"
       aria-labelledby="your-memes-title"
-      className="scroll-mt-17 bg-black px-5 py-16 sm:px-6 lg:py-24"
+      className="mt-14 scroll-mt-24 border-t border-white/15 pt-12 sm:mt-18 sm:pt-16 lg:mt-20 lg:pt-18"
     >
-      <div className="mx-auto max-w-6xl">
-        <div className="mx-auto mb-10 max-w-xl text-center lg:mb-12">
+      <div>
+        <div className="mb-7 sm:mb-9">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-midi-white">
+            {t.eyebrow}
+          </p>
           <h2
             id="your-memes-title"
-            className="mt-3 text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl"
+            className="mt-5 text-4xl font-bold leading-tight text-midi-gray sm:text-5xl"
           >
             {t.title}
           </h2>
-          <p className={`${ui.description} mt-4`}>
-            {yourMemes.length === 0 ? t.empty : t.description}
-          </p>
         </div>
-        {yourMemes.length > 0 && (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
-            {yourMemes.map((meme) => (
+        {memes.length === 0 ? (
+          <div className="py-2">
+            <h3 className="text-lg font-semibold text-midi-gray">{t.emptyTitle}</h3>
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-text-muted">
+              {t.empty}
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {memes.map((meme) => (
               <MemeCard
                 key={meme.id}
                 image={meme.image}
@@ -54,7 +65,8 @@ const YourMemes = () => {
                   label: t.status[meme.status],
                   className: statusStyles[meme.status],
                 }}
-                metaLabel={dateTimeFormatter.format(new Date(meme.submittedAt))}
+                layout="side-meta"
+                metaLabel={`${t.submitted} ${dateTimeFormatter.format(new Date(meme.submittedAt))}`}
               />
             ))}
           </div>

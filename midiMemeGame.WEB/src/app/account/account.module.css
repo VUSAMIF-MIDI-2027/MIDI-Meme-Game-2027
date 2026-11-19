@@ -1,0 +1,117 @@
+.page {
+  position: relative;
+  isolation: isolate;
+  background: #000;
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 6% 12%, #dcdcdc66 0 1px, transparent 1.5px),
+    radial-gradient(circle at 22% 5%, #009de066 0 1px, transparent 1.5px),
+    radial-gradient(circle at 76% 9%, #dcdcdc44 0 1px, transparent 1.5px),
+    radial-gradient(circle at 94% 25%, #009de077 0 1px, transparent 1.5px),
+    radial-gradient(circle at 4% 47%, #dcdcdc44 0 1px, transparent 1.5px),
+    radial-gradient(circle at 89% 61%, #dcdcdc55 0 1px, transparent 1.5px),
+    radial-gradient(circle at 29% 77%, #009de055 0 1px, transparent 1.5px),
+    radial-gradient(circle at 65% 88%, #dcdcdc55 0 1px, transparent 1.5px),
+    radial-gradient(ellipse at 90% 30%, rgb(0 117 181 / 7%), transparent 55%);
+}
+
+.settings {
+  width: 100%;
+  min-width: 0;
+}
+
+.editButton {
+  min-height: 40px !important;
+  padding: 9px 16px !important;
+  border: 1px solid #0075b5 !important;
+  border-radius: 6px !important;
+  background: #0075b5 !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.editButton:hover {
+  background: #00649c !important;
+}
+
+.editButton:focus-visible {
+  outline: 2px solid #70cfff;
+  outline-offset: 3px;
+}
+
+@media (min-width: 768px) {
+  .settings {
+    max-width: 1100px;
+    margin: 32px auto 0;
+    padding: 0 24px;
+  }
+}
+
+.profile {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.card {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: calc(100svh - 8rem) !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.sidebar,
+.mobileMenuButton {
+  display: none !important;
+}
+
+.content {
+  width: 100% !important;
+  min-width: 0;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.tabs {
+  display: flex;
+  gap: 28px;
+  padding: 0 32px;
+  border-bottom: 1px solid #222;
+}
+
+.tabs a {
+  padding: 16px 0;
+  border-bottom: 2px solid transparent;
+  color: #a3a3a3;
+}
+
+.tabs a[aria-current="page"] {
+  color: #70cfff;
+  border-color: #0075b5;
+}
+
+.tabs a:focus-visible {
+  outline: 2px solid #0075b5;
+  outline-offset: 3px;
+}
+
+@media (max-width: 767px) {
+  .tabs { padding: 0 20px; }
+  .content { padding: 24px 16px !important; }
+}

@@ -1,8 +1,25 @@
 import { enUS } from "@clerk/localizations/en-US";
+import { accountLocalizationLt } from "./accountLocalization";
 
 export const ltLT = {
     ...enUS,
     locale: "lt-LT",
+    userProfile: accountLocalizationLt,
+    badge__primary: "Pagrindinis",
+    badge__default: "Numatytasis",
+    badge__thisDevice: "Šis įrenginys",
+    badge__unverified: "Nepatvirtintas",
+    badge__you: "Tu",
+    formFieldLabel__currentPassword: "Dabartinis slaptažodis",
+    formFieldLabel__username: "Vartotojo vardas",
+    formFieldLabel__phoneNumber: "Telefono numeris",
+    formFieldLabel__backupCode: "Atsarginis kodas",
+    formFieldLabel__passkeyName: "Prieigos rakto pavadinimas",
+    formFieldLabel__confirmDeletion: "Patvirtinimas",
+    formFieldInputPlaceholder__username: "Įvesk vartotojo vardą",
+    formFieldInputPlaceholder__phoneNumber: "Įvesk telefono numerį",
+    formFieldInputPlaceholder__backupCode: "Įvesk atsarginį kodą",
+    formFieldInputPlaceholder__confirmDeletionUserAccount: "Ištrinti paskyrą",
     unstable__errors: {
         ...enUS.unstable__errors,
         zxcvbn: {

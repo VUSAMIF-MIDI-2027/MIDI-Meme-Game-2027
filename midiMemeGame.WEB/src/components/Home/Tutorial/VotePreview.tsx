@@ -9,13 +9,13 @@ import type { DemoPhoto } from "./demoPhotos";
 const voteText = {
   lt: {
     choose: "Rinktis šį memą",
-    selected: "Tavo favoritas",
+    selected: "Pasirinkta · 1 taškas",
     hint: "Išbandyk balsavimą",
     note: "Tai pavyzdys — balsas neišsaugomas.",
   },
   en: {
     choose: "Choose this meme",
-    selected: "Your favourite",
+    selected: "Selected · 1 point",
     hint: "Try voting",
     note: "This is a preview — your vote is not saved.",
   },
@@ -59,7 +59,7 @@ type VotePreviewProps = {
 };
 
 export default function VotePreview({ lang, photos }: VotePreviewProps) {
-  const [favouriteId, setFavouriteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const t = voteText[lang];
 
   return (
@@ -67,6 +67,7 @@ export default function VotePreview({ lang, photos }: VotePreviewProps) {
       <div className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-text-muted">
         <Heart aria-hidden="true" className="size-4 text-midi-blue" />
         {t.hint}
+        <span aria-live="polite">{selectedIds.length} / 3</span>
       </div>
       <div className="grid gap-5 lg:grid-cols-3 lg:gap-8">
         {photos.map((photo) => (
@@ -74,9 +75,11 @@ export default function VotePreview({ lang, photos }: VotePreviewProps) {
             key={photo.id}
             photo={photo}
             lang={lang}
-            selected={favouriteId === photo.id}
+            selected={selectedIds.includes(photo.id)}
             onSelect={() =>
-              setFavouriteId(favouriteId === photo.id ? null : photo.id)
+              setSelectedIds(ids => ids.includes(photo.id)
+                ? ids.filter(id => id !== photo.id)
+                : ids.length < 3 ? [...ids, photo.id] : ids)
             }
           />
         ))}

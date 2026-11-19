@@ -2,18 +2,24 @@ import type { Lang } from "@/context/LanguageContext";
 import type { MemeStatus } from "./yourMemesMock";
 
 type YourMemesText = {
+    eyebrow: string;
     title: string;
     description: string;
     empty: string;
+    emptyTitle: string;
+    submitted: string;
     status: Record<MemeStatus, string>;
 };
 
 export const yourMemesText: Record<Lang, YourMemesText> = {
     lt: {
-        title: "Tavo įkelti memai",
+        eyebrow: "Tavo darbai",
+        title: "Mano memai",
         description:
             "Visi tavo pateikti memai ir jų moderavimo būsena vienoje vietoje.",
-        empty: "Kol kas tuščia — dar nieko neįkėlei, pirmyn!",
+        empty: "Kai pateiksi memą, jis atsiras čia.",
+        emptyTitle: "Kol kas tuščia",
+        submitted: "Pateikta",
         status: {
             approved: "Patvirtintas",
             pending: "Laukiama patvirtinimo",
@@ -21,10 +27,13 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
         },
     },
     en: {
-        title: "Your uploaded memes",
+        eyebrow: "Your creations",
+        title: "My memes",
         description:
             "All your submitted memes and their moderation status in one place.",
-        empty: "It's empty here — you didn't upload anything yet, please do!",
+        empty: "Your memes will appear here after you submit them.",
+        emptyTitle: "Nothing here yet",
+        submitted: "Submitted",
         status: {
             approved: "Approved",
             pending: "Pending review",

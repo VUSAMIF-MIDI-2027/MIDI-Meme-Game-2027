@@ -1,0 +1,100 @@
+.page {
+  position: relative;
+  isolation: isolate;
+  background: #000;
+}
+
+.page::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 660px;
+  content: "";
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 9% 14%, rgb(220 220 220 / 35%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 35% 6%, rgb(0 157 224 / 45%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 62% 12%, rgb(220 220 220 / 25%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 89% 7%, rgb(220 220 220 / 40%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 96% 48%, rgb(0 157 224 / 35%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 4% 71%, rgb(220 220 220 / 25%) 0 1px, transparent 1.5px),
+    radial-gradient(ellipse at 85% 25%, rgb(0 117 181 / 12%), transparent 55%);
+}
+
+.page::after {
+  position: absolute;
+  z-index: -1;
+  top: 15px;
+  right: 0;
+  width: min(42vw, 540px);
+  aspect-ratio: 1;
+  content: "";
+  pointer-events: none;
+  opacity: 0.12;
+  background: url("/images/moon-current.webp") center / contain no-repeat;
+  mask-image: linear-gradient(110deg, transparent 5%, #000 65%);
+}
+
+.catScene {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  height: 154px;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding-right: 20px;
+}
+
+.catScene::before {
+  position: absolute;
+  z-index: -1;
+  right: 0;
+  bottom: 0;
+  width: 240px;
+  height: 190px;
+  content: "";
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 22% 24%, rgb(0 157 224 / 60%) 0 1px, transparent 2px),
+    radial-gradient(circle at 86% 14%, rgb(220 220 220 / 35%) 0 1px, transparent 2px),
+    radial-gradient(circle at 93% 61%, rgb(0 157 224 / 45%) 0 1px, transparent 2px),
+    radial-gradient(ellipse at 52% 80%, rgb(0 117 181 / 14%), transparent 65%);
+}
+
+.dioCat {
+  --cat-size: 200px;
+  display: block;
+  width: var(--cat-size);
+  height: var(--cat-size);
+  flex-shrink: 0;
+  background: url("/cats/diocat-sprite.png") 0 0 / calc(var(--cat-size) * 48) var(--cat-size) no-repeat;
+  animation: dio-crouch 3.2s steps(48) infinite;
+  margin-bottom: -5px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes dio-crouch {
+  to { background-position-x: calc(var(--cat-size) * -48); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dioCat { animation: none; }
+}
+
+@media (max-width: 1023px) {
+  .page::after {
+    width: 260px;
+    opacity: 0.07;
+  }
+  .catScene {
+    height: 115px;
+  }
+
+  .dioCat {
+    --cat-size: 150px;
+  }
+}
+

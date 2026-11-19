@@ -15,10 +15,10 @@ export const tutorialText: Record<Lang, TutorialText> = {
         eyebrow: "Kaip tai veikia?",
         title: "Viena nuotrauka. Keturi paprasti žingsniai.",
         descriptions: [
-            "Išsirink organizatorių įkeltą renginio kadrą.",
+            "Pasirink vieną iš pateiktų nuotraukų.",
             "Pridėk vieną trumpą ir juokingą sakinį.",
-            "Patvirtink rezultatą ir dalyvauk konkurse.",
-            "Peržiūrėk dalyvių memus ir balsuok už geriausią.",
+            "Pateik memą organizatorių peržiūrai. Vienam žmogui — iki 3 memų.",
+            "Pasibaigus įkėlimui skirk iki 3 balsų skirtingiems patvirtintiems memams. Vienas balsas — vienas taškas.",
         ],
 
         choosePhotoHint: "Išbandyk — pasirink nuotrauką",
@@ -29,10 +29,10 @@ export const tutorialText: Record<Lang, TutorialText> = {
         eyebrow: "How does it work?",
         title: "One photo. Four simple steps.",
         descriptions: [
-            "Choose an event photo uploaded by the organisers.",
+            "Choose one of the provided photos.",
             "Add one short, funny sentence.",
-            "Confirm your meme and enter the competition.",
-            "Browse the entries and vote for the best meme.",
+            "Submit your meme for organiser review. Up to 3 memes per person.",
+            "After submissions close, cast up to 3 votes for different approved memes. One vote equals one point.",
         ],
 
         choosePhotoHint: "Try it — choose a photo",
@@ -40,3 +40,4 @@ export const tutorialText: Record<Lang, TutorialText> = {
         votePreviewLabel: "Your favourite · voting preview",
     },
 };
+

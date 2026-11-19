@@ -1,0 +1,101 @@
+import { enUS } from "@clerk/localizations/en-US";
+
+// Keep Clerk's interpolation tokens intact when translating account forms.
+export const accountLocalizationLt = {
+    ...enUS.userProfile,
+    formButtonPrimary__add: "Pridėti",
+    formButtonPrimary__continue: "Tęsti",
+    formButtonPrimary__finish: "Baigti",
+    formButtonPrimary__remove: "Pašalinti",
+    formButtonPrimary__save: "Išsaugoti",
+    formButtonReset: "Atšaukti",
+    mobileButton__menu: "Meniu",
+    navbar: { ...enUS.userProfile?.navbar, account: "Profilis", security: "Saugumas", title: "Paskyra", description: "Tvarkyk savo paskyros duomenis." },
+    profilePage: {
+        title: "Keisti profilį", successMessage: "Profilis atnaujintas.",
+        imageFormTitle: "Profilio nuotrauka", imageFormSubtitle: "Įkelti", imageFormDestructiveActionSubtitle: "Pašalinti",
+        fileDropAreaHint: "Rekomenduojamas santykis 1:1, iki 10 MB.",
+        readonly: "Šiuos duomenis pateikė organizacija, todėl jų keisti negalima.",
+    },
+    passwordPage: {
+        title__set: "Nustatyti slaptažodį", title__update: "Keisti slaptažodį",
+        successMessage__set: "Slaptažodis nustatytas.", successMessage__update: "Slaptažodis pakeistas.",
+        successMessage__signOutOfOtherSessions: "Kiti įrenginiai atjungti.",
+        checkboxInfoText__signOutOfOtherSessions: "Rekomenduojame atsijungti iš kitų įrenginių, kuriuose naudotas senas slaptažodis.",
+        readonly: "Slaptažodžio keisti negalima, nes prisijungi per organizacijos paskyrą.",
+    },
+    usernamePage: { title__set: "Nustatyti vartotojo vardą", title__update: "Keisti vartotojo vardą", successMessage: "Vartotojo vardas atnaujintas." },
+    emailAddressPage: {
+        ...enUS.userProfile?.emailAddressPage,
+        title: "Pridėti el. paštą", verifyTitle: "Patvirtinti el. paštą",
+        formHint: "Prieš pridedant el. pašto adresą reikės jį patvirtinti.",
+        emailCode: {
+            formHint: "Šiuo el. paštu atsiųsime patvirtinimo kodą.", formSubtitle: "Įvesk kodą, išsiųstą adresu {{identifier}}.",
+            formTitle: "Patvirtinimo kodas", resendButton: "Negavai kodo? Siųsti dar kartą", successMessage: "El. paštas {{identifier}} pridėtas.",
+        },
+        emailLink: {
+            formHint: "Šiuo el. paštu atsiųsime patvirtinimo nuorodą.", formSubtitle: "Atidaryk nuorodą laiške, išsiųstame adresu {{identifier}}.",
+            formTitle: "Patvirtinimo nuoroda", resendButton: "Negavai nuorodos? Siųsti dar kartą", successMessage: "El. paštas {{identifier}} pridėtas.",
+        },
+        removeResource: { title: "Pašalinti el. paštą", messageLine1: "{{identifier}} bus pašalintas iš paskyros.", messageLine2: "Šiuo el. paštu prisijungti nebegalėsi.", successMessage: "El. paštas {{emailAddress}} pašalintas." },
+    },
+    connectedAccountPage: {
+        ...enUS.userProfile?.connectedAccountPage,
+        title: "Susieti paskyrą", formHint: "Pasirink paskyros teikėją.", formHint__noAccounts: "Nėra galimų paskyrų teikėjų.", successMessage: "Paskyra susieta.",
+        removeResource: { title: "Atsieti paskyrą", messageLine1: "{{identifier}} bus atsietas nuo paskyros.", messageLine2: "Šia susieta paskyra ir nuo jos priklausančiomis funkcijomis naudotis nebegalėsi.", successMessage: "Paskyra {{connectedAccount}} atsieta." },
+    },
+    deletePage: {
+        title: "Ištrinti paskyrą", confirm: "Ištrinti paskyrą", actionDescription: "Norėdamas tęsti, įrašyk „Ištrinti paskyrą“.",
+        messageLine1: "Ar tikrai nori ištrinti paskyrą? Dalis susijusių duomenų gali likti saugoma. Dėl visų duomenų pašalinimo susisiek su organizatoriais.",
+        messageLine2: "Šis veiksmas negrįžtamas.",
+    },
+    start: {
+        ...enUS.userProfile?.start,
+        headerTitle__account: "Profilio duomenys", headerTitle__security: "Saugumas",
+        profileSection: { title: "Profilis", primaryButton: "Keisti profilį" },
+        usernameSection: { title: "Vartotojo vardas", primaryButton__setUsername: "Nustatyti vartotojo vardą", primaryButton__updateUsername: "Keisti vartotojo vardą" },
+        passwordSection: { title: "Slaptažodis", primaryButton__setPassword: "Nustatyti slaptažodį", primaryButton__updatePassword: "Keisti slaptažodį" },
+        emailAddressesSection: { title: "El. pašto adresai", primaryButton: "Pridėti el. paštą", destructiveAction: "Pašalinti el. paštą", detailsAction__nonPrimary: "Nustatyti pagrindiniu", detailsAction__primary: "Baigti patvirtinimą", detailsAction__unverified: "Patvirtinti" },
+        connectedAccountsSection: { title: "Susietos paskyros", primaryButton: "Susieti paskyrą", destructiveActionTitle: "Atsieti", actionLabel__connectionFailed: "Susieti iš naujo", actionLabel__reauthorize: "Suteikti prieigą", subtitle__disconnected: "Ši paskyra atsieta.", subtitle__reauthorize: "Reikalingos teisės pasikeitė. Suteik prieigą iš naujo, kad visos funkcijos veiktų." },
+        activeDevicesSection: { title: "Aktyvūs įrenginiai", destructiveAction: "Atjungti įrenginį" },
+        dangerSection: { title: "Paskyros ištrynimas", deleteAccountButton: "Ištrinti paskyrą" },
+        passkeysSection: { title: "Prieigos raktai", primaryButton: "Pridėti prieigos raktą", menuAction__destructive: "Pašalinti", menuAction__rename: "Pervadinti" },
+        phoneNumbersSection: { title: "Telefono numeriai", primaryButton: "Pridėti numerį", destructiveAction: "Pašalinti numerį", detailsAction__nonPrimary: "Nustatyti pagrindiniu", detailsAction__primary: "Baigti patvirtinimą", detailsAction__unverified: "Patvirtinti numerį" },
+        mfaSection: {
+            title: "Dviejų veiksmų patvirtinimas", primaryButton: "Įjungti dviejų veiksmų patvirtinimą",
+            totp: { headerTitle: "Autentifikavimo programėlė", destructiveActionTitle: "Pašalinti" },
+            phoneCode: { actionLabel__setDefault: "Naudoti pagal nutylėjimą", destructiveActionLabel: "Pašalinti" },
+            backupCodes: { headerTitle: "Atsarginiai kodai", actionLabel__regenerate: "Sugeneruoti iš naujo", title__regenerate: "Atnaujinti atsarginius kodus", subtitle__regenerate: "Ankstesni kodai nebegalios. Saugiai išsisaugok naujus kodus." },
+        },
+    },
+    mfaPage: { title: "Dviejų veiksmų patvirtinimas", formHint: "Pasirink patvirtinimo būdą." },
+    phoneNumberPage: {
+        title: "Pridėti telefono numerį", verifyTitle: "Patvirtinti telefono numerį", verifySubtitle: "Įvesk kodą, išsiųstą numeriu {{identifier}}.",
+        infoText: "Šiuo numeriu atsiųsime SMS su patvirtinimo kodu. Gali būti taikomi operatoriaus mokesčiai.", successMessage: "Numeris {{identifier}} pridėtas.",
+        removeResource: { title: "Pašalinti telefono numerį", messageLine1: "{{identifier}} bus pašalintas iš paskyros.", messageLine2: "Šiuo numeriu prisijungti nebegalėsi.", successMessage: "Numeris {{phoneNumber}} pašalintas." },
+    },
+    mfaPhoneCodePage: {
+        title: "Įjungti patvirtinimą SMS", backButton: "Naudoti esamą numerį", primaryButton__addPhoneNumber: "Pridėti numerį",
+        subtitle__availablePhoneNumbers: "Pasirink esamą numerį SMS patvirtinimui arba pridėk naują.", subtitle__unavailablePhoneNumbers: "Nėra tinkamų numerių. Pridėk naują telefono numerį.",
+        successTitle: "Patvirtinimas SMS įjungtas", successMessage1: "Prisijungiant papildomai reikės įvesti SMS atsiųstą kodą.", successMessage2: "Saugiai išsisaugok atsarginius kodus. Jie padės prisijungti praradus telefoną.",
+        removeResource: { title: "Išjungti patvirtinimą SMS", messageLine1: "Numeriu {{identifier}} prisijungimo kodų nebesiųsime.", messageLine2: "Paskyra gali tapti mažiau saugi. Ar tęsti?", successMessage: "Patvirtinimas SMS numeriu {{mfaPhoneCode}} išjungtas." },
+    },
+    mfaTOTPPage: {
+        title: "Pridėti autentifikavimo programėlę", verifyTitle: "Patvirtinimo kodas", verifySubtitle: "Įvesk programėlėje sugeneruotą kodą.",
+        successMessage: "Dviejų veiksmų patvirtinimas įjungtas. Prisijungiant reikės kodo iš programėlės.",
+        authenticatorApp: {
+            buttonAbleToScan__nonPrimary: "Nuskaityti QR kodą", buttonUnableToScan__nonPrimary: "Nepavyksta nuskaityti QR kodo?",
+            infoText__ableToScan: "Programėlėje pridėk naują paskyrą ir nuskaityk šį QR kodą.", infoText__unableToScan: "Programėlėje pridėk naują paskyrą ir įvesk žemiau pateiktą raktą.",
+            inputLabel__unableToScan1: "Pasirink vienkartinius slaptažodžius pagal laiką ir baik susiejimą.", inputLabel__unableToScan2: "Jei programėlė palaiko TOTP URI, gali nukopijuoti visą adresą.",
+        },
+        removeResource: { title: "Išjungti dviejų veiksmų patvirtinimą", messageLine1: "Prisijungiant šios programėlės kodų nebereikės.", messageLine2: "Paskyra gali tapti mažiau saugi. Ar tęsti?", successMessage: "Patvirtinimas programėle išjungtas." },
+    },
+    backupCodePage: {
+        title: "Pridėti atsarginius kodus", title__codelist: "Atsarginiai kodai", subtitle__codelist: "Saugok juos saugioje vietoje ir niekam neatskleisk.",
+        actionLabel__copied: "Nukopijuota!", actionLabel__copy: "Kopijuoti visus", actionLabel__download: "Atsisiųsti .txt", actionLabel__print: "Spausdinti",
+        infoText1: "Šiai paskyrai bus įjungti atsarginiai kodai.", infoText2: "Laikyk kodus paslaptyje. Jei įtari, kad juos sužinojo kiti, sugeneruok naujus.",
+        successMessage: "Atsarginiai kodai įjungti. Praradęs autentifikavimo įrenginį galėsi prisijungti su vienu iš jų. Kiekvienas kodas galioja vieną kartą.",
+        successSubtitle: "Praradęs autentifikavimo įrenginį prisijunk su vienu iš šių kodų.",
+    },
+    passkeyScreen: { title__rename: "Pervadinti prieigos raktą", subtitle__rename: "Pasirink lengvai atpažįstamą pavadinimą.", removeResource: { title: "Pašalinti prieigos raktą", messageLine1: "{{name}} bus pašalintas iš paskyros." } },
+};

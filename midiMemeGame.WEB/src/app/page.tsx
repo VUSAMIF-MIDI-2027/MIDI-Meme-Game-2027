@@ -12,6 +12,7 @@ import EventCountdown from "@/components/Home/Countdown/EventCountdown";
 import Tutorial from "@/components/Home/Tutorial/Tutorial";
 import { tutorialText } from "@/components/Home/Tutorial/tutorialText";
 import { useLanguage } from "@/context/LanguageContext";
+import { RulesReminder } from "@/components/Home/RulesReminder";
 
 export default function Home() {
     const { lang } = useLanguage();
@@ -48,6 +49,7 @@ export default function Home() {
                 </a>
             </div>
             <Tutorial />
+            <RulesReminder />
         </div>
     );
 }
