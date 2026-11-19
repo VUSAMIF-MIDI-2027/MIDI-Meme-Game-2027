@@ -10,7 +10,7 @@ namespace MidiMemeGame.Api.Controllers
 {
     [ApiController]
     [Route("api/photos")]
-    [Authorize]
+    // [Authorize]
     public class PhotosController : ControllerBase
     {
         private readonly SourcePhotoQueries _sourcePhotoQueries;

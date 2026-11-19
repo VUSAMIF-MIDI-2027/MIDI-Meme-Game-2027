@@ -91,13 +91,13 @@ public class ClerkUserService
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogWarning(LogMessages.CLERK_USER_NOT_FOUND, clerkId);
+                _logger.LogWarning(LogMessages.Clerk.USER_NOT_FOUND, clerkId);
                 return ErrorType.NOT_FOUND;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError(LogMessages.CLERK_USER_REQUEST_FAILED, (int)response.StatusCode);
+                _logger.LogError(LogMessages.Clerk.USER_REQUEST_FAILED, (int)response.StatusCode);
 
                 return ErrorType.CLERK_API_UNAVAILABLE;
             }
@@ -121,7 +121,7 @@ public class ClerkUserService
                 || clerkUser.CreatedAt == null
                 || clerkUser.UpdatedAt == null)
             {
-                _logger.LogWarning(LogMessages.CLERK_USER_DATA_INCOMPLETE, clerkId);
+                _logger.LogWarning(LogMessages.Clerk.USER_DATA_INCOMPLETE, clerkId);
 
                 return ErrorType.CLERK_USER_DATA_INVALID;
             }
@@ -162,7 +162,7 @@ public class ClerkUserService
         {
             _logger.LogError(
                 exception,
-                LogMessages.CLERK_API_REQUEST_FAILED
+                LogMessages.Clerk.API_REQUEST_FAILED
             );
 
             return ErrorType.CLERK_API_UNAVAILABLE;
@@ -172,7 +172,7 @@ public class ClerkUserService
         {
             _logger.LogWarning(
                 exception,
-                LogMessages.CLERK_API_TIMEOUT
+                LogMessages.Clerk.API_TIMEOUT
             );
 
             return ErrorType.CLERK_API_UNAVAILABLE;
@@ -181,7 +181,7 @@ public class ClerkUserService
         {
             _logger.LogError(
                 exception,
-                LogMessages.CLERK_API_INVALID_JSON
+                LogMessages.Clerk.API_INVALID_JSON
             );
 
             return ErrorType.CLERK_PAYLOAD_INVALID;
