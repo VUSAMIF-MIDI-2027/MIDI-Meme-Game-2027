@@ -1,3 +1,4 @@
+using MidiMemeGame.Api.Common.Constants;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using MidiMemeGame.Api.Common.Enums;
@@ -94,7 +95,7 @@ public class PhotoFileService
             if (fileCreated)
                 DeleteIncompleteFile(destination!);
 
-            _logger.LogError(ex, "Failed to save uploaded photo.");
+            _logger.LogError(ex, LogMessages.PHOTO_SAVE_FAILED);
 
             return ErrorType.PHOTO_FILE_SAVE_FAILED;
         }
@@ -114,7 +115,7 @@ public class PhotoFileService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete photo.");
+            _logger.LogError(ex, LogMessages.PHOTO_DELETE_FAILED);
 
             return ErrorType.PHOTO_FILE_DELETE_FAILED;
         }
@@ -146,7 +147,7 @@ public class PhotoFileService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete incomplete photo: {Path}", path);
+            _logger.LogError(ex, LogMessages.PHOTO_INCOMPLETE_DELETE_FAILED, path);
         }
     }
 }
