@@ -14,11 +14,6 @@ namespace MidiMemeGame.Api.Controllers;
 [Route("api/event-schedule")]
 public class EventScheduleController : ControllerBase
 {
-    private const string ScheduleMissingMessage =
-        "Event schedule does not exist yet. Create it first via PUT /api/event-schedule.";
-    private const string InvalidOrderMessage =
-        "Event start must be before voting start, and voting start must be before event end.";
-
     private readonly EventScheduleQueries _eventScheduleQueries;
 
     public EventScheduleController(EventScheduleQueries eventScheduleQueries)
@@ -132,7 +127,7 @@ public class EventScheduleController : ControllerBase
         var currentResult = await _eventScheduleQueries.GetAsync(cancellationToken);
 
         if (currentResult.Error == ErrorType.EVENT_SCHEDULE_NOT_FOUND)
-            return NotFound(ErrorResponse.Create(currentResult.Error, ScheduleMissingMessage));
+            return NotFound(ErrorResponse.Create(currentResult.Error));
 
         if (currentResult.IsError)
             return StatusCode(
@@ -153,9 +148,7 @@ public class EventScheduleController : ControllerBase
         var utcSchedule = EventScheduleHelper.ToUtc(schedule);
 
         if (!EventScheduleHelper.IsChronological(utcSchedule))
-            return BadRequest(ErrorResponse.Create(
-                ErrorType.EVENT_SCHEDULE_INVALID_ORDER,
-                InvalidOrderMessage));
+            return BadRequest(ErrorResponse.Create(ErrorType.EVENT_SCHEDULE_INVALID_ORDER));
 
         var result = await _eventScheduleQueries.UpsertAsync(
             utcSchedule,

@@ -45,10 +45,6 @@ public class EventScheduleQueries
 
             return schedule;
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
         catch (SqliteException ex)
         {
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
@@ -102,10 +98,6 @@ public class EventScheduleQueries
                 .ToListAsync(cancellationToken);
 
             return schedules.Single();
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (SqliteException ex)
         {
