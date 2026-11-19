@@ -8,6 +8,7 @@ import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import { LogoutButton } from "./LogoutButton";
 import { accountText } from "./pageText";
 import { syncUser } from "@/services/userService";
+import { FirstVisitRules } from "./FirstVisitRules";
 
 export function UserSync() {
     const { isLoaded, isSignedIn, sessionId } = useAuth();
@@ -53,7 +54,7 @@ function SignedInUserSync() {
     }, [getToken, attempt]);
 
     if (status === "loading") return <LoadingScreen message="preparingAccount" overlay />;
-    if (status === "success") return null;
+    if (status === "success") return <FirstVisitRules />;
 
     return (
         <div role="alert" className="fixed inset-x-0 bottom-0 top-17 z-40 flex flex-col items-center justify-center gap-5 bg-page-background px-6 text-center text-white">

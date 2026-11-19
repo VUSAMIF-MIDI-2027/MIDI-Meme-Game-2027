@@ -1,15 +1,162 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using MidiMemeGame.Api.Common.Constants;
+using MidiMemeGame.Api.Common.Enums;
+using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Dto.Users;
 
 namespace MidiMemeGame.Api.Data.Queries;
 
-public static class UserQueries
+public class UserQueries
 {
-    public static Task<int> UpsertFromClerkAsync(
+    public async Task<Result<AdminUserLookupResponse>> FindActiveByEmailAsync(
+        string email, CancellationToken cancellationToken)
+    {
+        try
+        {
+            FormattableString query = $"""
+                SELECT 
+                    "Id" AS "UserId", 
+                    "FirstName", 
+                    "LastName", 
+                    "Email"
+                FROM "Users"
+                WHERE "Email" = {email} COLLATE NOCASE AND "IsDeleted" = 0
+                LIMIT 2
+                """;
+            var users = await _db.Database
+                .SqlQuery<AdminUserLookupResponse>(query)
+                .ToListAsync(cancellationToken);
+
+            if (users.Count == 0) 
+                return ErrorType.NOT_FOUND;
+
+            if (users.Count > 1) 
+                return ErrorType.BAD_REQUEST;
+            return users[0];
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    private readonly AppDbContext _db;
+    private readonly ILogger<UserQueries> _logger;
+
+    public UserQueries(
         AppDbContext db,
+        ILogger<UserQueries> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
+    public async Task<Result<int>> ResetRulesAcknowledgementsAsync(
+    CancellationToken cancellationToken)
+    {
+        try
+        {
+            const string query = """
+            UPDATE "Users"
+            SET "RulesAcknowledgedAtUtc" = NULL
+            WHERE "RulesAcknowledgedAtUtc" IS NOT NULL;
+            """;
+
+            return await _db.Database.ExecuteSqlRawAsync(
+                query,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+    public async Task<Result<CurrentUserResponse>> GetCurrentUserAsync(string clerkId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            FormattableString query = $"""
+                SELECT 
+                    "Id" AS "UserId", 
+                    "RulesAcknowledgedAtUtc"
+                FROM "Users"
+                WHERE "ClerkId" = {clerkId} AND "IsDeleted" = 0
+                """;
+
+            var user = await _db.Database.SqlQuery<CurrentUserResponse>(query)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (user is null) return ErrorType.NOT_FOUND;
+            return user;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    public async Task<Result<string>> GetActiveClerkIdByIdAsync(
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            FormattableString query = $"""
+            SELECT "ClerkId" AS "Value"
+            FROM "Users"
+            WHERE "Id" = {userId}
+                AND "IsDeleted" = 0
+            """;
+
+            var clerkId = await _db.Database
+                .SqlQuery<string>(query)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(clerkId))
+                return ErrorType.NOT_FOUND;
+
+            return clerkId;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    public async Task<Result<int>> UpsertFromClerkAsync(
         User user,
-        CancellationToken cancellationToken
-    )
+        CancellationToken cancellationToken)
     {
         FormattableString query =
             $"""
@@ -44,17 +191,34 @@ public static class UserQueries
                     AND "Users"."LastClerkUpdatedAt" < {user.LastClerkUpdatedAt};
             """;
 
-        return db.Database.ExecuteSqlInterpolatedAsync(
-            query,
-            cancellationToken
-        );
+        try
+        {
+            var affectedRows = await _db.Database.ExecuteSqlInterpolatedAsync(
+                query,
+                cancellationToken);
+
+            return affectedRows;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_EXCEPTION;
+        }
     }
-    public static Task<int> MarkDeletedFromClerkAsync(
-        AppDbContext db,
+
+    public async Task<Result<int>> MarkDeletedFromClerkAsync(
         string clerkId,
         CancellationToken cancellationToken)
     {
-        FormattableString query = $"""
+        FormattableString query =
+            $"""
             UPDATE "Users"
             SET
                 "IsDeleted" = 1
@@ -62,20 +226,90 @@ public static class UserQueries
                 "ClerkId" = {clerkId};
             """;
 
-        return db.Database.ExecuteSqlInterpolatedAsync(
-            query,
-            cancellationToken
-        );
+        try
+        {
+            var affectedRows = await _db.Database.ExecuteSqlInterpolatedAsync(
+                query,
+                cancellationToken);
+
+            return affectedRows;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_EXCEPTION;
+        }
     }
 
-    public static Task<int?> GetActiveIdByClerkIdAsync(
-        AppDbContext db,
-        string clerkId,
-        CancellationToken cancellationToken)
+    public async Task<Result<int>> GetActiveIdByClerkIdAsync(
+    string clerkId,
+    CancellationToken cancellationToken)
     {
-        return db.Users
-            .Where(user => user.ClerkId == clerkId && !user.IsDeleted)
-            .Select(user => (int?)user.Id)
-            .SingleOrDefaultAsync(cancellationToken);
+        FormattableString query =
+            $"""
+        SELECT "Id" AS "Value"
+        FROM "Users"
+        WHERE
+            "ClerkId" = {clerkId}
+            AND "IsDeleted" = 0
+        """;
+
+        try
+        {
+            var userId = await _db.Database.SqlQuery<int?>(query).SingleOrDefaultAsync(cancellationToken);
+
+            if (userId is null)
+                return ErrorType.NOT_FOUND;
+
+            return userId.Value;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+    public async Task<Result<int>> AcknowledgeRulesAsync(
+    string clerkId,
+    CancellationToken cancellationToken)
+    {
+        try
+        {
+            FormattableString query = $"""
+            UPDATE "Users"
+            SET "RulesAcknowledgedAtUtc" =
+                COALESCE("RulesAcknowledgedAtUtc", {DateTime.UtcNow})
+            WHERE "ClerkId" = {clerkId}
+                AND "IsDeleted" = 0;
+            """;
+
+            return await _db.Database.ExecuteSqlInterpolatedAsync(
+                query,
+                cancellationToken);
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
     }
 }

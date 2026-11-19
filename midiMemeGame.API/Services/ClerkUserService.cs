@@ -13,20 +13,71 @@ namespace MidiMemeGame.Api.Services;
 public class ClerkUserService
 {
     private readonly HttpClient _httpClient;
-    private readonly AppDbContext _db;
+    private readonly UserQueries _userQueries;
     private readonly ILogger<ClerkUserService> _logger;
 
     public ClerkUserService(
         HttpClient httpClient,
-        AppDbContext db,
+        UserQueries userQueries,
         ILogger<ClerkUserService> logger
     )
     {
         _httpClient = httpClient;
-        _db = db;
+        _userQueries = userQueries;
         _logger = logger;
     }
+    public async Task<Result> GrantAdminAsync(
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        var userResult = await _userQueries.GetActiveClerkIdByIdAsync(
+            userId,
+            cancellationToken);
 
+        if (userResult.IsError)
+            return userResult.Error;
+
+        try
+        {
+            var payload = new
+            {
+                public_metadata = new
+                {
+                    role = "admin"
+                }
+            };
+
+            using var response = await _httpClient.PatchAsJsonAsync(
+                $"users/{Uri.EscapeDataString(userResult.Value)}/metadata",
+                payload,
+                cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return ErrorType.NOT_FOUND;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "Failed to grant admin role. Clerk status: {StatusCode}",
+                    (int)response.StatusCode);
+
+                return ErrorType.CLERK_API_UNAVAILABLE;
+            }
+
+            return Result.Ok();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Clerk API request failed.");
+            return ErrorType.CLERK_API_UNAVAILABLE;
+        }
+        catch (OperationCanceledException ex)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Clerk API request timed out.");
+            return ErrorType.CLERK_API_UNAVAILABLE;
+        }
+    }
     public async Task<Result<int>> SyncAsync(
         string clerkId,
         CancellationToken cancellationToken
@@ -41,13 +92,13 @@ public class ClerkUserService
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogWarning("Clerk user {ClerkId} was not found.",clerkId);
+                _logger.LogWarning("Clerk user {ClerkId} was not found.", clerkId);
                 return ErrorType.NOT_FOUND;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Clerk user request failed with status {StatusCode}.",(int)response.StatusCode);
+                _logger.LogError("Clerk user request failed with status {StatusCode}.", (int)response.StatusCode);
 
                 return ErrorType.CLERK_API_UNAVAILABLE;
             }
@@ -71,7 +122,7 @@ public class ClerkUserService
                 || clerkUser.CreatedAt == null
                 || clerkUser.UpdatedAt == null)
             {
-                _logger.LogWarning("Clerk returned incomplete user data for {ClerkId}.",clerkId);
+                _logger.LogWarning("Clerk returned incomplete user data for {ClerkId}.", clerkId);
 
                 return ErrorType.CLERK_USER_DATA_INVALID;
             }
@@ -88,14 +139,12 @@ public class ClerkUserService
                 LastClerkUpdatedAt = clerkUser.UpdatedAt.Value
             };
 
-            await UserQueries.UpsertFromClerkAsync(
-                _db,
+            await _userQueries.UpsertFromClerkAsync(
                 user,
                 cancellationToken
             );
 
-            var userId = await UserQueries.GetActiveIdByClerkIdAsync(
-                _db,
+            var userId = await _userQueries.GetActiveIdByClerkIdAsync(
                 clerkId,
                 cancellationToken
             );
