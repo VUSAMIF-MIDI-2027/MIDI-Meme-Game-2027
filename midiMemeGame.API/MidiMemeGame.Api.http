@@ -4,3 +4,68 @@ GET {{MidiMemeGame.Api_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+# Event schedule (issue #79). GET endpoints are public; PUT endpoints need an admin Clerk token.
+@adminToken = paste-admin-clerk-jwt-here
+
+GET {{MidiMemeGame.Api_HostAddress}}/api/event-schedule
+Accept: application/json
+
+###
+
+PUT {{MidiMemeGame.Api_HostAddress}}/api/event-schedule
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "eventStartsAt": "2026-11-21T18:00:00+02:00",
+  "votingStartsAt": "2026-11-21T22:00:00+02:00",
+  "eventEndsAt": "2026-11-22T02:00:00+02:00"
+}
+
+###
+
+GET {{MidiMemeGame.Api_HostAddress}}/api/event-schedule/event-start
+Accept: application/json
+
+###
+
+PUT {{MidiMemeGame.Api_HostAddress}}/api/event-schedule/event-start
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "eventStartsAt": "2026-11-21T19:00:00+02:00"
+}
+
+###
+
+GET {{MidiMemeGame.Api_HostAddress}}/api/event-schedule/voting-start
+Accept: application/json
+
+###
+
+PUT {{MidiMemeGame.Api_HostAddress}}/api/event-schedule/voting-start
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "votingStartsAt": "2026-11-21T23:00:00+02:00"
+}
+
+###
+
+GET {{MidiMemeGame.Api_HostAddress}}/api/event-schedule/event-end
+Accept: application/json
+
+###
+
+PUT {{MidiMemeGame.Api_HostAddress}}/api/event-schedule/event-end
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "eventEndsAt": "2026-11-22T03:00:00+02:00"
+}
+
+###

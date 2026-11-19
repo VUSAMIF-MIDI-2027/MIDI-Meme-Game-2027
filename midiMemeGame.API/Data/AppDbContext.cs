@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Meme> Memes { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<DeletedClerkUser> DeletedClerkUsers { get; set; }
+    public DbSet<EventSchedule> EventSchedules { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -27,6 +27,28 @@ namespace MidiMemeGame.Api.Migrations
                     b.ToTable("DeletedClerkUsers", (string)null);
                 });
 
+            modelBuilder.Entity("MidiMemeGame.Api.Models.EventSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("EventEndsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("EventStartsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("VotingStartsAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EventSchedule", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_EventSchedule_SingleRow", "\"Id\" = 1");
+                        });
+                });
+
             modelBuilder.Entity("MidiMemeGame.Api.Models.Meme", b =>
                 {
                     b.Property<int>("Id")
