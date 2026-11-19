@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<UserQueries>();
         services.AddScoped<SourcePhotoQueries>();
+        services.AddScoped<PhotoFileService>();
 
         return services;
     }

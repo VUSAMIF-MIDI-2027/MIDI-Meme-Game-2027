@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
     {
     }
     public DbSet<SourcePhoto> SourcePhotos { get; set; }
+    public DbSet<Meme> Memes { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<DeletedClerkUser> DeletedClerkUsers { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)

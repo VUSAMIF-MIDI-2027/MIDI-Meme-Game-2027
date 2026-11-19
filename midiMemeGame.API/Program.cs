@@ -1,3 +1,4 @@
+using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Data;
 using MidiMemeGame.Api.Common.Extensions;
 using MidiMemeGame.Api.Common.Settings;
@@ -60,13 +61,14 @@ namespace midiMemeGame.API
             catch (Exception ex)
             {
                 using var startupLogger = new StreamWriter("failed-startup.log");
-                startupLogger.WriteLine("Application failed to start");
-                startupLogger.WriteLine("Exception message: " + ex.Message);
-                startupLogger.WriteLine("Inner exception message:" + ex.InnerException?.Message);
+                startupLogger.WriteLine(LogMessages.APPLICATION_START_FAILED);
+                startupLogger.WriteLine(LogMessages.STARTUP_EXCEPTION_PREFIX + ex.Message);
+                startupLogger.WriteLine(LogMessages.STARTUP_INNER_EXCEPTION_PREFIX + ex.InnerException?.Message);
                 throw;
             }
         }
     }
 }
+
 
 

@@ -1,4 +1,7 @@
 using System;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Options;
 using MidiMemeGame.Api.Models.Settings;
 
 namespace MidiMemeGame.Api.Common.Settings;
@@ -36,6 +39,31 @@ public static class AppSettingsRegistrationExtensions
                 "Clerk:AuthorizedParties must contain valid frontend URLs"
             )
             .ValidateOnStart();
+
+        services.AddOptions<FileStorageSettings>()
+            .Bind(configuration.GetSection("FileStorage"))
+            .Validate(settings => !string.IsNullOrWhiteSpace(settings.RootPath), "FileStorage:RootPath is required")
+            .ValidateOnStart();
+
+        services.AddOptions<PhotoUploadSettings>()
+            .Bind(configuration.GetSection("PhotoUpload"))
+            .Validate(settings => settings.MaxFileSizeBytes > 0 && settings.MaxRequestSizeBytes >= settings.MaxFileSizeBytes,
+                "PhotoUpload size limits are invalid")
+            .ValidateOnStart();
+
+        services.AddOptions<KestrelServerOptions>()
+            .Configure<IOptions<PhotoUploadSettings>>((options, upload) =>
+            {
+                options.Limits.MaxRequestBodySize =
+                    upload.Value.MaxRequestSizeBytes;
+            });
+
+        services.AddOptions<FormOptions>()
+            .Configure<IOptions<PhotoUploadSettings>>((options, upload) =>
+            {
+                options.MultipartBodyLengthLimit =
+                    upload.Value.MaxRequestSizeBytes;
+            });
 
         return services;
     }
