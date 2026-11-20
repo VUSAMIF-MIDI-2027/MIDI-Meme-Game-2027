@@ -2,10 +2,13 @@
 
 import { useEffect, useRef } from "react";
 
+export type FlightStartSide = "left" | "right";
+
 type Position = { x: number; y: number };
 type Obstacle = { left: number; top: number; right: number; bottom: number };
 
 const MOBILE_QUERY = "(max-width: 639px)";
+const RULES_OVERLAP_QUERY = "(width < 64rem), (pointer: coarse)";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const OBSTACLE_GAP = 6;
 const POSITION_SEARCH_STEP = 8;
@@ -13,11 +16,16 @@ const MAX_FRAME_SECONDS = 0.05;
 const TURN_LOOKAHEAD_SECONDS = 1.2;
 const TURN_SMOOTHING = 2;
 const FLIGHT_SPEED = { x: 17, y: 11 };
+// The furthest visible point in the spinning sprite is 46% of its width from its center.
+const SPRITE_RADIUS_RATIO = 0.46;
 
 // Only the visible pixels collide; the SVG has transparent margins.
 const SPRITE_BOUNDS = { left: 0.175, right: 0.9, top: 0.2, bottom: 0.925 };
 
-function collectObstacles(content: HTMLElement, flightArea: HTMLElement): Obstacle[] {
+function collectObstacles(
+  content: HTMLElement,
+  flightArea: HTMLElement,
+): Obstacle[] {
   const areaBounds = flightArea.getBoundingClientRect();
   const obstacles: Obstacle[] = [];
 
@@ -59,16 +67,20 @@ function startFlyingCatMotion(
   flightArea: HTMLDivElement,
   cat: HTMLDivElement,
   content: HTMLElement,
+  startSide: FlightStartSide,
+  bounceOnContact: boolean,
 ) {
-  const mobileScreen = window.matchMedia(MOBILE_QUERY);
+  const overlapScreen = window.matchMedia(bounceOnContact ? RULES_OVERLAP_QUERY : MOBILE_QUERY);
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
   const position = { x: 0, y: 0 };
-  const targetVelocity = { x: -FLIGHT_SPEED.x, y: FLIGHT_SPEED.y };
+  const startsOnLeft = startSide === "left";
+  const targetVelocity = { x: startsOnLeft ? FLIGHT_SPEED.x : -FLIGHT_SPEED.x, y: FLIGHT_SPEED.y };
   const velocity = { ...targetVelocity };
   let maxX = 0;
   let maxY = 0;
   let catSize = 100;
   let obstacles: Obstacle[] = [];
+  let canPlaceCat = true;
   let initialized = false;
   let disposed = false;
   let visible = true;
@@ -76,6 +88,18 @@ function startFlyingCatMotion(
   let previousFrameTime = 0;
 
   function hitsObstacle(x: number, y: number) {
+    if (bounceOnContact) {
+      const centerX = x + catSize / 2;
+      const centerY = y + catSize / 2;
+      const radius = catSize * SPRITE_RADIUS_RATIO;
+
+      return obstacles.some(({ left, top, right, bottom }) => {
+        const dx = Math.max(left - centerX, 0, centerX - right);
+        const dy = Math.max(top - centerY, 0, centerY - bottom);
+        return dx * dx + dy * dy < radius * radius;
+      });
+    }
+
     const rotationMargin = catSize * 0.07;
     const left = x + catSize * SPRITE_BOUNDS.left - rotationMargin;
     const right = x + catSize * SPRITE_BOUNDS.right + rotationMargin;
@@ -101,8 +125,12 @@ function startFlyingCatMotion(
     let nearest: Position | undefined;
     let nearestDistance = Infinity;
 
-    for (let y = 0; y <= maxY; y += POSITION_SEARCH_STEP) {
-      for (let x = 0; x <= maxX; x += POSITION_SEARCH_STEP) {
+    for (let row = 0; row <= Math.ceil(maxY / POSITION_SEARCH_STEP); row++) {
+      const y = Math.min(row * POSITION_SEARCH_STEP, maxY);
+      if ((y - position.y) ** 2 >= nearestDistance) continue;
+
+      for (let column = 0; column <= Math.ceil(maxX / POSITION_SEARCH_STEP); column++) {
+        const x = Math.min(column * POSITION_SEARCH_STEP, maxX);
         const distance = (x - position.x) ** 2 + (y - position.y) ** 2;
         if (distance < nearestDistance && !hitsObstacle(x, y)) {
           nearest = { x, y };
@@ -114,29 +142,46 @@ function startFlyingCatMotion(
     return nearest;
   }
 
-  function measureLayout() {
-    if (disposed) return;
-
-    catSize = cat.offsetWidth;
-    maxX = Math.max(0, flightArea.clientWidth - catSize);
-    maxY = Math.max(0, flightArea.clientHeight - catSize);
-    obstacles = mobileScreen.matches ? [] : collectObstacles(content, flightArea);
-
+  function placeCat() {
     if (!initialized) {
-      position.x = maxX * 0.95;
-      position.y = maxY * 0.18;
+      position.x = maxX * (startsOnLeft ? 0.05 : 0.95);
+      position.y = bounceOnContact ? Math.min(maxY, 32) : maxY * 0.18;
       initialized = true;
     }
     position.x = Math.max(0, Math.min(maxX, position.x));
     position.y = Math.max(0, Math.min(maxY, position.y));
 
     // Text can move over the cat after resizing, loading fonts or switching language.
+    canPlaceCat = true;
     if (hitsObstacle(position.x, position.y)) {
       const clearPosition = findNearestClearPosition();
       if (clearPosition) Object.assign(position, clearPosition);
+      else canPlaceCat = !bounceOnContact;
     }
 
+    if (bounceOnContact) cat.style.visibility = canPlaceCat ? "" : "hidden";
     paintPosition();
+  }
+
+  function measureLayout() {
+    if (disposed) return;
+
+    catSize = cat.offsetWidth;
+    maxX = Math.max(0, flightArea.clientWidth - catSize);
+    maxY = Math.max(0, flightArea.clientHeight - catSize);
+
+    obstacles = overlapScreen.matches ? [] : collectObstacles(content, flightArea);
+    placeCat();
+  }
+
+  function bounceOffObstacles(elapsed: number) {
+    const nextX = position.x + velocity.x * elapsed;
+    if (isBlocked(nextX, position.y)) velocity.x *= -1;
+    else position.x = nextX;
+
+    const nextY = position.y + velocity.y * elapsed;
+    if (isBlocked(position.x, nextY)) velocity.y *= -1;
+    else position.y = nextY;
   }
 
   function animate(now: number) {
@@ -144,6 +189,15 @@ function startFlyingCatMotion(
       ? Math.min((now - previousFrameTime) / 1000, MAX_FRAME_SECONDS)
       : 0;
     previousFrameTime = now;
+
+    if (bounceOnContact) {
+      if (canPlaceCat) {
+        bounceOffObstacles(elapsed);
+        paintPosition();
+      }
+      animationFrame = requestAnimationFrame(animate);
+      return;
+    }
 
     // Start turning before contact, and avoid flipping directions every frame
     // when a narrow gap blocks both lookahead probes.
@@ -203,7 +257,7 @@ function startFlyingCatMotion(
 
   const textObserver = new MutationObserver((records) => {
     // The reaction bubble moves with the cat and cannot be a flight obstacle.
-    if (!mobileScreen.matches && records.some(({ target }) => !flightArea.contains(target))) {
+    if (!overlapScreen.matches && records.some(({ target }) => !flightArea.contains(target))) {
       measureLayout();
     }
   });
@@ -220,7 +274,7 @@ function startFlyingCatMotion(
   visibilityObserver.observe(flightArea);
 
   content.addEventListener("load", measureLayout, true);
-  mobileScreen.addEventListener("change", measureLayout);
+  overlapScreen.addEventListener("change", measureLayout);
   reducedMotion.addEventListener("change", updatePlayback);
   document.addEventListener("visibilitychange", updatePlayback);
   document.fonts.ready.then(measureLayout);
@@ -235,13 +289,16 @@ function startFlyingCatMotion(
     textObserver.disconnect();
     visibilityObserver.disconnect();
     content.removeEventListener("load", measureLayout, true);
-    mobileScreen.removeEventListener("change", measureLayout);
+    overlapScreen.removeEventListener("change", measureLayout);
     reducedMotion.removeEventListener("change", updatePlayback);
     document.removeEventListener("visibilitychange", updatePlayback);
   };
 }
 
-export function useFlyingCatMotion() {
+export function useFlyingCatMotion(
+  startSide: FlightStartSide,
+  bounceOnContact: boolean,
+) {
   const flightAreaRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
 
@@ -251,8 +308,8 @@ export function useFlyingCatMotion() {
     const content = flightArea?.parentElement;
     if (!flightArea || !cat || !content) return;
 
-    return startFlyingCatMotion(flightArea, cat, content);
-  }, []);
+    return startFlyingCatMotion(flightArea, cat, content, startSide, bounceOnContact);
+  }, [startSide, bounceOnContact]);
 
   return { flightAreaRef, catRef };
 }

@@ -21,8 +21,7 @@
   }
 }
 
-/* The cat's resting paw meets the line at row 29 of its 60px sprite.
-   Countdown's top border starts 1rem below this containing block. */
+/* The resting paw meets the top border at row 29 of the 60px sprite. */
 .perched {
   --sleeping-cat-size: 144px;
   position: absolute;

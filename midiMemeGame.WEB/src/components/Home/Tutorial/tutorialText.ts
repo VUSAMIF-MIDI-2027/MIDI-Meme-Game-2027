@@ -7,6 +7,8 @@ type TutorialText = {
     votePreviewLabel: string;
     choosePhotoHint: string;
     submitted: string;
+    rulesLink: string;
+    rulesLinkDescription: string;
 
 };
 
@@ -23,6 +25,8 @@ export const tutorialText: Record<Lang, TutorialText> = {
 
         choosePhotoHint: "Išbandyk — pasirink nuotrauką",
         submitted: "Memas pateiktas!",
+        rulesLink: "Taisyklės",
+        rulesLinkDescription: "Susipažink su memų pateikimo ir balsavimo tvarka.",
         votePreviewLabel: "Tavo favoritas · balsavimo pavyzdys",
     },
     en: {
@@ -37,6 +41,8 @@ export const tutorialText: Record<Lang, TutorialText> = {
 
         choosePhotoHint: "Try it — choose a photo",
         submitted: "Meme submitted!",
+        rulesLink: "Rules",
+        rulesLinkDescription: "See how to submit memes and vote.",
         votePreviewLabel: "Your favourite · voting preview",
     },
 };

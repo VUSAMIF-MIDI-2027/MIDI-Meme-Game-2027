@@ -7,6 +7,11 @@
   user-select: none;
 }
 
+.sky.sectionSky {
+  inset-block-start: 32px;
+  inset-inline: 16px;
+}
+
 .flight {
   position: absolute;
   top: 0;
@@ -21,11 +26,11 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .flight img {
+  .flight [data-cat-sprite] {
     animation: spin-in-flight 30s linear infinite paused;
   }
 
-  .flight[data-flying] img {
+  .flight[data-flying] [data-cat-sprite] {
     animation-play-state: running;
   }
 }

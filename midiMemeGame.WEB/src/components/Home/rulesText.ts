@@ -16,9 +16,6 @@ export const rulesText = {
         warning: "Nekelk NSFW (seksualinio ar kito nepadoraus turinio) ir memų, kuriuose asmeniškai įžeidinėjami žmonės. Pažeidžiantis memas bus užblokuotas ir sunaudos vieną iš 3 bandymų. Šis bandymas negrąžinamas, tačiau likusius bandymus gali panaudoti kitiems memams.",
         warningNote: "Juokauk kūrybiškai, bet nežemink kitų. Ši taisyklė taikoma visiems dalyviams.",
         tutorialLink: "Peržiūrėti kūrimo ir balsavimo pavyzdį ↓",
-        reminderTitle: "Prieš pateikdamas memą",
-        reminder: "Iki 3 memų, iki 3 balsų skirtingiems memams. NSFW ar asmeninių įžeidimų turintis memas blokuojamas, o jam panaudotas bandymas negrąžinamas.",
-        read: "Perskaityti taisykles →",
     },
     en: {
         title: "Meme competition rules",
@@ -35,9 +32,6 @@ export const rulesText = {
         warning: "Do not submit NSFW (sexual or other indecent content) or memes that personally insult people. The offending meme will be blocked and use up one of the 3 attempts. That attempt is not refunded, but you can still use your remaining attempts for other memes.",
         warningNote: "Be creative with your humour, but do not demean others. This rule applies to every participant.",
         tutorialLink: "See the creation and voting example ↓",
-        reminderTitle: "Before submitting a meme",
-        reminder: "Up to 3 memes and 3 votes for different memes. Memes containing NSFW content or personal insults are blocked, and the attempt used is not refunded.",
-        read: "Read the rules →",
     },
 } satisfies Record<Lang, unknown>;
 

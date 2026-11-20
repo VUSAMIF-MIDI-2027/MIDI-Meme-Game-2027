@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowRight } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import PhotoPicker from "./PhotoPicker";
 import MemePreview from "./MemePreview";
 import VotePreview from "./VotePreview";
@@ -9,7 +12,7 @@ import { text } from "@/app/pageText";
 import { useLanguage } from "@/context/LanguageContext";
 import { tutorialText } from "./tutorialText";
 
-export default function Tutorial() {
+export default function Tutorial({ showRulesLink = false }: { showRulesLink?: boolean }) {
     const { lang } = useLanguage();
     const t = tutorialText[lang];
     const page = text[lang];
@@ -63,6 +66,27 @@ export default function Tutorial() {
                             </div>
                         </div>
                         <VotePreview key={selectedPhoto.id} lang={lang} photos={votingPhotos} />
+                        {showRulesLink && (
+                            <Link
+                                href="/rules"
+                                className="mt-11 flex w-full items-center gap-3 rounded-lg bg-[radial-gradient(ellipse_29%_48%_at_29%_50%,color-mix(in_srgb,var(--midi-blue)_15%,transparent),transparent),radial-gradient(ellipse_33%_46%_at_55%_54%,color-mix(in_srgb,var(--midi-blue)_8%,transparent),transparent)] px-3 text-2xl leading-tight font-bold text-midi-blue focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-midi-blue motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out motion-safe:hover:scale-[1.02] sm:mt-12 sm:gap-6 sm:px-5 sm:text-3xl lg:text-4xl"
+                            >
+                                <Image
+                                    src="/cats/skaitantis_kasaras.svg"
+                                    alt=""
+                                    width={160}
+                                    height={160}
+                                    className="size-24 shrink-0 sm:size-32 lg:size-40 [image-rendering:pixelated]"
+                                />
+                                <span className="min-w-0">
+                                    <span className="block text-midi-white">{t.rulesLink}</span>
+                                    <span className="mt-1 block text-sm leading-snug font-normal text-text-muted sm:text-base">
+                                        {t.rulesLinkDescription}
+                                    </span>
+                                </span>
+                                <ArrowRight aria-hidden="true" className="ml-auto size-5 shrink-0 sm:size-7" />
+                            </Link>
+                        )}
                     </li>
                 </ol>
             </div>
