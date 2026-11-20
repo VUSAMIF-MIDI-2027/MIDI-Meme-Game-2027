@@ -65,6 +65,18 @@ public static class AppSettingsRegistrationExtensions
                     upload.Value.MaxRequestSizeBytes;
             });
 
+        services.AddOptions<SmtpSettings>()
+            .Bind(configuration.GetSection("Smtp"))
+            .Validate(s => !string.IsNullOrWhiteSpace(s.Host), "Smtp:Host is required")
+            .Validate(s => s.Port == 587, "Smtp:Port is invalid")
+            .Validate(s => string.Equals(s.Security, "StartTls", StringComparison.OrdinalIgnoreCase), "Smtp:Security must be StartTls")
+            .Validate(s => !string.IsNullOrWhiteSpace(s.Username), "Smtp:Username is required")
+            .Validate(s => !string.IsNullOrWhiteSpace(s.Password), "Smtp:Password is missing")
+            .Validate(s => System.Net.Mail.MailAddress.TryCreate(s.FromAddress, out _), "Smtp:FromAddress is invalid")
+            .Validate(s => !string.IsNullOrWhiteSpace(s.FromName), "Smtp:FromName is required")
+            .Validate(s => s.MaxAttempts > 0 && s.PollIntervalSeconds > 0, "Smtp retry settings are invalid")
+            .ValidateOnStart();
+
         return services;
     }
 }
