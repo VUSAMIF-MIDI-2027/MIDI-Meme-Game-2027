@@ -5,15 +5,12 @@ import { useAuth } from "@clerk/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { resetRulesAcknowledgements } from "@/services/userService";
 
-const text = {
-    lt: { title: "Taisyklių peržiūra", description: "Atstatyk visų vartotojų taisyklių patvirtinimus. Taisyklių langą jie vėl matys perkrovę puslapį arba prisijungę iš naujo.", action: "Atstatyti patvirtinimus", confirm: "Atstatyti visiems?", warning: "Bus atstatyti visų vartotojų, įskaitant tavo, taisyklių patvirtinimai. Ankstesni patvirtinimo laikai bus pašalinti.", cancel: "Atšaukti", submit: "Taip, atstatyti visiems", saving: "Atstatoma…", success: "Atnaujinta vartotojų:", empty: "Nė vienas vartotojas neturėjo išsaugoto patvirtinimo.", error: "Nepavyko patvirtinti rezultato. Patikrink ryšį ir bandyk dar kartą.", denied: "Neturi teisės atlikti šio veiksmo. Prisijunk su administratoriaus paskyra." },
-    en: { title: "Rules acknowledgement", description: "Reset every user's rules acknowledgement. They will see the rules again after reloading the page or signing in again.", action: "Reset acknowledgements", confirm: "Reset for everyone?", warning: "All users' acknowledgements, including yours, will be reset. Previous acknowledgement dates will be cleared.", cancel: "Cancel", submit: "Yes, reset for everyone", saving: "Resetting…", success: "Users updated:", empty: "No users had an acknowledgement to reset.", error: "Could not confirm the result. Check your connection and try again.", denied: "You do not have permission to do this. Sign in with an administrator account." },
-};
+import { resetRulesText } from "@/app/admin/pageText";
 
 export function ResetRulesAcknowledgements() {
     const { getToken } = useAuth();
     const { lang } = useLanguage();
-    const t = text[lang];
+    const t = resetRulesText[lang];
     const dialog = useRef<HTMLDialogElement>(null);
     const request = useRef<AbortController | null>(null);
     const [saving, setSaving] = useState(false);

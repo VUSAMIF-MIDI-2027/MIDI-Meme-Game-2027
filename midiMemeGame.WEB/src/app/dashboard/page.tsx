@@ -1,54 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth, useUser } from "@clerk/react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import YourMemes from "@/components/Home/Your-Memes/YourMemes";
+import { CompetitionStatus } from "@/components/Shared/CompetitionStatus";
 import { useLanguage } from "@/context/LanguageContext";
 import { dashboardText } from "./pageText";
 import styles from "./dashboard.module.css";
 import Link from "next/link";
-
-// Keep the date consistent with the existing public countdown.
-const COMPETITION_START = new Date("2026-11-27T21:00:00+02:00");
 
 export default function DashboardPage() {
     const { isLoaded, isSignedIn } = useAuth();
     const { isLoaded: isUserLoaded, user } = useUser();
     const { lang } = useLanguage();
     const router = useRouter();
-    const [now, setNow] = useState<number | null>(null);
     const t = dashboardText[lang];
 
     useEffect(() => {
         if (isLoaded && !isSignedIn) router.replace("/login");
     }, [isLoaded, isSignedIn, router]);
 
-    useEffect(() => {
-        const initialUpdate = window.setTimeout(() => setNow(Date.now()), 0);
-        const interval = window.setInterval(() => setNow(Date.now()), 60_000);
-        return () => {
-            window.clearTimeout(initialUpdate);
-            window.clearInterval(interval);
-        };
-    }, []);
-
     if (!isLoaded || !isSignedIn || !isUserLoaded) return <LoadingScreen />;
 
     const name = user?.firstName?.trim() || user?.username?.trim();
-    const competitionOpen = now !== null && now >= COMPETITION_START.getTime();
-    const date = new Intl.DateTimeFormat(lang === "lt" ? "lt-LT" : "en-GB", {
-        month: "long",
-        day: "numeric",
-        timeZone: "Europe/Vilnius",
-    }).format(COMPETITION_START);
-    const time = new Intl.DateTimeFormat("lt-LT", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Europe/Vilnius",
-    }).format(COMPETITION_START);
 
     return (
         <div className={`${styles.page} flex flex-1 flex-col text-midi-gray`}>
@@ -89,21 +66,10 @@ export default function DashboardPage() {
                         <div className={styles.catScene} aria-hidden="true">
                             <span className={styles.dioCat} />
                         </div>
-                        <aside className="relative border-t border-midi-blue/60 pt-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#70cfff]">
-                            {competitionOpen ? t.competitionLive : t.competitionUpcoming}
-                        </p>
-                        <p className="mt-3 text-3xl leading-tight font-bold text-white">
-                            <time dateTime={COMPETITION_START.toISOString()}>
-                                <span className="inline-block first-letter:uppercase">{date}</span>
-                                <span> · {t.startsAt} </span>
-                                <span>{time}</span>
-                            </time>
-                        </p>
-                        <p className="mt-3 text-sm leading-relaxed text-text-muted">
-                            {competitionOpen ? t.liveDescription : t.upcomingDescription}
-                        </p>
-                        </aside>
+                        <CompetitionStatus
+                            layout="dashboard"
+                            className="relative border-t border-midi-blue/60 pt-5"
+                        />
                     </div>
                 </section>
 

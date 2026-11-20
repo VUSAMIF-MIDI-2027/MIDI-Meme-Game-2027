@@ -5,7 +5,6 @@ type PageText = {
     titlePrefix: string;
     titleEnding: string;
     description: string;
-    submissionsCloseIn: string;
 
     registerTab: string;
     loginTab: string;
@@ -37,7 +36,6 @@ export const authText: Record<Lang, PageText> = {
         titlePrefix: "Paversk",
         titleEnding: "akimirką memu.",
         description: "Išsirink renginio nuotrauką, parašyk prierašą ir pateik savo memą.",
-        submissionsCloseIn: "Iki pateikimo pabaigos",
 
         registerTab: "Registruotis",
         loginTab: "Prisijungti",
@@ -68,7 +66,6 @@ export const authText: Record<Lang, PageText> = {
         titlePrefix: "Turn a",
         titleEnding: "moment into a meme.",
         description: "Choose an event photo, write a caption, and submit your meme.",
-        submissionsCloseIn: "Submissions close in",
 
         registerTab: "Register",
         loginTab: "Sign in",
