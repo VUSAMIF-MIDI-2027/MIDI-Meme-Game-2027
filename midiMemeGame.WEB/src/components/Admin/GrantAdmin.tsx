@@ -5,26 +5,8 @@ import { useAuth } from "@clerk/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { AdminUserError, lookupAdminUser, grantAdminRole, type AdminUser } from "@/services/userService";
 
-const text = {
-    lt: {
-        title: "Pridėti administratorių", description: "Rask žmogų pagal el. paštą ir suteik jam administratoriaus teises.",
-        email: "El. paštas", search: "Rasti vartotoją", searching: "Ieškoma…", grant: "Suteikti teises", granting: "Suteikiama…",
-        confirm: "Suteikti administratoriaus teises?", warning: "Šis žmogus gaus prieigą prie administravimo funkcijų.", cancel: "Atšaukti",
-        success: "Administratoriaus teisės suteiktos. Vartotojas turėtų atsijungti ir prisijungti iš naujo.",
-        notFound: "Vartotojas nerastas. Paprašyk jo pirmiausia prisijungti prie svetainės.",
-        invalid: "Patikrink el. pašto adresą.", ambiguous: "Šį el. paštą turi keli vartotojai. Teisės nesuteiktos — patikrink vartotojų duomenis.",
-        denied: "Neturi administratoriaus teisių arba sesija nebegalioja.", error: "Nepavyko gauti atsakymo. Pabandyk dar kartą.",
-    },
-    en: {
-        title: "Add an administrator", description: "Find a person by email and grant them administrator access.",
-        email: "Email address", search: "Find user", searching: "Searching…", grant: "Grant access", granting: "Granting…",
-        confirm: "Grant administrator access?", warning: "This person will gain access to administration features.", cancel: "Cancel",
-        success: "Administrator access granted. The user should sign out and sign in again.",
-        notFound: "User not found. Ask them to sign in to the website first.", invalid: "Check the email address.",
-        ambiguous: "Multiple users have this email. Access was not granted — check the user records.",
-        denied: "You do not have administrator access or your session has expired.", error: "Could not receive a response. Please try again.",
-    },
-};
+import { grantAdminText } from "@/app/admin/pageText";
+
 type ErrorKey = "notFound" | "invalid" | "ambiguous" | "denied" | "error";
 function errorKey(error: unknown): ErrorKey {
     if (!(error instanceof AdminUserError)) return "error";
@@ -38,7 +20,7 @@ function errorKey(error: unknown): ErrorKey {
 export function GrantAdmin() {
     const { getToken } = useAuth();
     const { lang } = useLanguage();
-    const t = text[lang];
+    const t = grantAdminText[lang];
     const [email, setEmail] = useState("");
     const [user, setUser] = useState<AdminUser | null>(null);
     const [busy, setBusy] = useState<"search" | "grant" | null>(null);
