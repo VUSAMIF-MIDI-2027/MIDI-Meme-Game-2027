@@ -52,6 +52,10 @@
 }
 
 @media (max-width: 639px) {
+  .sky.sectionSky {
+    display: none;
+  }
+
   .sky {
     inset-inline: -20px;
   }

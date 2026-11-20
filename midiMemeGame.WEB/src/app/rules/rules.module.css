@@ -1,5 +1,5 @@
 /* Keep the rules readable above the sprite wherever text overlap is allowed. */
-@media (width < 64rem), (pointer: coarse) {
+@media (640px <= width < 64rem), (width >= 640px) and (pointer: coarse) {
   .content {
     position: relative;
     z-index: 2;
