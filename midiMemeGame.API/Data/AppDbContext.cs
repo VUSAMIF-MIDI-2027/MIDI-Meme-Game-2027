@@ -13,6 +13,8 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<DeletedClerkUser> DeletedClerkUsers { get; set; }
     public DbSet<EventSchedule> EventSchedules { get; set; }
+    public DbSet<EmailTemplate> EmailTemplates { get; set; }
+    public DbSet<EmailDelivery> EmailDeliveries { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
