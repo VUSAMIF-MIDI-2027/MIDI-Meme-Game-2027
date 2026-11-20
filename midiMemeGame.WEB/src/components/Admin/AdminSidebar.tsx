@@ -4,10 +4,12 @@ import Link from "next/link";
 import {
     ArrowLeft,
     Camera,
+    CalendarClock,
+    BookOpen,
     Image as ImageIcon,
     LayoutDashboard,
-    Settings as SettingsIcon,
     ShieldCheck,
+    UsersRound,
 } from "lucide-react";
 import { SECTIONS, type AdminTranslations, type Section } from "@/app/admin/types";
 
@@ -21,7 +23,9 @@ const SECTION_ICONS: Record<Section, typeof LayoutDashboard> = {
     overview: LayoutDashboard,
     "meme-approval": ImageIcon,
     photos: Camera,
-    settings: SettingsIcon,
+    schedule: CalendarClock,
+    team: UsersRound,
+    rules: BookOpen,
 };
 
 export function AdminSidebar({ t, section, onSelect }: AdminSidebarProps) {
