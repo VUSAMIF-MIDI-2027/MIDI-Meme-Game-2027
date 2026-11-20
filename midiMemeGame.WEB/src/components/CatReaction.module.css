@@ -39,7 +39,7 @@
 }
 
 .button[aria-disabled="true"] {
-  cursor: not-allowed;
+  cursor: wait;
 }
 
 .angerMarks {

@@ -13,9 +13,7 @@ import { AdminHeader } from "@/components/Admin/AdminHeader";
 import { Overview } from "@/components/Admin/Overview";
 import { MemeApproval } from "@/components/Admin/MemeApproval";
 import { Photos } from "@/components/Admin/photos/Photos";
-import { EventScheduleSettings } from "@/components/Admin/EventScheduleSettings";
-import { GrantAdmin } from "@/components/Admin/GrantAdmin";
-import { ResetRulesAcknowledgements } from "@/components/Admin/ResetRulesAcknowledgements";
+import { Settings } from "@/components/Admin/settings/Settings";
 
 function renderSectionContent(section: Section, navigateToSection: (next: Section) => void) {
     switch (section) {
@@ -25,12 +23,8 @@ function renderSectionContent(section: Section, navigateToSection: (next: Sectio
             return <MemeApproval />;
         case "photos":
             return <Photos />;
-        case "schedule":
-            return <EventScheduleSettings />;
-        case "team":
-            return <GrantAdmin />;
-        case "rules":
-            return <ResetRulesAcknowledgements />;
+        case "settings":
+            return <Settings />;
     }
 }
 
@@ -44,7 +38,7 @@ function AdminPageContent() {
     const section = parseSection(searchParams.get("section"));
     const isAdmin = sessionClaims?.role === "admin";
     const t = adminText[lang];
-    const currentConfig = SECTIONS.find((item) => item.id === section) ?? SECTIONS[0];
+    const currentConfig = SECTIONS.find((s) => s.id === section) ?? SECTIONS[0];
 
     useEffect(() => {
         if (!isLoaded) return;

@@ -1,4 +1,7 @@
-import { apiBaseUrl } from "./apiBaseUrl";
+const apiBaseUrl = (
+    process.env.NEXT_PUBLIC_API_BASE_URL
+    ?? (process.env.NODE_ENV === "development" ? "http://localhost:5000" : "")
+).replace(/[/]$/, "");
 
 export type CurrentUser = {
     userId: number;
@@ -57,44 +60,6 @@ export async function syncUser(token: string, signal: AbortSignal): Promise<void
     if (!response.ok) {
         throw new Error("User synchronization failed: HTTP " + response.status);
     }
-}
-
-export type AdminUser = {
-    userId: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-};
-
-export class AdminUserError extends Error {
-    constructor(public status: number) {
-        super(`Admin user request failed: ${status}`);
-    }
-}
-
-export async function lookupAdminUser(email: string, token: string, signal: AbortSignal): Promise<AdminUser> {
-    const response = await fetch(apiBaseUrl + "/api/admin/users/lookup?" + new URLSearchParams({ email: email.trim() }), {
-        headers: { Authorization: "Bearer " + token },
-        signal,
-        cache: "no-store",
-    });
-    if (!response.ok) throw new AdminUserError(response.status);
-    const user = await response.json();
-    if (!Number.isInteger(user?.userId) || user.userId <= 0 ||
-        ![user.firstName, user.lastName, user.email].every(value => typeof value === "string")) {
-        throw new Error("Invalid user lookup response.");
-    }
-    return user;
-}
-
-export async function grantAdminRole(userId: number, token: string, signal: AbortSignal): Promise<void> {
-    const response = await fetch(apiBaseUrl + `/api/admin/users/${userId}/grant-admin`, {
-        method: "POST",
-        headers: { Authorization: "Bearer " + token },
-        signal,
-        cache: "no-store",
-    });
-    if (!response.ok) throw new AdminUserError(response.status);
 }
 
 // Photos
