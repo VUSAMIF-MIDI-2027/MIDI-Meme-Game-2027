@@ -66,14 +66,16 @@ export function DateTimeInput({
     const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const [previousDatePart, setPreviousDatePart] = useState(datePart);
 
-    useEffect(() => {
+    if (datePart !== previousDatePart) {
+        setPreviousDatePart(datePart);
         if (isValidIsoDate(datePart)) {
             const parsed = new Date(`${datePart}T00:00:00`);
             setViewYear(parsed.getFullYear());
             setViewMonth(parsed.getMonth());
         }
-    }, [datePart]);
+    }
 
     useEffect(() => {
         if (!open) return;

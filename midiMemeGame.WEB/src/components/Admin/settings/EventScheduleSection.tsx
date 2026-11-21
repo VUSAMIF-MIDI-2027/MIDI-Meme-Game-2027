@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { Clock } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { settingsText } from "@/components/Admin/settings/settingsText";
@@ -48,26 +48,29 @@ export function EventScheduleSection({
     const { lang } = useLanguage();
     const t = settingsText[lang];
 
-    const [eventStartInput, setEventStartInput] = useState("");
-    const [votingStartInput, setVotingStartInput] = useState("");
-    const [votingEndInput, setVotingEndInput] = useState("");
-    const [validationError, setValidationError] = useState<string | null>(null);
-
     const originalEventStart = formatVilniusInput(schedule?.eventStartsAt);
     const originalVotingStart = formatVilniusInput(schedule?.votingStartsAt);
     const originalVotingEnd = formatVilniusInput(schedule?.eventEndsAt);
+
+    const [eventStartInput, setEventStartInput] = useState(originalEventStart);
+    const [votingStartInput, setVotingStartInput] = useState(originalVotingStart);
+    const [votingEndInput, setVotingEndInput] = useState(originalVotingEnd);
+    const [validationError, setValidationError] = useState<string | null>(null);
+    const [previousSchedule, setPreviousSchedule] = useState(schedule);
+
+    if (schedule !== previousSchedule) {
+        setPreviousSchedule(schedule);
+        if (schedule) {
+            setEventStartInput(originalEventStart);
+            setVotingStartInput(originalVotingStart);
+            setVotingEndInput(originalVotingEnd);
+        }
+    }
 
     const isDirty =
         eventStartInput !== originalEventStart ||
         votingStartInput !== originalVotingStart ||
         votingEndInput !== originalVotingEnd;
-
-    useEffect(() => {
-        if (!schedule) return;
-        setEventStartInput(formatVilniusInput(schedule.eventStartsAt));
-        setVotingStartInput(formatVilniusInput(schedule.votingStartsAt));
-        setVotingEndInput(formatVilniusInput(schedule.eventEndsAt));
-    }, [schedule]);
 
     function resolveSchedule(requireAll = false): EventSchedule | null {
         const eventStartsAt =

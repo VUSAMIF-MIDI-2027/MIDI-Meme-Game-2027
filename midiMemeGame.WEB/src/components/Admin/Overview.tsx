@@ -32,13 +32,13 @@ export function Overview({
     const t = overviewText[lang];
     // const request = useRef<AbortController | null>(null);
 
-    const [counts] = useState<CompetitionMemeCounts>({
-        totalMemes: 0,
-        pendingApproval: 0,
-        approved: 0,
-        rejected: 0,
-        currentStage: "-",
-    });
+    // const [counts] = useState<CompetitionMemeCounts>({
+    //     totalMemes: 0,
+    //     pendingApproval: 0,
+    //     approved: 0,
+    //     rejected: 0,
+    //     currentStage: "-",
+    // });
     const [topMemes] = useState<CompetitionMeme[]>([]);
     const [loading] = useState<boolean>(false);
 

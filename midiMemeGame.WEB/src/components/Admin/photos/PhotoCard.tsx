@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { getPhotoBlob } from "@/services/userService";
 import { type AdminPhoto } from "@/services/adminService";
@@ -74,7 +75,7 @@ export default function PhotoCard({
 
     return (
         <article className="flex flex-col overflow-hidden rounded-xl border border-white/15 bg-[#0d1013]">
-            <div className="flex aspect-video w-full items-center justify-center overflow-hidden bg-neutral-900">
+            <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-neutral-900">
                 {failed ? (
                     <span className="text-sm text-rose-400">
                         {t.failedToLoad}
@@ -84,10 +85,14 @@ export default function PhotoCard({
                         {t.loadingPhoto}
                     </span>
                 ) : (
-                    <img
+                    <Image
                         src={imageUrl}
                         alt={t.photoAlt}
-                        className="h-full w-full object-contain"
+                        fill
+                        unoptimized
+                        loading="eager"
+                        sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        className="object-contain"
                     />
                 )}
             </div>

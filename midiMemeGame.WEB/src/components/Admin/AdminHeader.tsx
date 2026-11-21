@@ -1,6 +1,6 @@
 "use client";
 
-import { SECTIONS, type AdminTranslations, type Section } from "@/app/admin/types";
+import type { AdminTranslations } from "@/app/admin/types";
 
 type AdminHeaderProps = {
     t: AdminTranslations;

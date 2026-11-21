@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ImageUp, Loader2, Upload } from "lucide-react";
 import { useAuth } from "@clerk/react";
@@ -47,26 +48,23 @@ export function Photos() {
     const t = photosText[lang];
     const request = useRef<AbortController | null>(null);
     const input = useRef<HTMLInputElement>(null);
+    const previewUrl = useRef<string | null>(null);
 
     const [photos, setPhotos] = useState<AdminPhoto[]>(() => readStoredPhotos());
     const [loading, setLoading] = useState<boolean>(true);
 
-    const [file, setFile] = useState<File | null>(null);
-    const [preview, setPreview] = useState<string | null>(null);
+    const [selection, setSelection] = useState<{ file: File; preview: string } | null>(null);
+    const { file, preview } = selection ?? { file: null, preview: null };
     const [progress, setProgress] = useState<number | null>(null);
     const [notice, setNotice] = useState<NoticeState>(null);
 
     const uploading = progress !== null;
 
     useEffect(() => {
-        if (!file) {
-            setPreview(null);
-            return;
-        }
-        const url = URL.createObjectURL(file);
-        setPreview(url);
-        return () => URL.revokeObjectURL(url);
-    }, [file]);
+        return () => {
+            if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+        };
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -121,7 +119,10 @@ export function Photos() {
         if (!f && input.current) {
             input.current.value = "";
         }
-        setFile(f);
+        if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+        const nextSelection = f ? { file: f, preview: URL.createObjectURL(f) } : null;
+        previewUrl.current = nextSelection?.preview ?? null;
+        setSelection(nextSelection);
     }
 
     async function upload() {
@@ -210,12 +211,16 @@ export function Photos() {
     return (
         <div className="space-y-8">
             <section className="grid gap-6 rounded-xl border-2 border-dashed border-white/20 bg-[#0d1013] p-5 sm:grid-cols-[200px_minmax(0,1fr)] sm:p-6">
-                <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg bg-white/5 text-white/40">
+                <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg bg-white/5 text-white/40">
                     {preview ? (
-                        <img
+                        <Image
                             src={preview}
                             alt={t.previewAlt}
-                            className="size-full object-contain"
+                            fill
+                            unoptimized
+                            loading="eager"
+                            sizes="(min-width: 640px) 200px, 100vw"
+                            className="object-contain"
                         />
                     ) : (
                         <ImageUp className="size-8" aria-hidden="true" />
