@@ -34,6 +34,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<PhotoFileService>();
         services.AddScoped<EmailTemplateQueries>();
         services.AddScoped<EmailDeliveryQueries>();
+        services.AddScoped<SmtpEmailSender>();
+        services.AddScoped<EmailService>();
 
         return services;
     }
