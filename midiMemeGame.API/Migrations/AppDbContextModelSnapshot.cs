@@ -40,6 +40,9 @@ namespace MidiMemeGame.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("ClaimedAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -88,6 +91,24 @@ namespace MidiMemeGame.Api.Migrations
                     b.HasIndex("Status", "NextAttemptAtUtc");
 
                     b.ToTable("EmailDeliveries");
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.EmailMilestoneProgress", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Milestone")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("QueuedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EventId", "Milestone");
+
+                    b.ToTable("EmailMilestoneProgress");
                 });
 
             modelBuilder.Entity("MidiMemeGame.Api.Models.EmailTemplate", b =>

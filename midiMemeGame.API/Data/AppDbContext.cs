@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<EventSchedule> EventSchedules { get; set; }
     public DbSet<EmailTemplate> EmailTemplates { get; set; }
     public DbSet<EmailDelivery> EmailDeliveries { get; set; }
+    public DbSet<EmailMilestoneProgress> EmailMilestoneProgress { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

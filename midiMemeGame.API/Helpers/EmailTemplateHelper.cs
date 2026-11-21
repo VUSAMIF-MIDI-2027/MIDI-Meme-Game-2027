@@ -9,9 +9,6 @@ namespace MidiMemeGame.Api.Helpers;
 public static class EmailTemplateHelper
 {
     private static readonly Regex PlaceholderRegex = new(@"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}");
-    private static readonly Regex HtmlTagRegex = new(@"<[^>]+>");
-
-    public static bool IsHtml(string text) => HtmlTagRegex.IsMatch(text);
 
     public static IReadOnlyList<string> ParseAllowedPlaceholders(string json)
     {
@@ -53,13 +50,14 @@ public static class EmailTemplateHelper
     public static Result<(string Subject, string Body)> Render(
         string subjectTemplate,
         string bodyTemplate,
+        bool isHtml,
         IReadOnlyDictionary<string, string> variables)
     {
         var renderedSubject = RenderText(subjectTemplate, variables, htmlEncode: false, out var missingSubjectVar);
         if (missingSubjectVar is not null)
             return ErrorType.EMAIL_TEMPLATE_VARIABLE_MISSING;
 
-        var renderedBody = RenderText(bodyTemplate, variables, htmlEncode: IsHtml(bodyTemplate), out var missingBodyVar);
+        var renderedBody = RenderText(bodyTemplate, variables, htmlEncode: isHtml, out var missingBodyVar);
         if (missingBodyVar is not null)
             return ErrorType.EMAIL_TEMPLATE_VARIABLE_MISSING;
 

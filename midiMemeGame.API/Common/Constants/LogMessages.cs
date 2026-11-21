@@ -29,6 +29,8 @@ public static class LogMessages
         public const string SEND_FAILED = "Email delivery {DeliveryId} failed permanently after {Attempt} attempts.";
         public const string SMTP_ERROR = "SMTP error while sending delivery {DeliveryId}.";
         public const string WORKER_ITERATION_FAILED = "Email delivery worker iteration failed.";
+        public const string SCHEDULED_WORKER_ITERATION_FAILED = "Scheduled email worker iteration failed.";
+        public const string SCHEDULED_MILESTONE_FAILED = "Failed to process scheduled email milestone {Milestone} for event {EventId}.";
     }
 
     public const string APPLICATION_START_FAILED = "Application failed to start";

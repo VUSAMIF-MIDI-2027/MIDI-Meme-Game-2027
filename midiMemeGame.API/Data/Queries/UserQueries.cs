@@ -346,4 +346,22 @@ public class UserQueries
             return ErrorType.DB_EXCEPTION;
         }
     }
+
+    public async Task<Result<List<User>>> GetActiveEmailRecipientsAsync(CancellationToken ct)
+{
+    try
+    {
+        var users = await _db.Users
+            .AsNoTracking()
+            .Where(u => !u.IsDeleted && !string.IsNullOrWhiteSpace(u.Email))
+            .ToListAsync(ct);
+
+        return users;
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+        _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+        return ErrorType.DB_EXCEPTION;
+    }
+}
 }

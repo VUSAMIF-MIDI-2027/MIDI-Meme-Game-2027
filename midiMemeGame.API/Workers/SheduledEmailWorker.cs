@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Constants;
-using MidiMemeGame.Api.Data;
+using MidiMemeGame.Api.Common.Enums;
+using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Services;
 
 namespace MidiMemeGame.Api.Workers;
@@ -26,7 +26,7 @@ public class ScheduledEmailWorker : BackgroundService
         {
             try
             {
-                await CheckSchedulesAsync(stoppingToken);
+                await ProcessMilestonesAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -34,7 +34,7 @@ public class ScheduledEmailWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, LogMessages.Email.WORKER_ITERATION_FAILED);
+                _logger.LogError(ex, LogMessages.Email.SCHEDULED_WORKER_ITERATION_FAILED);
             }
 
             try
@@ -48,86 +48,87 @@ public class ScheduledEmailWorker : BackgroundService
         }
     }
 
-    private async Task CheckSchedulesAsync(CancellationToken cancellationToken)
+    private async Task ProcessMilestonesAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var scheduleQueries = scope.ServiceProvider.GetRequiredService<EventScheduleQueries>();
+        var userQueries = scope.ServiceProvider.GetRequiredService<UserQueries>();
+        var templateQueries = scope.ServiceProvider.GetRequiredService<EmailTemplateQueries>();
+        var progressQueries = scope.ServiceProvider.GetRequiredService<EmailMilestoneProgressQueries>();
         var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
 
-        var now = DateTime.UtcNow;
-
-        var schedule = await dbContext.EventSchedules
-            .AsNoTracking()
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (schedule is null)
+        var scheduleResult = await scheduleQueries.GetAsync(ct);
+        if (scheduleResult.IsError || scheduleResult.Value is null)
             return;
 
-        var recipients = await dbContext.Users
-            .AsNoTracking()
-            .Where(u => !string.IsNullOrWhiteSpace(u.Email))
-            .Select(u => new { u.Id, u.Email, u.FirstName })
-            .ToListAsync(cancellationToken);
+        var schedule = scheduleResult.Value;
+        var nowUtc = DateTimeOffset.UtcNow;
+        var eventId = schedule.EventStartsAt.ToUnixTimeSeconds().ToString();
 
-        if (recipients.Count == 0)
-            return;
-
-        if (schedule.EventStartsAt <= now)
+        var milestones = new (string Key, DateTimeOffset At)[]
         {
-            await EnqueueBroadcastAsync(
-                emailService,
-                EmailTemplateKeys.EventStarted,
-                $"event-started:{schedule.Id}",
-                recipients.Select(r => (r.Id, r.Email, r.FirstName)),
-                cancellationToken);
-        }
+            (EmailTemplateKeys.EventStarted, schedule.EventStartsAt),
+            (EmailTemplateKeys.VotingOpened, schedule.VotingStartsAt),
+            (EmailTemplateKeys.EventEnded, schedule.EventEndsAt)
+        };
 
-        if (schedule.VotingStartsAt <= now)
+        foreach (var milestone in milestones)
         {
-            await EnqueueBroadcastAsync(
-                emailService,
-                EmailTemplateKeys.VotingOpened,
-                $"voting-started:{schedule.Id}",
-                recipients.Select(r => (r.Id, r.Email, r.FirstName)),
-                cancellationToken);
-        }
+            if (milestone.At > nowUtc)
+                continue;
 
-        if (schedule.EventEndsAt <= now)
-        {
-            await EnqueueBroadcastAsync(
-                emailService,
-                EmailTemplateKeys.EventEnded,
-                $"event-ended:{schedule.Id}",
-                recipients.Select(r => (r.Id, r.Email, r.FirstName)),
-                cancellationToken);
-        }
-    }
-
-    private static async Task EnqueueBroadcastAsync(
-        EmailService emailService,
-        string templateKey,
-        string eventScopeKey,
-        IEnumerable<(int Id, string Email, string FirstName)> recipients,
-        CancellationToken cancellationToken)
-    {
-        foreach (var recipient in recipients)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                break;
-
-            var variables = new Dictionary<string, string>
+            var completedResult = await progressQueries.IsCompletedAsync(eventId, milestone.Key, ct);
+            if (completedResult.IsError)
             {
-                ["recipientName"] = string.IsNullOrWhiteSpace(recipient.FirstName) ? "Player" : recipient.FirstName
-            };
+                _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId);
+                return;
+            }
 
-            var deduplicationKey = $"{eventScopeKey}:user:{recipient.Id}";
+            if (completedResult.Value)
+                continue;
 
-            await emailService.EnqueueTemplatedAsync(
-                templateKey,
-                recipient.Email,
-                variables,
-                deduplicationKey,
-                cancellationToken);
+            var templateResult = await templateQueries.GetByKeyAsync(milestone.Key, ct);
+            if (templateResult.IsError)
+            {
+                _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId);
+                return;
+            }
+
+            var usersResult = await userQueries.GetActiveEmailRecipientsAsync(ct);
+            if (usersResult.IsError)
+            {
+                _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId);
+                return;
+            }
+
+            foreach (var user in usersResult.Value)
+            {
+                var variables = new Dictionary<string, string>
+                {
+                    ["recipientName"] = string.IsNullOrWhiteSpace(user.FirstName) ? "Dalyvi" : user.FirstName
+                };
+
+                var deduplicationKey = $"{eventId}:{milestone.Key}:user:{user.Id}";
+                var enqueueResult = await emailService.EnqueueTemplatedAsync(
+                    templateResult.Value,
+                    user.Email,
+                    variables,
+                    deduplicationKey,
+                    ct);
+
+                if (enqueueResult.IsError && enqueueResult.Error != ErrorType.EMAIL_RECIPIENT_ADDRESS_INVALID)
+                {
+                    _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId);
+                    return;
+                }
+            }
+
+            var markResult = await progressQueries.MarkCompletedAsync(eventId, milestone.Key, DateTime.UtcNow, ct);
+            if (markResult.IsError)
+            {
+                _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId);
+                return;
+            }
         }
     }
 }

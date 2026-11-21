@@ -27,37 +27,49 @@ public class EmailService
     }
 
     public async Task<Result<EmailDelivery>> EnqueueTemplatedAsync(
-        string templateKey,
-        string? recipientEmail,
-        IReadOnlyDictionary<string, string> variables,
+        EmailTemplate template,
+        string recipientAddress,
+        IReadOnlyDictionary<string, string>? variables,
         string? deduplicationKey,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(recipientEmail))
-            return ErrorType.EMAIL_RECIPIENT_MISSING;
+        if (string.IsNullOrWhiteSpace(recipientAddress))
+            return ErrorType.EMAIL_TEMPLATE_INVALID;
 
-        if (!IsValidEmail(recipientEmail))
-            return ErrorType.EMAIL_RECIPIENT_ADDRESS_INVALID;
+        var trimmedRecipient = recipientAddress.Trim();
+        if (!IsValidEmail(trimmedRecipient))
+            return ErrorType.EMAIL_TEMPLATE_INVALID;
 
-        var templateResult = await _templateQueries.GetByKeyAsync(templateKey, cancellationToken);
-        if (templateResult.IsError)
-            return templateResult.Error;
+        var allowed = EmailTemplateHelper.ParseAllowedPlaceholders(template.AllowedPlaceholdersJson);
+        var renderResult = EmailTemplateHelper.Render(
+            template.Subject,
+            template.Body,
+            template.IsHtml,
+            variables ?? new Dictionary<string, string>());
 
-        var rendered = EmailTemplateHelper.Render(
-            templateResult.Value.Subject,
-            templateResult.Value.Body,
-            variables);
+        if (renderResult.IsError)
+            return renderResult.Error;
 
-        if (rendered.IsError)
-            return rendered.Error;
+        var now = DateTime.UtcNow;
+        var delivery = new EmailDelivery
+        {
+            TemplateKey = template.Key,
+            RecipientAddress = trimmedRecipient,
+            Subject = renderResult.Value.Subject,
+            Body = renderResult.Value.Body,
+            IsHtml = template.IsHtml,
+            Status = EmailDeliveryStatus.Pending,
+            AttemptCount = 0,
+            NextAttemptAtUtc = now,
+            DeduplicationKey = deduplicationKey,
+            CreatedAtUtc = now
+        };
 
-        return await SaveToQueueAsync(
-            templateKey,
-            recipientEmail.Trim(),
-            rendered.Value.Subject,
-            rendered.Value.Body,
-            deduplicationKey,
-            cancellationToken);
+        var enqueueResult = await _deliveryQueries.EnqueueAsync(delivery, cancellationToken);
+        if (enqueueResult.IsError)
+            return enqueueResult.Error;
+
+        return enqueueResult.Value.Delivery;
     }
 
     public async Task<Result<EmailDelivery>> EnqueueRawAsync(
