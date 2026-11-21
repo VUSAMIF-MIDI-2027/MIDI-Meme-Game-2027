@@ -2,7 +2,7 @@ namespace MidiMemeGame.Api.Dto.Email;
 
 public class SendManualEmailRequest
 {
-    public string? UserId { get; set; }
+    public int? UserId { get; set; }
     public string? RecipientEmail { get; set; }
     public string? RecipientName { get; set; }
     public string? TemplateKey { get; set; }
