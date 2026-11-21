@@ -312,4 +312,38 @@ public class UserQueries
             return ErrorType.DB_EXCEPTION;
         }
     }
+
+    public async Task<Result<string?>> GetActiveEmailByIdAsync(
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            FormattableString query = $"""
+            SELECT "Email" AS "Value"
+            FROM "Users"
+            WHERE "Id" = {userId}
+                AND "IsDeleted" = 0
+            """;
+
+            var rows = await _db.Database
+                .SqlQuery<string?>(query)
+                .ToListAsync(cancellationToken);
+
+            if (rows.Count == 0)
+                return ErrorType.NOT_FOUND;
+
+            return rows[0];
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
 }

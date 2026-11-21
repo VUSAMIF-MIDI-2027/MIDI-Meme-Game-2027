@@ -1,4 +1,5 @@
 using System.Net.Mail;
+using System.Text.Json;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
@@ -113,6 +114,37 @@ public class EmailService
             _logger.LogInformation(LogMessages.Email.QUEUED, result.Value.Delivery.Id, templateKey ?? "manual");
 
         return result.Value.Delivery;
+    }
+
+    public async Task<Result<EmailTemplate>> UpdateTemplateAsync(
+        string key,
+        string subject,
+        string body,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))
+            return ErrorType.EMAIL_TEMPLATE_INVALID;
+
+        var existingResult = await _templateQueries.GetByKeyAsync(key, cancellationToken);
+        if (existingResult.IsError)
+            return existingResult.Error;
+
+        var allowedPlaceholders = JsonSerializer.Deserialize<List<string>>(
+            existingResult.Value.AllowedPlaceholdersJson) ?? [];
+
+        var validationError = EmailTemplateHelper.ValidatePlaceholders(
+            subject,
+            body,
+            allowedPlaceholders);
+
+        if (validationError != ErrorType.NONE)
+            return validationError;
+
+        return await _templateQueries.UpdateAsync(
+            key,
+            subject.Trim(),
+            body,
+            cancellationToken);
     }
 
     private static bool IsValidEmail(string email)
