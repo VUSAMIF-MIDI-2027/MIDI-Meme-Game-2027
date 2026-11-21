@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services;
+using MidiMemeGame.Api.Workers;
 
 namespace MidiMemeGame.Api.Common.Extensions;
 
@@ -36,6 +37,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EmailDeliveryQueries>();
         services.AddScoped<SmtpEmailSender>();
         services.AddScoped<EmailService>();
+        services.AddHostedService<EmailDeliveryWorker>();
+        services.AddHostedService<ScheduledEmailWorker>();
 
         return services;
     }
