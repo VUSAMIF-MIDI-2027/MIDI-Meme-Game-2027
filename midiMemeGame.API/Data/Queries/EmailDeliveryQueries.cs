@@ -36,21 +36,42 @@ public class EmailDeliveryQueries
                     return (existing, false);
             }
 
-            _db.EmailDeliveries.Add(delivery);
-            await _db.SaveChangesAsync(cancellationToken);
+            var status = (int)delivery.Status;
+            FormattableString query = $"""
+                INSERT INTO "EmailDeliveries" (
+                    "TemplateKey", "RecipientAddress", "Subject", "Body", "IsHtml",
+                    "Status", "AttemptCount", "NextAttemptAtUtc", "LastError",
+                    "DeduplicationKey", "CreatedAtUtc", "SentAtUtc", "ClaimedAtUtc"
+                )
+                VALUES (
+                    {delivery.TemplateKey}, {delivery.RecipientAddress}, {delivery.Subject}, {delivery.Body}, {delivery.IsHtml},
+                    {status}, {delivery.AttemptCount}, {delivery.NextAttemptAtUtc}, {delivery.LastError},
+                    {delivery.DeduplicationKey}, {delivery.CreatedAtUtc}, {delivery.SentAtUtc}, {delivery.ClaimedAtUtc}
+                )
+                ON CONFLICT ("DeduplicationKey") WHERE "DeduplicationKey" IS NOT NULL DO NOTHING
+                RETURNING "Id", "TemplateKey", "RecipientAddress", "Subject", "Body", "IsHtml",
+                          "Status", "AttemptCount", "NextAttemptAtUtc", "LastError",
+                          "DeduplicationKey", "CreatedAtUtc", "SentAtUtc", "ClaimedAtUtc";
+                """;
 
-            return (delivery, true);
-        }
-        catch (DbUpdateException) when (!string.IsNullOrEmpty(delivery.DeduplicationKey))
-        {
-            _db.Entry(delivery).State = EntityState.Detached;
-
-            var existing = await _db.EmailDeliveries
+            var inserted = await _db.EmailDeliveries
+                .FromSqlInterpolated(query)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(d => d.DeduplicationKey == delivery.DeduplicationKey, cancellationToken);
+                .ToListAsync(cancellationToken);
 
-            if (existing is not null)
-                return (existing, false);
+            if (inserted.Count > 0)
+                return (inserted[0], true);
+
+            // Jei eilutė neįterpta dėl lygiagretaus konflikto (ON CONFLICT DO NOTHING), nuskaitome esamą
+            if (!string.IsNullOrEmpty(delivery.DeduplicationKey))
+            {
+                var existing = await _db.EmailDeliveries
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.DeduplicationKey == delivery.DeduplicationKey, cancellationToken);
+
+                if (existing is not null)
+                    return (existing, false);
+            }
 
             return ErrorType.DB_EXCEPTION;
         }
