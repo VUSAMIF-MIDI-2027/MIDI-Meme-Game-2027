@@ -9,6 +9,7 @@ public class EmailDelivery
     public string RecipientAddress { get; set; } = string.Empty;
     public string Subject { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
+    public bool IsHtml { get; set; }
     public EmailDeliveryStatus Status { get; set; } = EmailDeliveryStatus.Pending;
     public int AttemptCount { get; set; }
     public DateTime NextAttemptAtUtc { get; set; } = DateTime.UtcNow;

@@ -47,6 +47,11 @@ namespace MidiMemeGame.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsHtml")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("LastError")
                         .HasMaxLength(1000)
                         .HasColumnType("TEXT");
@@ -98,6 +103,11 @@ namespace MidiMemeGame.Api.Migrations
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsHtml")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Subject")
                         .IsRequired()

@@ -12,6 +12,7 @@ public class EmailTemplateConfiguration : IEntityTypeConfiguration<EmailTemplate
         builder.Property(e => e.Key).HasMaxLength(100).IsRequired();
         builder.Property(e => e.Subject).HasMaxLength(200).IsRequired();
         builder.Property(e => e.Body).IsRequired();
+        builder.Property(e => e.IsHtml).IsRequired().HasDefaultValue(false);
         builder.Property(e => e.AllowedPlaceholdersJson).IsRequired();
     }
 }
