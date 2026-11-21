@@ -73,7 +73,7 @@ public class EmailDeliveryQueries
 
             FormattableString query = $"""
                 UPDATE "EmailDeliveries"
-                SET "Status" = {processing}
+                SET "Status" = {processing}, "ClaimedAtUtc" = {utcNow}
                 WHERE "Id" IN (
                     SELECT "Id" FROM "EmailDeliveries"
                     WHERE "Status" = {pending} AND "NextAttemptAtUtc" <= {utcNow}
@@ -82,7 +82,7 @@ public class EmailDeliveryQueries
                 )
                 RETURNING "Id", "TemplateKey", "RecipientAddress", "Subject", "Body", "IsHtml",
                           "Status", "AttemptCount", "NextAttemptAtUtc", "LastError",
-                          "DeduplicationKey", "CreatedAtUtc", "SentAtUtc";
+                          "DeduplicationKey", "CreatedAtUtc", "SentAtUtc", "ClaimedAtUtc";
                 """;
 
             var due = await _db.EmailDeliveries
@@ -111,6 +111,7 @@ public class EmailDeliveryQueries
             delivery.AttemptCount += 1;
             delivery.SentAtUtc = sentAtUtc;
             delivery.LastError = null;
+            delivery.ClaimedAtUtc = null;
 
             await _db.SaveChangesAsync(cancellationToken);
             return true;
@@ -138,6 +139,7 @@ public class EmailDeliveryQueries
             delivery.AttemptCount += 1;
             delivery.NextAttemptAtUtc = nextAttemptAtUtc;
             delivery.LastError = TruncateError(error);
+            delivery.ClaimedAtUtc = null;
 
             await _db.SaveChangesAsync(cancellationToken);
             return true;
@@ -163,6 +165,7 @@ public class EmailDeliveryQueries
             delivery.Status = EmailDeliveryStatus.Failed;
             delivery.AttemptCount += 1;
             delivery.LastError = TruncateError(error);
+            delivery.ClaimedAtUtc = null;
 
             await _db.SaveChangesAsync(cancellationToken);
             return true;
@@ -193,6 +196,26 @@ public class EmailDeliveryQueries
                 .ToListAsync(cancellationToken);
 
             return items;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    public async Task<Result<int>> ReleaseStaleAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var count = await _db.EmailDeliveries
+                .Where(d => d.Status == EmailDeliveryStatus.Processing && d.ClaimedAtUtc < cutoffUtc)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(d => d.Status, EmailDeliveryStatus.Pending)
+                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
+                    cancellationToken);
+
+            return count;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

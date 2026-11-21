@@ -16,5 +16,6 @@ public class EmailDelivery
     public string? LastError { get; set; }
     public string? DeduplicationKey { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? ClaimedAtUtc { get; set; }
     public DateTime? SentAtUtc { get; set; }
 }

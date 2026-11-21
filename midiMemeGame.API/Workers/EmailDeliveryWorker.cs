@@ -2,7 +2,6 @@ using Microsoft.Extensions.Options;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Data.Queries;
-using MidiMemeGame.Api.Helpers;
 using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services;
 
@@ -63,6 +62,9 @@ public class EmailDeliveryWorker : BackgroundService
         var smtpSender = scope.ServiceProvider.GetRequiredService<SmtpEmailSender>();
 
         var now = DateTime.UtcNow;
+
+        await deliveryQueries.ReleaseStaleAsync(now.AddMinutes(-10), cancellationToken);
+
         var claimResult = await deliveryQueries.ClaimPendingBatchAsync(BatchSize, now, cancellationToken);
         if (claimResult.IsError || claimResult.Value.Count == 0)
             return;
@@ -72,14 +74,13 @@ public class EmailDeliveryWorker : BackgroundService
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            var isHtml = EmailTemplateHelper.IsHtml(delivery.Body);
             var sendResult = await smtpSender.SendAsync(
                 delivery.Id,
                 delivery.RecipientAddress,
                 toName: null,
                 delivery.Subject,
                 delivery.Body,
-                isHtml,
+                delivery.IsHtml,
                 cancellationToken);
 
             var attemptedAt = DateTime.UtcNow;
