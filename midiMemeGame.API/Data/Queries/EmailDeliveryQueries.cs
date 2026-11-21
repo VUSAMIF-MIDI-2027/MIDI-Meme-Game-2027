@@ -68,22 +68,28 @@ public class EmailDeliveryQueries
     {
         try
         {
+            var pending = (int)EmailDeliveryStatus.Pending;
+            var processing = (int)EmailDeliveryStatus.Processing;
+
+            FormattableString query = $"""
+                UPDATE "EmailDeliveries"
+                SET "Status" = {processing}
+                WHERE "Id" IN (
+                    SELECT "Id" FROM "EmailDeliveries"
+                    WHERE "Status" = {pending} AND "NextAttemptAtUtc" <= {utcNow}
+                    ORDER BY "NextAttemptAtUtc", "Id"
+                    LIMIT {batchSize}
+                )
+                RETURNING "Id", "TemplateKey", "RecipientAddress", "Subject", "Body", "IsHtml",
+                          "Status", "AttemptCount", "NextAttemptAtUtc", "LastError",
+                          "DeduplicationKey", "CreatedAtUtc", "SentAtUtc";
+                """;
+
             var due = await _db.EmailDeliveries
-                .Where(d => d.Status == EmailDeliveryStatus.Pending && d.NextAttemptAtUtc <= utcNow)
-                .OrderBy(d => d.NextAttemptAtUtc)
-                .ThenBy(d => d.Id)
-                .Take(batchSize)
+                .FromSqlInterpolated(query)
+                .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
-            if (due.Count == 0)
-                return due;
-
-            foreach (var item in due)
-            {
-                item.Status = EmailDeliveryStatus.Processing;
-            }
-
-            await _db.SaveChangesAsync(cancellationToken);
             return due;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
