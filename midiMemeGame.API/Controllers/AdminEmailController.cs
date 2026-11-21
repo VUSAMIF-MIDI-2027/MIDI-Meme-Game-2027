@@ -54,7 +54,7 @@ public class AdminEmailController : ControllerBase
     {
         var result = await _templateQueries.GetByKeyAsync(key, cancellationToken);
 
-        if (result.Error == ErrorType.NOT_FOUND)
+        if (result.Error is ErrorType.NOT_FOUND or ErrorType.EMAIL_TEMPLATE_NOT_FOUND)
             return NotFound(ErrorResponse.Create(result.Error));
 
         if (result.IsError)
@@ -80,7 +80,7 @@ public class AdminEmailController : ControllerBase
             request.Body,
             cancellationToken);
 
-        if (result.Error == ErrorType.NOT_FOUND)
+        if (result.Error is ErrorType.NOT_FOUND or ErrorType.EMAIL_TEMPLATE_NOT_FOUND)
             return NotFound(ErrorResponse.Create(result.Error));
 
         if (result.Error == ErrorType.EMAIL_TEMPLATE_INVALID)
