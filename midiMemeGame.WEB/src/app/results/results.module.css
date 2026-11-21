@@ -1,0 +1,12 @@
+
+@media (640px <= width < 64rem), (width >= 640px) and (pointer: coarse) {
+  .content {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .content :is(h1, h2, h3, p, li, a, button) {
+    pointer-events: auto;
+  }
+}
