@@ -37,8 +37,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EmailTemplateQueries>();
         services.AddScoped<EmailDeliveryQueries>();
         services.AddScoped<EmailMilestoneProgressQueries>();
-        services.AddScoped<IEmailSender>();
-        services.AddScoped<IEmailService>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IEmailService, EmailService>();
         services.AddHostedService<EmailDeliveryWorker>();
         services.AddHostedService<ScheduledEmailWorker>();
 
