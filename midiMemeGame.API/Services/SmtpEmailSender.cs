@@ -47,6 +47,7 @@ public class SmtpEmailSender
             message.Body = builder.ToMessageBody();
 
             using var client = new SmtpClient();
+            client.CheckCertificateRevocation = false;
             await client.ConnectAsync(_settings.Host, _settings.Port, SecureSocketOptions.StartTls, cancellationToken);
             await client.AuthenticateAsync(_settings.Username, _settings.Password, cancellationToken);
             await client.SendAsync(message, cancellationToken);
