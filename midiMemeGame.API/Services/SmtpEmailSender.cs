@@ -23,6 +23,7 @@ public class SmtpEmailSender
     }
 
     public async Task<Result> SendAsync(
+        int deliveryId,
         string toAddress,
         string? toName,
         string subject,
@@ -55,7 +56,7 @@ public class SmtpEmailSender
         }
         catch (SmtpCommandException ex)
         {
-            _logger.LogWarning(ex, LogMessages.Email.SMTP_ERROR, toAddress);
+            _logger.LogWarning(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
             var code = (int)ex.StatusCode;
             return code is >= 400 and < 500
                 ? ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE
@@ -68,12 +69,12 @@ public class SmtpEmailSender
                                       or IOException
                                       or TimeoutException)
         {
-            _logger.LogWarning(ex, LogMessages.Email.SMTP_ERROR, toAddress);
+            _logger.LogWarning(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
             return ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex, LogMessages.Email.SMTP_ERROR, toAddress);
+            _logger.LogError(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
             return ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
         }
     }
