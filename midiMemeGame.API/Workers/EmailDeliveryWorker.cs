@@ -4,6 +4,7 @@ using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services;
+using MidiMemeGame.Api.Services.Interfaces;
 
 namespace MidiMemeGame.Api.Workers;
 
@@ -59,7 +60,7 @@ public class EmailDeliveryWorker : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var deliveryQueries = scope.ServiceProvider.GetRequiredService<EmailDeliveryQueries>();
-        var smtpSender = scope.ServiceProvider.GetRequiredService<SmtpEmailSender>();
+        var smtpSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
 
         var now = DateTime.UtcNow;
 

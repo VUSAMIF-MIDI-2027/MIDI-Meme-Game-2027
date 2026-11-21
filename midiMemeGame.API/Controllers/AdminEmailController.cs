@@ -7,6 +7,7 @@ using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Email;
 using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Services;
+using MidiMemeGame.Api.Services.Interfaces;
 
 namespace MidiMemeGame.Api.Controllers;
 
@@ -16,12 +17,12 @@ namespace MidiMemeGame.Api.Controllers;
 public class AdminEmailController : ControllerBase
 {
     private readonly EmailTemplateQueries _templateQueries;
-    private readonly EmailService _emailService;
+    private readonly IEmailService _emailService;
     private readonly UserQueries _userQueries;
 
     public AdminEmailController(
         EmailTemplateQueries templateQueries,
-        EmailService emailService,
+        IEmailService emailService,
         UserQueries userQueries)
     {
         _templateQueries = templateQueries;

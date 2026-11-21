@@ -7,11 +7,12 @@ using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Models.Settings;
+using MidiMemeGame.Api.Services.Interfaces;
 using MimeKit;
 
 namespace MidiMemeGame.Api.Services;
 
-public class SmtpEmailSender
+public class SmtpEmailSender : IEmailSender
 {
     private readonly SmtpSettings _settings;
     private readonly ILogger<SmtpEmailSender> _logger;

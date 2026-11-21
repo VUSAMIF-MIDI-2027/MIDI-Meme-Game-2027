@@ -7,10 +7,11 @@ using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Enums;
 using MidiMemeGame.Api.Helpers;
 using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Services.Interfaces;
 
 namespace MidiMemeGame.Api.Services;
 
-public class EmailService
+public class EmailService : IEmailService
 {
     private readonly EmailTemplateQueries _templateQueries;
     private readonly EmailDeliveryQueries _deliveryQueries;
@@ -27,20 +28,41 @@ public class EmailService
     }
 
     public async Task<Result<EmailDelivery>> EnqueueTemplatedAsync(
-        EmailTemplate template,
-        string recipientAddress,
+        string templateKey,
+        string? recipientEmail,
         IReadOnlyDictionary<string, string>? variables,
         string? deduplicationKey,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(recipientAddress))
+        if (string.IsNullOrWhiteSpace(templateKey))
             return ErrorType.EMAIL_TEMPLATE_INVALID;
 
-        var trimmedRecipient = recipientAddress.Trim();
+        var templateResult = await _templateQueries.GetByKeyAsync(templateKey.Trim(), cancellationToken);
+        if (templateResult.IsError)
+            return templateResult.Error;
+
+        return await EnqueueTemplatedAsync(
+            templateResult.Value,
+            recipientEmail,
+            variables,
+            deduplicationKey,
+            cancellationToken);
+    }
+
+    public async Task<Result<EmailDelivery>> EnqueueTemplatedAsync(
+        EmailTemplate template,
+        string? recipientEmail,
+        IReadOnlyDictionary<string, string>? variables,
+        string? deduplicationKey,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+            return ErrorType.EMAIL_RECIPIENT_MISSING;
+
+        var trimmedRecipient = recipientEmail.Trim();
         if (!IsValidEmail(trimmedRecipient))
-            return ErrorType.EMAIL_TEMPLATE_INVALID;
+            return ErrorType.EMAIL_RECIPIENT_ADDRESS_INVALID;
 
-        var allowed = EmailTemplateHelper.ParseAllowedPlaceholders(template.AllowedPlaceholdersJson);
         var renderResult = EmailTemplateHelper.Render(
             template.Subject,
             template.Body,
@@ -50,26 +72,14 @@ public class EmailService
         if (renderResult.IsError)
             return renderResult.Error;
 
-        var now = DateTime.UtcNow;
-        var delivery = new EmailDelivery
-        {
-            TemplateKey = template.Key,
-            RecipientAddress = trimmedRecipient,
-            Subject = renderResult.Value.Subject,
-            Body = renderResult.Value.Body,
-            IsHtml = template.IsHtml,
-            Status = EmailDeliveryStatus.Pending,
-            AttemptCount = 0,
-            NextAttemptAtUtc = now,
-            DeduplicationKey = deduplicationKey,
-            CreatedAtUtc = now
-        };
-
-        var enqueueResult = await _deliveryQueries.EnqueueAsync(delivery, cancellationToken);
-        if (enqueueResult.IsError)
-            return enqueueResult.Error;
-
-        return enqueueResult.Value.Delivery;
+        return await SaveToQueueAsync(
+            template.Key,
+            trimmedRecipient,
+            renderResult.Value.Subject,
+            renderResult.Value.Body,
+            template.IsHtml,
+            deduplicationKey,
+            cancellationToken);
     }
 
     public async Task<Result<EmailDelivery>> EnqueueRawAsync(
@@ -81,7 +91,8 @@ public class EmailService
         if (string.IsNullOrWhiteSpace(recipientEmail))
             return ErrorType.EMAIL_RECIPIENT_MISSING;
 
-        if (!IsValidEmail(recipientEmail))
+        var trimmedRecipient = recipientEmail.Trim();
+        if (!IsValidEmail(trimmedRecipient))
             return ErrorType.EMAIL_RECIPIENT_ADDRESS_INVALID;
 
         if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))
@@ -89,9 +100,10 @@ public class EmailService
 
         return await SaveToQueueAsync(
             templateKey: null,
-            recipientEmail.Trim(),
+            trimmedRecipient,
             subject.Trim(),
             body,
+            isHtml: false,
             deduplicationKey: null,
             cancellationToken);
     }
@@ -101,6 +113,7 @@ public class EmailService
         string recipientAddress,
         string subject,
         string body,
+        bool isHtml,
         string? deduplicationKey,
         CancellationToken cancellationToken)
     {
@@ -111,6 +124,7 @@ public class EmailService
             RecipientAddress = recipientAddress,
             Subject = subject,
             Body = body,
+            IsHtml = isHtml,
             Status = EmailDeliveryStatus.Pending,
             AttemptCount = 0,
             NextAttemptAtUtc = now,

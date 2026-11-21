@@ -2,6 +2,7 @@ using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Services;
+using MidiMemeGame.Api.Services.Interfaces;
 
 namespace MidiMemeGame.Api.Workers;
 
@@ -55,7 +56,7 @@ public class ScheduledEmailWorker : BackgroundService
         var userQueries = scope.ServiceProvider.GetRequiredService<UserQueries>();
         var templateQueries = scope.ServiceProvider.GetRequiredService<EmailTemplateQueries>();
         var progressQueries = scope.ServiceProvider.GetRequiredService<EmailMilestoneProgressQueries>();
-        var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
+        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
         var scheduleResult = await scheduleQueries.GetAsync(ct);
         if (scheduleResult.IsError || scheduleResult.Value is null)
