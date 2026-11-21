@@ -1,0 +1,68 @@
+import type { Lang } from "@/context/LanguageContext";
+
+type AdminPageText = {
+    back: string;
+    label: string;
+    admin: string;
+    nightWithMidi: string;
+    overview: string;
+    photos: string;
+    memeReview: string;
+    team: string;
+    rules: string;
+    settings: string;
+    title: string;
+    description: string;
+    photosDescription: string;
+    memeReviewDescription: string;
+    teamDescription: string;
+    rulesDescription: string;
+    settingsDescription: string;
+    access: string;
+    tools: string;
+};
+
+export const adminText: Record<Lang, AdminPageText> = {
+    lt: {
+        back: "Į dalyvio puslapį",
+        label: "Valdymo skydelis",
+        admin: "Administravimas",
+        nightWithMidi: "Naktis su MIDI",
+        overview: "Apžvalga",
+        photos: "Nuotraukos",
+        memeReview: "Memų moderacija",
+        team: "Administratoriai",
+        rules: "Taisyklės",
+        settings: "Nustatymai",
+        title: "Viskas savo vietoje.",
+        description: "Tvarkyk komandos prieigą, nuotraukas ir dalyvių supažindinimą su taisyklėmis.",
+        photosDescription: "Įkelk ir peržiūrėk konkurso nuotraukas.",
+        memeReviewDescription: "Peržiūrėk ir moderuok dalyvių pateiktus memus.",
+        teamDescription: "Pridėk žmogų prie organizatorių komandos pagal jo el. paštą.",
+        rulesDescription: "Pakviesk dalyvius iš naujo perskaityti konkurso taisykles.",
+        settingsDescription: "Tvarkyk renginio ir balsavimo tvarkaraštį bei nustatymus.",
+        access: "Organizatorių erdvė",
+        tools: "Konkurso valdymas",
+    },
+    en: {
+        back: "Participant home",
+        label: "Control panel",
+        admin: "Administration",
+        nightWithMidi: "Naktis su MIDI",
+        overview: "Overview",
+        photos: "Photos",
+        memeReview: "Meme moderation",
+        team: "Administrators",
+        rules: "Rules",
+        settings: "Settings",
+        title: "Everything in one place.",
+        description: "Manage team access, photos, and participant rules acknowledgements.",
+        photosDescription: "Upload and view competition photos.",
+        memeReviewDescription: "Review and moderate submitted memes.",
+        teamDescription: "Add someone to the organising team using their email address.",
+        rulesDescription: "Ask participants to read the competition rules again.",
+        settingsDescription: "Configure the event and voting schedule as well as settings.",
+        access: "Organiser workspace",
+        tools: "Competition management",
+    },
+};
