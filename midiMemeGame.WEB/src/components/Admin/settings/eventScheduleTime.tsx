@@ -1,4 +1,5 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
+
 const vilniusFormatter = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Vilnius",
     calendar: "iso8601",
@@ -13,12 +14,17 @@ const vilniusFormatter = new Intl.DateTimeFormat("en-GB", {
 });
 
 function vilniusWallTime(instant: number): string {
-    const parts = Object.fromEntries(vilniusFormatter.formatToParts(instant).map(({ type, value }) => [type, value]));
+    const parts = Object.fromEntries(
+        vilniusFormatter.formatToParts(instant).map(({ type, value }) => [type, value]),
+    );
     return `${parts.year.padStart(4, "0")}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
-export function formatVilniusInput(iso: string): string {
-    return vilniusWallTime(Date.parse(iso)).slice(0, 16);
+export function formatVilniusInput(iso: string | null | undefined): string {
+    if (!iso) return "";
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) return "";
+    return vilniusWallTime(ms).slice(0, 16);
 }
 
 export function parseVilniusInput(input: string): string | null {
@@ -30,12 +36,14 @@ export function parseVilniusInput(input: string): string | null {
         return null;
     }
 
-    // Check offsets on both sides of a possible clock change.
+    // Check offsets on both sides of a possible DST clock change.
     const matches = new Set<number>();
     for (const probe of [wallTime - DAY_MS, wallTime + DAY_MS]) {
         const offset = Date.parse(`${vilniusWallTime(probe)}Z`) - probe;
         const instant = wallTime - offset;
-        if (Number.isFinite(instant) && vilniusWallTime(instant) === local) matches.add(instant);
+        if (Number.isFinite(instant) && vilniusWallTime(instant) === local) {
+            matches.add(instant);
+        }
     }
 
     const [instant] = matches;

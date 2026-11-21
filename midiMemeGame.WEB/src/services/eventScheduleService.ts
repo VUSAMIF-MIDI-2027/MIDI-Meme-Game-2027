@@ -12,6 +12,7 @@ export class EventScheduleError extends Error {
 
 const scheduleUrl = apiBaseUrl + "/api/event-schedule";
 
+
 async function readSchedule(response: Response): Promise<EventSchedule> {
     if (!response.ok) {
         const body = await response.json().catch(() => null);
