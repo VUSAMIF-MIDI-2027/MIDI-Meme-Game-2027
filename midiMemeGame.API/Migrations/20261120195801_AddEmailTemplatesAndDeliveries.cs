@@ -88,7 +88,7 @@ namespace MidiMemeGame.Api.Migrations
                 (
                     'VotingOpened',
                     'Balsavimas prasidėjo!',
-                    'Sveiki, {{recipientName}}! Peržiūrėkite memų galeriją ir atiduokite iki trijų balsų patinkusiems skirtingiems memams.',
+                    'Sveiki, {{recipientName}}! Peržiūrėkite memų galeriją ir atiduokite iki trijų balsų patikusiems skirtingiems memams.',
                     '["recipientName"]',
                     '2026-01-01T00:00:00Z'
                 ),
