@@ -15,14 +15,14 @@ export type MemeCardButton = {
 };
 
 type MemeCardProps = {
-  image: StaticImageData;
+  image: StaticImageData | string;
   imageAlt: string;
   caption: string;
   selected?: boolean;
   status?: MemeCardStatus;
   metaLabel?: string;
   button?: MemeCardButton;
-  layout?: "stacked" | "side-meta";
+  layout?: "stacked" | "meta-footer";
 };
 
 export default function MemeCard({
@@ -35,7 +35,7 @@ export default function MemeCard({
   button,
   layout = "stacked",
 }: MemeCardProps) {
-  const sideMeta = layout === "side-meta";
+  const metaFooter = layout === "meta-footer";
   const borderStyle = selected ? "border-midi-blue" : "border-white/15";
   const buttonStyle = button?.pressed
     ? "border-midi-blue bg-midi-blue text-white"
@@ -43,9 +43,9 @@ export default function MemeCard({
 
   return (
     <article
-      className={`flex min-w-0 overflow-hidden rounded-xl border transition-colors ${sideMeta ? "flex-col bg-[#1d1d1d] sm:flex-row" : "flex-col bg-[#0a0a0a]"} ${borderStyle}`}
+      className={`flex min-w-0 flex-col overflow-hidden rounded-xl border transition-colors ${metaFooter ? "bg-[#1d1d1d]" : "bg-[#0a0a0a]"} ${borderStyle}`}
     >
-      <figure className={`flex min-w-0 flex-1 flex-col ${sideMeta ? "sm:w-[70%] sm:flex-none" : ""}`}>
+      <figure className="flex min-w-0 flex-1 flex-col">
         <div className="relative aspect-[3/2]">
           <Image
             src={image}
@@ -56,14 +56,20 @@ export default function MemeCard({
             className="object-cover"
           />
         </div>
-        <figcaption className={`flex min-h-20 flex-1 items-center justify-center px-5 py-4 text-center text-base font-semibold leading-snug text-black ${sideMeta ? "bg-midi-gray" : "bg-white"}`}>
+        <figcaption
+          className={`flex min-h-20 flex-1 items-center justify-center px-5 py-4 text-center text-base font-semibold leading-snug text-black ${metaFooter ? "bg-midi-gray" : "bg-white"}`}
+        >
           {caption}
         </figcaption>
       </figure>
       {(status || metaLabel || button) && (
-        <div className={`flex flex-col gap-2 p-3 ${sideMeta ? "justify-center sm:w-[30%] sm:p-5" : ""}`}>
+        <div
+          className={`flex flex-col gap-2 p-3 ${metaFooter ? "sm:p-4" : ""}`}
+        >
           {(status || metaLabel) && (
-            <p className={`flex gap-3 text-xs ${sideMeta ? "flex-col leading-relaxed" : "items-center justify-between font-semibold uppercase tracking-widest"}`}>
+            <p
+              className={`flex gap-3 text-xs ${metaFooter ? "flex-row flex-wrap items-center justify-between" : "items-center justify-between font-semibold uppercase tracking-widest"}`}
+            >
               {metaLabel && (
                 <span className="text-text-muted">{metaLabel}</span>
               )}

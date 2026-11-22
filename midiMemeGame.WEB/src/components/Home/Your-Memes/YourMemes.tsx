@@ -2,8 +2,18 @@
 
 import { useLanguage } from "@/context/LanguageContext";
 import MemeCard from "@/components/Shared/MemeCard";
-import type { YourMeme, MemeStatus } from "./yourMemesMock";
 import { yourMemesText } from "./yourMemesText";
+
+export type MemeStatus = "approved" | "pending" | "rejected";
+
+export type YourMeme = {
+  id: number;
+  image: string;
+  sourcePhotoId: number;
+  caption: string;
+  submittedAt: string;
+  status: MemeStatus;
+};
 
 const statusStyles: Record<MemeStatus, string> = {
   approved: "text-green-400",
@@ -18,15 +28,18 @@ type YourMemesProps = {
 const YourMemes = ({ memes = [] }: YourMemesProps) => {
   const { lang } = useLanguage();
   const t = yourMemesText[lang];
-  const dateTimeFormatter = new Intl.DateTimeFormat(lang === "lt" ? "lt-LT" : "en-GB", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Europe/Vilnius",
-  });
+  const dateTimeFormatter = new Intl.DateTimeFormat(
+    lang === "lt" ? "lt-LT" : "en-GB",
+    {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Europe/Vilnius",
+    },
+  );
 
   return (
     <section
@@ -48,24 +61,26 @@ const YourMemes = ({ memes = [] }: YourMemesProps) => {
         </div>
         {memes.length === 0 ? (
           <div className="py-2">
-            <h3 className="text-lg font-semibold text-midi-gray">{t.emptyTitle}</h3>
+            <h3 className="text-lg font-semibold text-midi-gray">
+              {t.emptyTitle}
+            </h3>
             <p className="mt-2 max-w-lg text-sm leading-relaxed text-text-muted">
               {t.empty}
             </p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-3">
             {memes.map((meme) => (
               <MemeCard
                 key={meme.id}
                 image={meme.image}
-                imageAlt={meme.text[lang].alt}
-                caption={meme.text[lang].caption}
+                imageAlt={t.photoAlt(meme.sourcePhotoId)}
+                caption={meme.caption}
                 status={{
                   label: t.status[meme.status],
                   className: statusStyles[meme.status],
                 }}
-                layout="side-meta"
+                layout="meta-footer"
                 metaLabel={`${t.submitted} ${dateTimeFormatter.format(new Date(meme.submittedAt))}`}
               />
             ))}
