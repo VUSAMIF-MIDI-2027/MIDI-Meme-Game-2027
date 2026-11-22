@@ -3,7 +3,6 @@ using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Models.Settings;
-using MidiMemeGame.Api.Services;
 using MidiMemeGame.Api.Services.Interfaces;
 
 namespace MidiMemeGame.Api.Workers;
@@ -70,12 +69,47 @@ public class EmailDeliveryWorker : BackgroundService
         if (claimResult.IsError || claimResult.Value.Count == 0)
             return;
 
+        var sessionResult = await smtpSender.OpenSessionAsync(cancellationToken);
+        if (sessionResult.IsError)
+        {
+            var attemptedAt = DateTime.UtcNow;
+            var isPermanent = sessionResult.Error == ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
+            var isQuotaExceeded = sessionResult.Error == ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED;
+
+            foreach (var delivery in claimResult.Value)
+            {
+                var nextAttemptNumber = delivery.AttemptCount + 1;
+                if (isPermanent || nextAttemptNumber >= _settings.MaxAttempts)
+                {
+                    await deliveryQueries.MarkFailedAsync(
+                        delivery.Id,
+                        isPermanent ? "Permanent SMTP authentication/connection failure." : $"Exceeded max retry attempts ({_settings.MaxAttempts}).",
+                        cancellationToken);
+                }
+                else
+                {
+                    var retryDelay = isQuotaExceeded
+                        ? TimeSpan.FromHours(1)
+                        : TimeSpan.FromMinutes(Math.Min(Math.Pow(2, delivery.AttemptCount), 60));
+
+                    await deliveryQueries.ScheduleRetryAsync(
+                        delivery.Id,
+                        attemptedAt.Add(retryDelay),
+                        isQuotaExceeded ? "SMTP daily sending quota exceeded; scheduled for retry in 1 hour." : "SMTP connection failure; scheduled for retry.",
+                        cancellationToken);
+                }
+            }
+            return;
+        }
+
+        await using var smtpSession = sessionResult.Value;
+
         foreach (var delivery in claimResult.Value)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            var sendResult = await smtpSender.SendAsync(
+            var sendResult = await smtpSession.SendAsync(
                 delivery.Id,
                 delivery.RecipientAddress,
                 toName: null,
