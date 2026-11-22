@@ -20,7 +20,7 @@ public class SmtpEmailSender : IEmailSender
     {
         _settings = settings.Value;
         _logger = logger;
-        _loggerFactory = loggerFactory;  
+        _loggerFactory = loggerFactory;
     }
 
     public async Task<Result<IEmailSendSession>> OpenSessionAsync(CancellationToken cancellationToken)
@@ -36,6 +36,11 @@ public class SmtpEmailSender : IEmailSender
             await client.ConnectAsync(_settings.Host, _settings.Port, SecureSocketOptions.StartTls, cancellationToken);
             await client.AuthenticateAsync(_settings.Username, _settings.Password, cancellationToken);
             return new SmtpSendSession(client, _settings, _loggerFactory.CreateLogger<SmtpSendSession>());
+        }
+        catch (OperationCanceledException)
+        {
+            client.Dispose();
+            throw;
         }
         catch (Exception ex)
         {

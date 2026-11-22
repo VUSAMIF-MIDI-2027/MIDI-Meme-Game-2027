@@ -87,7 +87,7 @@ internal sealed class SmtpSendSession : IEmailSendSession
             _logger.LogWarning(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
             return ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
             return ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;

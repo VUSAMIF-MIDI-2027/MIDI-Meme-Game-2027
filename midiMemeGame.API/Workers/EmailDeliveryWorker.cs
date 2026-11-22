@@ -15,6 +15,8 @@ public class EmailDeliveryWorker : BackgroundService
     private readonly EmailSettings _emailSettings;
     private readonly ILogger<EmailDeliveryWorker> _logger;
 
+    private DateTime _smtpResumeAtUtc;
+
     public EmailDeliveryWorker(
         IServiceScopeFactory scopeFactory,
         IOptions<SmtpSettings> settings,
@@ -59,6 +61,9 @@ public class EmailDeliveryWorker : BackgroundService
 
     private async Task ProcessBatchAsync(CancellationToken cancellationToken)
     {
+        if (DateTime.UtcNow < _smtpResumeAtUtc)
+            return;
+
         using var scope = _scopeFactory.CreateScope();
         var deliveryQueries = scope.ServiceProvider.GetRequiredService<EmailDeliveryQueries>();
         var smtpSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
@@ -110,6 +115,10 @@ public class EmailDeliveryWorker : BackgroundService
 
             var retryDelay = isQuotaExceeded ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(1);
             var nextAttemptAt = attemptedAt.Add(retryDelay);
+
+            if (isQuotaExceeded)
+                _smtpResumeAtUtc = nextAttemptAt;
+            
             var batchIds = batch.Select(d => d.Id).ToList();
 
             var releaseResult = await deliveryQueries.ReleaseWithoutAttemptAsync(
@@ -174,6 +183,7 @@ public class EmailDeliveryWorker : BackgroundService
             {
                 var remainingIds = batch.Skip(i).Select(d => d.Id).ToList();
                 var nextAttemptAt = attemptedAt.Add(TimeSpan.FromHours(1));
+                _smtpResumeAtUtc = nextAttemptAt;
 
                 var releaseResult = await deliveryQueries.ReleaseWithoutAttemptAsync(
                     remainingIds,
