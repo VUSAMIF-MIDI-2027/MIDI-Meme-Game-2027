@@ -222,6 +222,41 @@ public class EmailDeliveryQueries
         }
     }
 
+    public async Task<Result<int>> ReleaseWithoutAttemptAsync(
+        IReadOnlyCollection<int> deliveryIds,
+        DateTime nextAttemptAtUtc,
+        string error,
+        CancellationToken cancellationToken)
+    {
+        if (deliveryIds.Count == 0)
+            return 0;
+
+        try
+        {
+            var truncatedError = TruncateError(error);
+            var count = await _db.EmailDeliveries
+                .Where(d => deliveryIds.Contains(d.Id) && d.Status == EmailDeliveryStatus.Processing)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(d => d.Status, EmailDeliveryStatus.Pending)
+                    .SetProperty(d => d.NextAttemptAtUtc, nextAttemptAtUtc)
+                    .SetProperty(d => d.LastError, truncatedError)
+                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
+                    cancellationToken);
+
+            return count;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
     public async Task<Result<int>> ReleaseStaleAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
     {
         try

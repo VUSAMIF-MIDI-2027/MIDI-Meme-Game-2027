@@ -69,6 +69,8 @@ public class EmailDeliveryWorker : BackgroundService
         if (claimResult.IsError || claimResult.Value.Count == 0)
             return;
 
+        var batch = claimResult.Value;
+
         var sessionResult = await smtpSender.OpenSessionAsync(cancellationToken);
         if (sessionResult.IsError)
         {
@@ -79,16 +81,11 @@ public class EmailDeliveryWorker : BackgroundService
                 ? sessionResult.ErrorMessage
                 : (isPermanent ? "Permanent SMTP authentication/connection failure." : "SMTP connection failure.");
 
-            foreach (var delivery in claimResult.Value)
+            if (isPermanent)
             {
-                var nextAttemptNumber = delivery.AttemptCount + 1;
-                if (isPermanent || nextAttemptNumber >= _settings.MaxAttempts)
+                foreach (var delivery in batch)
                 {
-                    var reason = isPermanent
-                        ? sessionError
-                        : $"Exceeded max retry attempts ({_settings.MaxAttempts}). Last error: {sessionError}";
-
-                    var markFailedResult = await deliveryQueries.MarkFailedAsync(delivery.Id, reason, cancellationToken);
+                    var markFailedResult = await deliveryQueries.MarkFailedAsync(delivery.Id, sessionError, cancellationToken);
                     if (markFailedResult.IsError)
                     {
                         _logger.LogError(
@@ -98,48 +95,57 @@ public class EmailDeliveryWorker : BackgroundService
                     }
                     else
                     {
-                        _logger.LogError(LogMessages.Email.SEND_FAILED, delivery.Id, nextAttemptNumber);
+                        _logger.LogError(LogMessages.Email.SEND_FAILED, delivery.Id, delivery.AttemptCount + 1);
                     }
                 }
-                else
-                {
-                    var retryDelay = isQuotaExceeded
-                        ? TimeSpan.FromHours(1)
-                        : TimeSpan.FromMinutes(Math.Min(Math.Pow(2, delivery.AttemptCount), 60));
-
-                    var nextAttemptAt = attemptedAt.Add(retryDelay);
-                    var retryResult = await deliveryQueries.ScheduleRetryAsync(
-                        delivery.Id,
-                        nextAttemptAt,
-                        sessionError,
-                        cancellationToken);
-
-                    if (retryResult.IsError)
-                    {
-                        _logger.LogError(
-                            "Failed to schedule retry for email delivery {DeliveryId} ({Error}).",
-                            delivery.Id,
-                            retryResult.Error);
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            LogMessages.Email.SEND_RETRY,
-                            delivery.Id,
-                            nextAttemptNumber,
-                            nextAttemptAt);
-                    }
-                }
+                return;
             }
+
+            var retryDelay = isQuotaExceeded ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(1);
+            var nextAttemptAt = attemptedAt.Add(retryDelay);
+            var batchIds = batch.Select(d => d.Id).ToList();
+
+            var releaseResult = await deliveryQueries.ReleaseWithoutAttemptAsync(
+                batchIds,
+                nextAttemptAt,
+                sessionError,
+                cancellationToken);
+
+            if (releaseResult.IsError)
+            {
+                _logger.LogError(
+                    "Failed to release {Count} email deliveries after SMTP session error ({Error}).",
+                    batchIds.Count,
+                    releaseResult.Error);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Released {Count} email deliveries without consuming attempts until {NextAttemptAtUtc:O}. Reason: {Reason}",
+                    releaseResult.Value,
+                    nextAttemptAt,
+                    sessionError);
+            }
+
             return;
         }
 
         await using var smtpSession = sessionResult.Value;
 
-        foreach (var delivery in claimResult.Value)
+        for (var i = 0; i < batch.Count; i++)
         {
+            var delivery = batch[i];
+
             if (cancellationToken.IsCancellationRequested)
+            {
+                var remainingIds = batch.Skip(i).Select(d => d.Id).ToList();
+                await deliveryQueries.ReleaseWithoutAttemptAsync(
+                    remainingIds,
+                    DateTime.UtcNow,
+                    "Worker shutdown requested before send.",
+                    CancellationToken.None);
                 break;
+            }
 
             var sendResult = await smtpSession.SendAsync(
                 delivery.Id,
@@ -171,11 +177,40 @@ public class EmailDeliveryWorker : BackgroundService
 
             var isPermanent = sendResult.Error == ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
             var isQuotaExceeded = sendResult.Error == ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED;
-            var nextAttemptNumber = delivery.AttemptCount + 1;
             var sendError = !string.IsNullOrWhiteSpace(sendResult.ErrorMessage)
                 ? sendResult.ErrorMessage
                 : (isPermanent ? "Permanent SMTP failure." : "Transient SMTP failure.");
 
+            if (isQuotaExceeded)
+            {
+                var remainingIds = batch.Skip(i).Select(d => d.Id).ToList();
+                var nextAttemptAt = attemptedAt.Add(TimeSpan.FromHours(1));
+
+                var releaseResult = await deliveryQueries.ReleaseWithoutAttemptAsync(
+                    remainingIds,
+                    nextAttemptAt,
+                    sendError,
+                    cancellationToken);
+
+                if (releaseResult.IsError)
+                {
+                    _logger.LogError(
+                        "Failed to release {Count} email deliveries after SMTP quota exceeded ({Error}).",
+                        remainingIds.Count,
+                        releaseResult.Error);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "SMTP quota exceeded on delivery {DeliveryId}; paused {Count} remaining deliveries without consuming attempts until {NextAttemptAtUtc:O}.",
+                        delivery.Id,
+                        releaseResult.Value,
+                        nextAttemptAt);
+                }
+                break;
+            }
+
+            var nextAttemptNumber = delivery.AttemptCount + 1;
             if (isPermanent || nextAttemptNumber >= _settings.MaxAttempts)
             {
                 var reason = isPermanent
@@ -198,11 +233,7 @@ public class EmailDeliveryWorker : BackgroundService
             else
             {
                 var backoffMinutes = Math.Min(Math.Pow(2, delivery.AttemptCount), 60);
-                var retryDelay = isQuotaExceeded
-                    ? TimeSpan.FromHours(1)
-                    : TimeSpan.FromMinutes(backoffMinutes);
-
-                var nextAttemptAt = attemptedAt.Add(retryDelay);
+                var nextAttemptAt = attemptedAt.AddMinutes(backoffMinutes);
                 var retryResult = await deliveryQueries.ScheduleRetryAsync(
                     delivery.Id,
                     nextAttemptAt,
