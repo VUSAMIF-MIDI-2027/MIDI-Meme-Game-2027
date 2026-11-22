@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Constants;
@@ -18,6 +17,65 @@ public class MemeQueries
     {
         _logger = logger;
         _db = db;
+    }
+    public async Task<Result<Meme>> UpdateAsync(
+        int memeId,
+        string userId,
+        string caption,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var now = DateTime.UtcNow;
+
+            FormattableString query = $"""
+                UPDATE "Memes"
+                SET
+                    "Caption" = {caption},
+                    "StatusId" = CASE
+                        WHEN "Caption" = {caption} THEN "StatusId"
+                        ELSE {(int)MemeStatus.Pending}
+                    END,
+                    "UpdatedAtUtc" = CASE
+                        WHEN "Caption" = {caption} THEN "UpdatedAtUtc"
+                        ELSE {now}
+                    END
+                WHERE "Id" = {memeId}
+                    AND "UserId" = {userId}
+                    AND "IsDeleted" = 0
+                    AND "IsInvalidatedBySourcePhoto" = 0
+                    AND EXISTS (
+                        SELECT 1
+                        FROM "SourcePhotos" AS photo
+                        WHERE photo."Id" = CAST("Memes"."SourcePhotoId" AS INTEGER)
+                            AND photo."IsEnabled" = 1
+                    )
+                RETURNING
+                    "Id", "SourcePhotoId", "UserId", "StatusId", "Caption",
+                    "CreatedAtUtc", "UpdatedAtUtc", "IsDeleted", "Score",
+                    "IsInvalidatedBySourcePhoto";
+                """;
+
+            var memes = await _db.Memes
+                .FromSqlInterpolated(query)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            if (memes.Count == 0)
+                return ErrorType.NOT_FOUND;
+
+            return memes.Single();
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
     }
     public async Task<Result<Meme>> CreateAsync(
         string sourcePhotoId,

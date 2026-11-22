@@ -30,8 +30,40 @@ public class MemeService
         _eventPhase = eventPhase;
         _logger = logger;
     }
-    public async Task<Result<Meme>> SaveAsync(
-        int? memeId,
+    public async Task<Result<Meme>> UpdateAsync(
+        int memeId,
+        string clerkId,
+        string caption,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userQueries.GetActiveIdByClerkIdAsync(
+            clerkId, cancellationToken);
+
+        if (user.Error == ErrorType.NOT_FOUND)
+        {
+            _logger.LogWarning(LogMessages.Memes.USER_ACCESS_DENIED, clerkId);
+            return ErrorType.USER_ACCESS_DENIED;
+        }
+
+        if (user.IsError)
+            return user.Error;
+
+        var submissions = await _eventPhase.EnsureSubmissionsOpenAsync(
+            cancellationToken);
+
+        if (submissions.IsError)
+            return submissions.Error;
+
+        var userId = user.Value.ToString(CultureInfo.InvariantCulture);
+
+        var result = await _memeQueries.UpdateAsync(memeId, userId, caption.Trim(), cancellationToken);
+
+        if (result.Error == ErrorType.NOT_FOUND)
+            _logger.LogWarning(LogMessages.Memes.UPDATE_TARGET_NOT_FOUND, user.Value, memeId);
+
+        return result;
+    }
+    public async Task<Result<Meme>> CreateAsync(
         string clerkId,
         MemeRequestDto request,
         CancellationToken cancellationToken)
@@ -76,27 +108,11 @@ public class MemeService
         var sourcePhotoId = photo.Value.Id.ToString(CultureInfo.InvariantCulture);
         var caption = request.Caption.Trim();
 
-        Result<Meme> result;
-
-        if (memeId.HasValue)
-            result = await _memeQueries.UpdateAsync(memeId.Value, userId, sourcePhotoId, caption, cancellationToken);
-        else
-            result = await _memeQueries.CreateAsync(sourcePhotoId, userId, caption, cancellationToken);
-
-        if (result.Error == ErrorType.NOT_FOUND)
-        {
-            _logger.LogWarning(LogMessages.Memes.UPDATE_TARGET_NOT_FOUND, user.Value, memeId);
-            return result.Error;
-        }
+        var result = await _memeQueries.CreateAsync(
+        sourcePhotoId, userId, caption, cancellationToken);
 
         if (result.Error == ErrorType.MEME_LIMIT_REACHED)
-        {
             _logger.LogWarning(LogMessages.Memes.SUBMISSION_LIMIT_REACHED, user.Value);
-            return result.Error;
-        }
-
-        if (result.IsError)
-            return result.Error;
 
         return result;
     }

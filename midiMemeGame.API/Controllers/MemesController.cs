@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MidiMemeGame.Api.Common.Enums;
@@ -18,21 +19,71 @@ namespace MidiMemeGame.Api.Controllers
             _memeService = memeService;
         }
         [HttpPost]
-        public Task<IActionResult> Create(
+        public async Task<IActionResult> Create(
             [FromBody] MemeRequestDto request,
             CancellationToken cancellationToken
         )
         {
-            return SaveAsync(null, request, cancellationToken);
+            var clerkId = User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrWhiteSpace(clerkId))
+                return Unauthorized(ErrorResponse.Create(ErrorType.USER_ACCESS_DENIED));
+
+            var result = await _memeService.CreateAsync(clerkId, request, cancellationToken);
+
+            if (!result.TryGetResult(out var meme))
+                return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
+
+            if (result.IsError)
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    ErrorResponse.Create(result.Error));
+
+            return Ok(new MemeResponseDto
+            {
+                Id = meme.Id,
+                SourcePhotoId = int.Parse(meme.SourcePhotoId, CultureInfo.InvariantCulture),
+                Caption = meme.Caption,
+                StatusId = (int)meme.StatusId,
+                Score = meme.Score,
+                CreatedAtUtc = meme.CreatedAtUtc,
+                UpdatedAtUtc = meme.UpdatedAtUtc,
+                IsInvalidatedBySourcePhoto = meme.IsInvalidatedBySourcePhoto
+            });
         }
 
         [HttpPatch("{id:int}")]
-        public Task<IActionResult> Update(
+        public async Task<IActionResult> Update(
             int id,
-            [FromBody] MemeRequestDto request,
+            [FromBody] UpdateMemeRequestDto request,
             CancellationToken cancellationToken)
         {
-            return SaveAsync(id, request, cancellationToken);
+            var clerkId = User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrWhiteSpace(clerkId))
+                return Unauthorized(ErrorResponse.Create(ErrorType.USER_ACCESS_DENIED));
+
+            var result = await _memeService.UpdateAsync(id, clerkId, request.Caption, cancellationToken);
+
+            if (!result.TryGetResult(out var meme))
+                return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
+
+            if (result.IsError)
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    ErrorResponse.Create(result.Error));
+
+            return Ok(new MemeResponseDto
+            {
+                Id = meme.Id,
+                SourcePhotoId = int.Parse(meme.SourcePhotoId, CultureInfo.InvariantCulture),
+                Caption = meme.Caption,
+                StatusId = (int)meme.StatusId,
+                Score = meme.Score,
+                CreatedAtUtc = meme.CreatedAtUtc,
+                UpdatedAtUtc = meme.UpdatedAtUtc,
+                IsInvalidatedBySourcePhoto = meme.IsInvalidatedBySourcePhoto
+            });
         }
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
@@ -52,7 +103,7 @@ namespace MidiMemeGame.Api.Controllers
             return Ok();
         }
         [HttpGet("mine")]
-        public async Task<IActionResult> GetMineMemes(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetMyMemes(CancellationToken cancellationToken)
         {
             var clerkId = User.FindFirst("sub")?.Value;
 
@@ -72,43 +123,6 @@ namespace MidiMemeGame.Api.Controllers
                     ErrorResponse.Create(result.Error));
 
             return Ok(result.Value);
-        }
-
-        private async Task<IActionResult> SaveAsync(
-            int? memeId,
-            MemeRequestDto request,
-            CancellationToken cancellationToken
-        )
-        {
-            var clerkId = User.FindFirst("sub")?.Value;
-
-            if (string.IsNullOrWhiteSpace(clerkId))
-                return Unauthorized();
-
-            var result = await _memeService.SaveAsync(
-                memeId, clerkId, request, cancellationToken);
-
-            if (result.IsError)
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    ErrorResponse.Create(result.Error));
-
-            var meme = result.Value;
-            var response = new
-            {
-                meme.Id,
-                request.SourcePhotoId,
-                meme.Caption,
-                meme.StatusId,
-                meme.Score,
-                meme.CreatedAtUtc,
-                meme.UpdatedAtUtc
-            };
-
-            if (memeId.HasValue)
-                return Ok(response);
-
-            return StatusCode(StatusCodes.Status201Created, response);
         }
     }
 }
