@@ -108,9 +108,10 @@ public class EmailDeliveryWorker : BackgroundService
             }
             else
             {
+                var backoffMinutes = Math.Min(Math.Pow(2, delivery.AttemptCount), 60);
                 var retryDelay = isQuotaExceeded
                     ? TimeSpan.FromHours(1)
-                    : TimeSpan.FromSeconds(Math.Pow(2, delivery.AttemptCount) * 10);
+                    : TimeSpan.FromMinutes(backoffMinutes);
 
                 var nextAttemptAt = attemptedAt.Add(retryDelay);
                 var retryReason = isQuotaExceeded

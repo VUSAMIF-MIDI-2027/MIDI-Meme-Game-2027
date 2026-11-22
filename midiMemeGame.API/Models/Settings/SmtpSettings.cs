@@ -9,6 +9,6 @@ public class SmtpSettings
     public string Password { get; set; } = "";
     public string FromAddress { get; set; } = "";
     public string FromName { get; set; } = "";
-    public int MaxAttempts { get; set; } = 5;
-    public int PollIntervalSeconds { get; set; } = 5;
+    public int MaxAttempts { get; set; }
+    public int PollIntervalSeconds { get; set; }
 }
