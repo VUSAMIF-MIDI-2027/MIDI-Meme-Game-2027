@@ -59,6 +59,10 @@ public class SmtpEmailSender : IEmailSender
         catch (SmtpCommandException ex)
         {
             _logger.LogWarning(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
+
+            if (IsQuotaExceeded(ex))
+                return ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED;
+
             var code = (int)ex.StatusCode;
             return code is >= 400 and < 500
                 ? ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE
@@ -79,5 +83,13 @@ public class SmtpEmailSender : IEmailSender
             _logger.LogError(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
             return ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
         }
+    }
+
+    private static bool IsQuotaExceeded(SmtpCommandException ex)
+    {
+        var message = ex.Message;
+        return message.Contains("5.4.5", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Daily user sending quota exceeded", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("quota exceeded", StringComparison.OrdinalIgnoreCase);
     }
 }

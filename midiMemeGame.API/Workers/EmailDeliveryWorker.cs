@@ -94,6 +94,7 @@ public class EmailDeliveryWorker : BackgroundService
             }
 
             var isPermanent = sendResult.Error == ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
+            var isQuotaExceeded = sendResult.Error == ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED;
             var nextAttemptNumber = delivery.AttemptCount + 1;
 
             if (isPermanent || nextAttemptNumber >= _settings.MaxAttempts)
@@ -107,13 +108,19 @@ public class EmailDeliveryWorker : BackgroundService
             }
             else
             {
-                var backoffSeconds = Math.Pow(2, delivery.AttemptCount) * 10;
-                var nextAttemptAt = attemptedAt.AddSeconds(backoffSeconds);
+                var retryDelay = isQuotaExceeded
+                    ? TimeSpan.FromHours(1)
+                    : TimeSpan.FromSeconds(Math.Pow(2, delivery.AttemptCount) * 10);
+
+                var nextAttemptAt = attemptedAt.Add(retryDelay);
+                var retryReason = isQuotaExceeded
+                    ? "SMTP daily sending quota exceeded; scheduled for retry in 1 hour."
+                    : "Transient SMTP failure; scheduled for retry.";
 
                 await deliveryQueries.ScheduleRetryAsync(
                     delivery.Id,
                     nextAttemptAt,
-                    "Transient SMTP failure; scheduled for retry.",
+                    retryReason,
                     cancellationToken);
 
                 _logger.LogWarning(
