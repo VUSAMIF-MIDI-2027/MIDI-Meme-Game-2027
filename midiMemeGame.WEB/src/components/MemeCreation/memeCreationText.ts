@@ -4,10 +4,9 @@ export const CAPTION_MAX_WORDS = 30;
 export const CAPTION_MAX_CHARS = 250;
 
 type MemeCreationText = {
-    dialogLabel: string;
+    pageTitle: string;
+    backToDashboard: string;
     progressLabel: string;
-    closeLabel: string;
-    confirmClose: string;
     stepNames: [string, string, string];
     photoTitle: string;
     photoHint: string;
@@ -30,6 +29,9 @@ type MemeCreationText = {
     submit: string;
     submitting: string;
     submitError: string;
+    submitErrorClosed: string;
+    submitErrorPhotoDisabled: string;
+    submitErrorDenied: string;
     authError: string;
     confirmTitle: string;
     confirmBody: string;
@@ -39,10 +41,9 @@ type MemeCreationText = {
 
 export const memeCreationText: Record<Lang, MemeCreationText> = {
     lt: {
-        dialogLabel: "Memų kūrimas",
+        pageTitle: "Memų kūrimas",
+        backToDashboard: "Atgal į pradžią",
         progressLabel: "Memų kūrimo eiga",
-        closeLabel: "Uždaryti",
-        confirmClose: "Ar tikrai nori uždaryti? Tavo progresas bus prarastas.",
         stepNames: ["Nuotrauka", "Prierašas", "Pateikimas"],
         photoTitle: "Pasirink nuotrauką",
         photoHint: "Išrink vieną iš organizatorių paruoštų nuotraukų.",
@@ -65,6 +66,9 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         submit: "Pateikti memą",
         submitting: "Pateikiama…",
         submitError: "Memą pateikti nepavyko. Bandyk dar kartą.",
+        submitErrorClosed: "Memų teikimas šiuo metu uždarytas.",
+        submitErrorPhotoDisabled: "Pasirinkta nuotrauka nebegalima. Pasirink kitą.",
+        submitErrorDenied: "Tavo paskyra negali teikti memų.",
         authError: "Prisijunk iš naujo ir bandyk dar kartą.",
         confirmTitle: "Memas pateiktas!",
         confirmBody: "Tavo memas laukia organizatorių peržiūros. Kai jį patvirtins, jis atsiras balsavime.",
@@ -72,10 +76,9 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         myMemes: "Mano memai",
     },
     en: {
-        dialogLabel: "Meme creation",
+        pageTitle: "Meme creation",
+        backToDashboard: "Back to dashboard",
         progressLabel: "Meme creation progress",
-        closeLabel: "Close",
-        confirmClose: "Close the meme creator? Your progress will be lost.",
         stepNames: ["Photo", "Caption", "Submit"],
         photoTitle: "Choose a photo",
         photoHint: "Pick one of the photos provided by the organizers.",
@@ -98,6 +101,9 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         submit: "Submit meme",
         submitting: "Submitting…",
         submitError: "Couldn't submit the meme. Try again.",
+        submitErrorClosed: "Meme submissions are closed right now.",
+        submitErrorPhotoDisabled: "That photo is no longer available. Choose another one.",
+        submitErrorDenied: "Your account isn't allowed to submit memes.",
         authError: "Sign in again and try once more.",
         confirmTitle: "Meme submitted!",
         confirmBody: "Your meme is waiting for organizer review. Once approved, it will appear in voting.",

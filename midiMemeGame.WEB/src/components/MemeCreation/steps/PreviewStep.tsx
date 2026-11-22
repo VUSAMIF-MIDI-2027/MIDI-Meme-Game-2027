@@ -5,8 +5,32 @@ import { useAuth } from "@clerk/react";
 import { Pencil } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import MemeCard from "@/components/Shared/MemeCard";
-import { submitMeme } from "@/services/memeService";
+import {
+  MEME_ERROR_ACCESS_DENIED,
+  MEME_ERROR_PHOTO_DISABLED,
+  MEME_ERROR_SUBMISSIONS_CLOSED,
+  MEME_ERROR_SUBMISSIONS_NOT_OPEN,
+  MemeServiceError,
+  submitMeme,
+} from "@/services/memeService";
 import { memeCreationText } from "../memeCreationText";
+
+type SubmitError = "submit" | "auth" | "closed" | "photoDisabled" | "denied";
+
+function mapSubmitError(error: unknown): SubmitError {
+  const code = error instanceof MemeServiceError ? error.code : undefined;
+  switch (code) {
+    case MEME_ERROR_SUBMISSIONS_NOT_OPEN:
+    case MEME_ERROR_SUBMISSIONS_CLOSED:
+      return "closed";
+    case MEME_ERROR_PHOTO_DISABLED:
+      return "photoDisabled";
+    case MEME_ERROR_ACCESS_DENIED:
+      return "denied";
+    default:
+      return "submit";
+  }
+}
 
 type PreviewStepProps = {
   photoId: number;
@@ -29,7 +53,7 @@ export default function PreviewStep({
   const { lang } = useLanguage();
   const t = memeCreationText[lang];
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<"submit" | "auth" | null>(null);
+  const [error, setError] = useState<SubmitError | null>(null);
 
   async function handleSubmit() {
     if (submitting) return;
@@ -43,8 +67,8 @@ export default function PreviewStep({
       }
       await submitMeme(photoId, caption, token);
       onSubmitted();
-    } catch {
-      setError("submit");
+    } catch (error) {
+      setError(mapSubmitError(error));
     } finally {
       setSubmitting(false);
     }
@@ -58,7 +82,11 @@ export default function PreviewStep({
       </div>
       {error && (
         <p role="alert" className="mt-4 text-center text-sm text-rose-400">
-          {error === "auth" ? t.authError : t.submitError}
+          {error === "auth" && t.authError}
+          {error === "closed" && t.submitErrorClosed}
+          {error === "photoDisabled" && t.submitErrorPhotoDisabled}
+          {error === "denied" && t.submitErrorDenied}
+          {error === "submit" && t.submitError}
         </p>
       )}
       <div className="mx-auto mt-6 flex w-3/5 flex-col gap-3">

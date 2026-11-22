@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Check } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import type { PhotoPool } from "../MemeCreationModal";
+import type { PhotoPool } from "../MemeCreationFlow";
 import { memeCreationText } from "../memeCreationText";
 
 type PhotoStepProps = {

@@ -6,16 +6,39 @@ export type Photo = {
 
 export type SubmittedMeme = {
     id: number;
-    photoId: number;
+    sourcePhotoId: number;
     caption: string;
     statusId: number;
+    score: number;
     createdAtUtc: string;
+    updatedAtUtc: string;
 };
 
 export const MEME_STATUS_PENDING = 1;
+export const MEME_STATUS_REJECTED = 2;
+export const MEME_STATUS_APPROVED = 3;
+
+// Backend ErrorType codes returned as `{ error: { code } }` with HTTP 500.
+export const MEME_ERROR_SUBMISSIONS_NOT_OPEN = 2402;
+export const MEME_ERROR_SUBMISSIONS_CLOSED = 2403;
+export const MEME_ERROR_PHOTO_DISABLED = 2501;
+export const MEME_ERROR_ACCESS_DENIED = 4004;
 
 export class MemeServiceError extends Error {
-    constructor(public status: number) { super(`Meme request failed: ${status}`); }
+    constructor(
+        public status: number,
+        public code?: number,
+    ) { super(`Meme request failed: ${status}`); }
+}
+
+async function readErrorCode(response: Response): Promise<number | undefined> {
+    try {
+        const body: unknown = await response.json();
+        const code = (body as { error?: { code?: unknown } } | null)?.error?.code;
+        return typeof code === "number" ? code : undefined;
+    } catch {
+        return undefined;
+    }
 }
 
 export async function getPhotos(token: string, signal?: AbortSignal): Promise<Photo[]> {
@@ -33,42 +56,25 @@ export async function getPhotos(token: string, signal?: AbortSignal): Promise<Ph
     return photos;
 }
 
-const useMock = process.env.NODE_ENV === "development"
-    ? process.env.NEXT_PUBLIC_MOCK_MEME_SUBMIT !== "false"
-    : process.env.NEXT_PUBLIC_MOCK_MEME_SUBMIT === "true";
-
-export const useMockPhotos = process.env.NODE_ENV === "development"
-    ? process.env.NEXT_PUBLIC_MOCK_PHOTOS !== "false"
-    : process.env.NEXT_PUBLIC_MOCK_PHOTOS === "true";
-
-export const MOCK_PHOTO_URLS: Record<number, string> = Object.fromEntries(
-    Array.from({ length: 24 }, (_, index) => [
-        index + 1,
-        `https://picsum.photos/seed/midi-meme-${index + 1}/640/480`,
-    ]),
-);
-
-const MOCK_SUBMIT_DELAY_MS = 800;
-
 export async function submitMeme(
-    photoId: number,
+    sourcePhotoId: number,
     caption: string,
     token: string,
     signal?: AbortSignal
 ): Promise<SubmittedMeme> {
-    if (useMock) return mockSubmitMeme(photoId, caption, signal);
-
     const response = await fetch(apiBaseUrl + "/api/memes", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Authorization: "Bearer " + token,
         },
-        body: JSON.stringify({ photoId, caption }),
+        body: JSON.stringify({ sourcePhotoId, caption }),
         signal,
         cache: "no-store",
     });
-    if (!response.ok) throw new MemeServiceError(response.status);
+    if (!response.ok) {
+        throw new MemeServiceError(response.status, await readErrorCode(response));
+    }
 
     const meme: unknown = await response.json();
     if (!Number.isInteger((meme as SubmittedMeme | null)?.id)) {
@@ -77,23 +83,19 @@ export async function submitMeme(
     return meme as SubmittedMeme;
 }
 
-function mockSubmitMeme(photoId: number, caption: string, signal?: AbortSignal): Promise<SubmittedMeme> {
-    return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-            signal?.removeEventListener("abort", onAbort);
-            resolve({
-                id: Date.now(),
-                photoId,
-                caption,
-                statusId: MEME_STATUS_PENDING,
-                createdAtUtc: new Date().toISOString(),
-            });
-        }, MOCK_SUBMIT_DELAY_MS);
-
-        function onAbort() {
-            clearTimeout(timer);
-            reject(signal?.reason ?? new DOMException("Aborted", "AbortError"));
-        }
-        signal?.addEventListener("abort", onAbort, { once: true });
+export async function getMyMemes(token: string, signal?: AbortSignal): Promise<SubmittedMeme[]> {
+    const response = await fetch(apiBaseUrl + "/api/memes/mine", {
+        headers: { Authorization: "Bearer " + token },
+        signal,
+        cache: "no-store",
     });
+    if (!response.ok) {
+        throw new MemeServiceError(response.status, await readErrorCode(response));
+    }
+
+    const memes: unknown = await response.json();
+    if (!Array.isArray(memes) || !memes.every(m => Number.isInteger((m as SubmittedMeme | null)?.id))) {
+        throw new Error("Invalid memes response.");
+    }
+    return memes;
 }

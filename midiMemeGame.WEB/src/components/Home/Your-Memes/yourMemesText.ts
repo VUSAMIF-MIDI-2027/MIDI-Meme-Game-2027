@@ -1,5 +1,5 @@
 import type { Lang } from "@/context/LanguageContext";
-import type { MemeStatus } from "./yourMemesMock";
+import type { MemeStatus } from "./YourMemes";
 
 type YourMemesText = {
     eyebrow: string;
@@ -8,6 +8,7 @@ type YourMemesText = {
     empty: string;
     emptyTitle: string;
     submitted: string;
+    photoAlt: (id: number) => string;
     status: Record<MemeStatus, string>;
 };
 
@@ -20,6 +21,7 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
         empty: "Kai pateiksi memą, jis atsiras čia.",
         emptyTitle: "Kol kas tuščia",
         submitted: "Pateikta",
+        photoAlt: (id) => `Konkurso nuotrauka ${id}`,
         status: {
             approved: "Patvirtintas",
             pending: "Laukiama patvirtinimo",
@@ -34,6 +36,7 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
         empty: "Your memes will appear here after you submit them.",
         emptyTitle: "Nothing here yet",
         submitted: "Submitted",
+        photoAlt: (id) => `Competition photo ${id}`,
         status: {
             approved: "Approved",
             pending: "Pending review",
