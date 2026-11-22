@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
@@ -28,6 +29,11 @@ public class EmailTemplateQueries
 
             return templates;
         }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
@@ -47,6 +53,11 @@ public class EmailTemplateQueries
                 return ErrorType.EMAIL_TEMPLATE_NOT_FOUND;
 
             return template;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -75,6 +86,11 @@ public class EmailTemplateQueries
 
             await _db.SaveChangesAsync(cancellationToken);
             return template;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
@@ -74,6 +75,11 @@ public class EmailDeliveryQueries
 
             return ErrorType.DB_EXCEPTION;
         }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
@@ -112,6 +118,11 @@ public class EmailDeliveryQueries
 
             return due;
         }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
@@ -134,6 +145,11 @@ public class EmailDeliveryQueries
                     cancellationToken);
 
             return updated > 0 ? true : ErrorType.NOT_FOUND;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -163,6 +179,11 @@ public class EmailDeliveryQueries
 
             return updated > 0 ? true : ErrorType.NOT_FOUND;
         }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
@@ -189,6 +210,11 @@ public class EmailDeliveryQueries
 
             return updated > 0 ? true : ErrorType.NOT_FOUND;
         }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
@@ -208,6 +234,11 @@ public class EmailDeliveryQueries
                     cancellationToken);
 
             return count;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

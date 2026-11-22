@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
@@ -31,6 +32,11 @@ public class EmailMilestoneProgressQueries
                 .AnyAsync(p => p.EventId == eventId && p.Milestone == milestone, ct);
 
             return exists;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -70,6 +76,11 @@ public class EmailMilestoneProgressQueries
                 return true;
 
             return ErrorType.DB_EXCEPTION;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using MailKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
@@ -123,9 +125,14 @@ public class SmtpEmailSender : IEmailSender
 
                 var builder = new BodyBuilder();
                 if (isHtml)
+                {
                     builder.HtmlBody = body;
+                    builder.TextBody = WebUtility.HtmlDecode(Regex.Replace(body, "<[^>]+>", " ")).Trim();
+                }
                 else
+                {
                     builder.TextBody = body;
+                }
 
                 message.Body = builder.ToMessageBody();
 

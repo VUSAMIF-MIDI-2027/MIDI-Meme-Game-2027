@@ -1,6 +1,7 @@
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Data.Queries;
+using MidiMemeGame.Api.Helpers;
 using MidiMemeGame.Api.Services;
 using MidiMemeGame.Api.Services.Interfaces;
 
@@ -125,7 +126,7 @@ public class ScheduledEmailWorker : BackgroundService
             {
                 var variables = new Dictionary<string, string>
                 {
-                    ["recipientName"] = string.IsNullOrWhiteSpace(user.FirstName) ? "Dalyvi" : user.FirstName
+                    ["recipientName"] = EmailTemplateHelper.BuildRecipientName(user.FirstName, user.LastName)
                 };
 
                 var deduplicationKey = $"{eventId}:{milestone.Key}:user:{user.Id}";

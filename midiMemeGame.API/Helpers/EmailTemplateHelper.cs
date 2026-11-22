@@ -115,4 +115,13 @@ public static class EmailTemplateHelper
         missingVariable = missing;
         return result;
     }
+
+    public static string BuildRecipientName(string? firstName, string? lastName = null)
+    {
+        var trimmedFirst = firstName?.Trim();
+        if (!string.IsNullOrWhiteSpace(trimmedFirst))
+            return trimmedFirst;
+
+        return "Dalyvi";
+    }
 }
