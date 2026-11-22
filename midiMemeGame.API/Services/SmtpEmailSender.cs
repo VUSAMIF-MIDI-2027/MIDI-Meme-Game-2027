@@ -30,7 +30,8 @@ public class SmtpEmailSender : IEmailSender
     {
         var client = new SmtpClient
         {
-            Timeout = SmtpTimeoutMs
+            Timeout = SmtpTimeoutMs,
+            CheckCertificateRevocation = false
         };
 
         try
