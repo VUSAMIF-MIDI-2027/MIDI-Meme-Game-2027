@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EmailMilestoneProgressQueries>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IScheduledEmailService, ScheduledEmailService>();
         services.AddHostedService<EmailDeliveryWorker>();
         services.AddHostedService<ScheduledEmailWorker>();
 

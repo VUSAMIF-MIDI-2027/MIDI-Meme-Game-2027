@@ -14,7 +14,7 @@ public class EmailDeliveryQueries
     private readonly ILogger<EmailDeliveryQueries> _logger;
 
     public EmailDeliveryQueries(
-        AppDbContext db, 
+        AppDbContext db,
         ILogger<EmailDeliveryQueries> logger)
     {
         _db = db;
@@ -27,18 +27,8 @@ public class EmailDeliveryQueries
     {
         try
         {
-            if (!string.IsNullOrEmpty(delivery.DeduplicationKey))
-            {
-                var existing = await _db.EmailDeliveries
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(d => d.DeduplicationKey == delivery.DeduplicationKey, cancellationToken);
-
-                if (existing is not null)
-                    return (existing, false);
-            }
-
             var status = (int)delivery.Status;
-            FormattableString query = $"""
+            FormattableString insertQuery = $"""
                 INSERT INTO "EmailDeliveries" (
                     "TemplateKey", "RecipientAddress", "Subject", "Body", "IsHtml",
                     "Status", "AttemptCount", "NextAttemptAtUtc", "LastError",
@@ -49,14 +39,14 @@ public class EmailDeliveryQueries
                     {status}, {delivery.AttemptCount}, {delivery.NextAttemptAtUtc}, {delivery.LastError},
                     {delivery.DeduplicationKey}, {delivery.CreatedAtUtc}, {delivery.SentAtUtc}, {delivery.ClaimedAtUtc}
                 )
-                ON CONFLICT ("DeduplicationKey") WHERE "DeduplicationKey" IS NOT NULL DO NOTHING
+                ON CONFLICT ("DeduplicationKey") DO NOTHING
                 RETURNING "Id", "TemplateKey", "RecipientAddress", "Subject", "Body", "IsHtml",
                           "Status", "AttemptCount", "NextAttemptAtUtc", "LastError",
                           "DeduplicationKey", "CreatedAtUtc", "SentAtUtc", "ClaimedAtUtc";
                 """;
 
             var inserted = await _db.EmailDeliveries
-                .FromSqlInterpolated(query)
+                .FromSqlInterpolated(insertQuery)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
@@ -65,9 +55,18 @@ public class EmailDeliveryQueries
 
             if (!string.IsNullOrEmpty(delivery.DeduplicationKey))
             {
+                FormattableString selectQuery = $"""
+                    SELECT "Id", "TemplateKey", "RecipientAddress", "Subject", "Body", "IsHtml",
+                           "Status", "AttemptCount", "NextAttemptAtUtc", "LastError",
+                           "DeduplicationKey", "CreatedAtUtc", "SentAtUtc", "ClaimedAtUtc"
+                    FROM "EmailDeliveries"
+                    WHERE "DeduplicationKey" = {delivery.DeduplicationKey}
+                    """;
+
                 var existing = await _db.EmailDeliveries
+                    .FromSqlInterpolated(selectQuery)
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(d => d.DeduplicationKey == delivery.DeduplicationKey, cancellationToken);
+                    .SingleOrDefaultAsync(cancellationToken);
 
                 if (existing is not null)
                     return (existing, false);
@@ -80,7 +79,7 @@ public class EmailDeliveryQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -123,7 +122,7 @@ public class EmailDeliveryQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -134,16 +133,20 @@ public class EmailDeliveryQueries
     {
         try
         {
-            var updated = await _db.EmailDeliveries
-                .Where(d => d.Id == deliveryId && d.Status == EmailDeliveryStatus.Processing)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(d => d.Status, EmailDeliveryStatus.Sent)
-                    .SetProperty(d => d.AttemptCount, d => d.AttemptCount + 1)
-                    .SetProperty(d => d.SentAtUtc, sentAtUtc)
-                    .SetProperty(d => d.LastError, (string?)null)
-                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
-                    cancellationToken);
+            var processing = (int)EmailDeliveryStatus.Processing;
+            var sent = (int)EmailDeliveryStatus.Sent;
 
+            FormattableString query = $"""
+                UPDATE "EmailDeliveries"
+                SET "Status" = {sent},
+                    "AttemptCount" = "AttemptCount" + 1,
+                    "SentAtUtc" = {sentAtUtc},
+                    "LastError" = NULL,
+                    "ClaimedAtUtc" = NULL
+                WHERE "Id" = {deliveryId} AND "Status" = {processing}
+                """;
+
+            var updated = await _db.Database.ExecuteSqlInterpolatedAsync(query, cancellationToken);
             return updated > 0 ? true : ErrorType.NOT_FOUND;
         }
         catch (SqliteException ex)
@@ -151,7 +154,7 @@ public class EmailDeliveryQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -167,16 +170,20 @@ public class EmailDeliveryQueries
         try
         {
             var truncatedError = TruncateError(error);
-            var updated = await _db.EmailDeliveries
-                .Where(d => d.Id == deliveryId && d.Status == EmailDeliveryStatus.Processing)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(d => d.Status, EmailDeliveryStatus.Pending)
-                    .SetProperty(d => d.AttemptCount, d => d.AttemptCount + 1)
-                    .SetProperty(d => d.NextAttemptAtUtc, nextAttemptAtUtc)
-                    .SetProperty(d => d.LastError, truncatedError)
-                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
-                    cancellationToken);
+            var processing = (int)EmailDeliveryStatus.Processing;
+            var pending = (int)EmailDeliveryStatus.Pending;
 
+            FormattableString query = $"""
+                UPDATE "EmailDeliveries"
+                SET "Status" = {pending},
+                    "AttemptCount" = "AttemptCount" + 1,
+                    "NextAttemptAtUtc" = {nextAttemptAtUtc},
+                    "LastError" = {truncatedError},
+                    "ClaimedAtUtc" = NULL
+                WHERE "Id" = {deliveryId} AND "Status" = {processing}
+                """;
+
+            var updated = await _db.Database.ExecuteSqlInterpolatedAsync(query, cancellationToken);
             return updated > 0 ? true : ErrorType.NOT_FOUND;
         }
         catch (SqliteException ex)
@@ -184,7 +191,7 @@ public class EmailDeliveryQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -199,15 +206,19 @@ public class EmailDeliveryQueries
         try
         {
             var truncatedError = TruncateError(error);
-            var updated = await _db.EmailDeliveries
-                .Where(d => d.Id == deliveryId && d.Status == EmailDeliveryStatus.Processing)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(d => d.Status, EmailDeliveryStatus.Failed)
-                    .SetProperty(d => d.AttemptCount, d => d.AttemptCount + 1)
-                    .SetProperty(d => d.LastError, truncatedError)
-                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
-                    cancellationToken);
+            var processing = (int)EmailDeliveryStatus.Processing;
+            var failed = (int)EmailDeliveryStatus.Failed;
 
+            FormattableString query = $"""
+                UPDATE "EmailDeliveries"
+                SET "Status" = {failed},
+                    "AttemptCount" = "AttemptCount" + 1,
+                    "LastError" = {truncatedError},
+                    "ClaimedAtUtc" = NULL
+                WHERE "Id" = {deliveryId} AND "Status" = {processing}
+                """;
+
+            var updated = await _db.Database.ExecuteSqlInterpolatedAsync(query, cancellationToken);
             return updated > 0 ? true : ErrorType.NOT_FOUND;
         }
         catch (SqliteException ex)
@@ -215,7 +226,7 @@ public class EmailDeliveryQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -234,15 +245,28 @@ public class EmailDeliveryQueries
         try
         {
             var truncatedError = TruncateError(error);
-            var count = await _db.EmailDeliveries
-                .Where(d => deliveryIds.Contains(d.Id) && d.Status == EmailDeliveryStatus.Processing)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(d => d.Status, EmailDeliveryStatus.Pending)
-                    .SetProperty(d => d.NextAttemptAtUtc, nextAttemptAtUtc)
-                    .SetProperty(d => d.LastError, truncatedError)
-                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
-                    cancellationToken);
+            var processing = (int)EmailDeliveryStatus.Processing;
+            var pending = (int)EmailDeliveryStatus.Pending;
 
+            var parameters = new List<object> { pending, nextAttemptAtUtc, truncatedError, processing };
+            var idPlaceholders = new List<string>(deliveryIds.Count);
+
+            foreach (var id in deliveryIds)
+            {
+                idPlaceholders.Add($"@p{parameters.Count}");
+                parameters.Add(id);
+            }
+
+            var sql = $"""
+                UPDATE "EmailDeliveries"
+                SET "Status" = @p0,
+                    "NextAttemptAtUtc" = @p1,
+                    "LastError" = @p2,
+                    "ClaimedAtUtc" = NULL
+                WHERE "Id" IN ({string.Join(", ", idPlaceholders)}) AND "Status" = @p3
+                """;
+
+            var count = await _db.Database.ExecuteSqlRawAsync(sql, parameters, cancellationToken);
             return count;
         }
         catch (SqliteException ex)
@@ -250,7 +274,7 @@ public class EmailDeliveryQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -261,13 +285,17 @@ public class EmailDeliveryQueries
     {
         try
         {
-            var count = await _db.EmailDeliveries
-                .Where(d => d.Status == EmailDeliveryStatus.Processing && d.ClaimedAtUtc < cutoffUtc)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(d => d.Status, EmailDeliveryStatus.Pending)
-                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
-                    cancellationToken);
+            var processing = (int)EmailDeliveryStatus.Processing;
+            var pending = (int)EmailDeliveryStatus.Pending;
 
+            FormattableString query = $"""
+                UPDATE "EmailDeliveries"
+                SET "Status" = {pending},
+                    "ClaimedAtUtc" = NULL
+                WHERE "Status" = {processing} AND "ClaimedAtUtc" < {cutoffUtc}
+                """;
+
+            var count = await _db.Database.ExecuteSqlInterpolatedAsync(query, cancellationToken);
             return count;
         }
         catch (SqliteException ex)
@@ -275,7 +303,7 @@ public class EmailDeliveryQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;

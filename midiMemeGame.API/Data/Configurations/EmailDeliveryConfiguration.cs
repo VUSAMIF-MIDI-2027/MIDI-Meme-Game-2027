@@ -18,8 +18,7 @@ public class EmailDeliveryConfiguration : IEntityTypeConfiguration<EmailDelivery
         builder.Property(e => e.DeduplicationKey).HasMaxLength(200);
 
         builder.HasIndex(e => e.DeduplicationKey)
-               .IsUnique()
-               .HasFilter("\"DeduplicationKey\" IS NOT NULL");
+               .IsUnique();
 
         builder.HasIndex(e => new { e.Status, e.NextAttemptAtUtc });
     }

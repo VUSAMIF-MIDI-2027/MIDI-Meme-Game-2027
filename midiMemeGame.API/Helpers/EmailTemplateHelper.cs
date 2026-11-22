@@ -3,14 +3,13 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
+using MidiMemeGame.Api.Dto.Email;
+using MidiMemeGame.Api.Models;
 
 namespace MidiMemeGame.Api.Helpers;
 
 public static class EmailTemplateHelper
 {
-    public const int MaxSubjectLength = 200;
-    public const int MaxBodyLength = 50_000;
-
     private static readonly Regex PlaceholderRegex = new(@"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}");
 
     public static IReadOnlyList<string> ParseAllowedPlaceholders(string? json)
@@ -28,92 +27,73 @@ public static class EmailTemplateHelper
         }
     }
 
-    public static IReadOnlyList<string> ValidateTemplate(
+    public static bool IsValidTemplate(
         string subject,
         string body,
-        IEnumerable<string> allowedPlaceholders)
+        IEnumerable<string> allowedPlaceholders,
+        int maxSubjectLength,
+        int maxBodyLength)
     {
-        var reasons = new List<string>();
         var trimmedSubject = subject.Trim();
+        if (trimmedSubject.Length == 0 || trimmedSubject.Length > maxSubjectLength)
+            return false;
 
-        if (string.IsNullOrWhiteSpace(trimmedSubject))
-            reasons.Add("Subject cannot be empty.");
-        else if (trimmedSubject.Length > MaxSubjectLength)
-            reasons.Add($"Subject cannot exceed {MaxSubjectLength} characters (got {trimmedSubject.Length}).");
-
-        if (string.IsNullOrWhiteSpace(body))
-            reasons.Add("Body cannot be empty.");
-        else if (body.Length > MaxBodyLength)
-            reasons.Add($"Body cannot exceed {MaxBodyLength} characters (got {body.Length}).");
+        if (string.IsNullOrWhiteSpace(body) || body.Length > maxBodyLength)
+            return false;
 
         var allowed = new HashSet<string>(allowedPlaceholders, StringComparer.Ordinal);
-        CollectPlaceholderErrors("Subject", subject, allowed, reasons);
-        CollectPlaceholderErrors("Body", body, allowed, reasons);
-
-        return reasons;
+        return IsTextValid(subject, allowed) && IsTextValid(body, allowed);
     }
 
-    private static void CollectPlaceholderErrors(
-        string fieldName,
-        string text,
-        HashSet<string> allowed,
-        List<string> reasons)
+    private static bool IsTextValid(string text, HashSet<string> allowed)
     {
         var stripped = PlaceholderRegex.Replace(text, string.Empty);
         if (stripped.Contains("{{") || stripped.Contains("}}"))
-            reasons.Add($"{fieldName} contains malformed or unclosed placeholder braces.");
+            return false;
 
-        var invalidNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (Match match in PlaceholderRegex.Matches(text))
-        {
-            var name = match.Groups[1].Value;
-            if (!allowed.Contains(name))
-                invalidNames.Add(name);
-        }
-
-        foreach (var name in invalidNames)
-            reasons.Add($"{fieldName} uses unsupported placeholder '{{{{{name}}}}}'. Allowed: {(allowed.Count > 0 ? string.Join(", ", allowed) : "none")}.");
+        return PlaceholderRegex.Matches(text).All(m => allowed.Contains(m.Groups[1].Value));
     }
 
-    public static Result<(string Subject, string Body)> Render(
+    public static Result<RenderedEmailContent> Render(
         string subjectTemplate,
         string bodyTemplate,
         bool isHtml,
         IReadOnlyDictionary<string, string> variables)
     {
-        var renderedSubject = RenderText(subjectTemplate, variables, htmlEncode: false, out var missingSubjectVar);
-        if (missingSubjectVar is not null)
+        if (!TryRenderText(subjectTemplate, variables, htmlEncode: false, out var renderedSubject))
             return ErrorType.EMAIL_TEMPLATE_VARIABLE_MISSING;
 
-        var renderedBody = RenderText(bodyTemplate, variables, htmlEncode: isHtml, out var missingBodyVar);
-        if (missingBodyVar is not null)
+        if (!TryRenderText(bodyTemplate, variables, htmlEncode: isHtml, out var renderedBody))
             return ErrorType.EMAIL_TEMPLATE_VARIABLE_MISSING;
 
-        return (renderedSubject, renderedBody);
+        return new RenderedEmailContent
+        {
+            Subject = renderedSubject,
+            Body = renderedBody
+        };
     }
 
-    private static string RenderText(
+    private static bool TryRenderText(
         string template,
         IReadOnlyDictionary<string, string> variables,
         bool htmlEncode,
-        out string? missingVariable)
+        out string renderedText)
     {
-        string? missing = null;
+        var missing = false;
 
-        var result = PlaceholderRegex.Replace(template, match =>
+        renderedText = PlaceholderRegex.Replace(template, match =>
         {
             var key = match.Groups[1].Value;
             if (!variables.TryGetValue(key, out var rawValue))
             {
-                missing ??= key;
+                missing = true;
                 return match.Value;
             }
 
             return htmlEncode ? WebUtility.HtmlEncode(rawValue) : rawValue;
         });
 
-        missingVariable = missing;
-        return result;
+        return !missing;
     }
 
     public static string BuildRecipientName(string? firstName, string? lastName = null)

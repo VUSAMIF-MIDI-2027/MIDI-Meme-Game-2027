@@ -1,4 +1,5 @@
 using System.Net.Mail;
+using Microsoft.Extensions.Options;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
@@ -6,6 +7,7 @@ using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Enums;
 using MidiMemeGame.Api.Helpers;
 using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services.Interfaces;
 
 namespace MidiMemeGame.Api.Services;
@@ -14,15 +16,18 @@ public class EmailService : IEmailService
 {
     private readonly EmailTemplateQueries _templateQueries;
     private readonly EmailDeliveryQueries _deliveryQueries;
+    private readonly EmailSettings _settings;
     private readonly ILogger<EmailService> _logger;
 
     public EmailService(
         EmailTemplateQueries templateQueries,
         EmailDeliveryQueries deliveryQueries,
+        IOptions<EmailSettings> settings,
         ILogger<EmailService> logger)
     {
         _templateQueries = templateQueries;
         _deliveryQueries = deliveryQueries;
+        _settings = settings.Value;
         _logger = logger;
     }
 
@@ -96,9 +101,9 @@ public class EmailService : IEmailService
 
         var trimmedSubject = subject.Trim();
         if (string.IsNullOrWhiteSpace(trimmedSubject)
-            || trimmedSubject.Length > EmailTemplateHelper.MaxSubjectLength
+            || trimmedSubject.Length > _settings.MaxSubjectLength
             || string.IsNullOrWhiteSpace(body)
-            || body.Length > EmailTemplateHelper.MaxBodyLength)
+            || body.Length > _settings.MaxBodyLength)
             return ErrorType.EMAIL_TEMPLATE_INVALID;
 
         return await SaveToQueueAsync(
@@ -152,7 +157,7 @@ public class EmailService : IEmailService
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))
-            return Result<EmailTemplate>.Fail(ErrorType.EMAIL_TEMPLATE_INVALID, "Subject and body are required.");
+            return ErrorType.EMAIL_TEMPLATE_INVALID;
 
         var existingResult = await _templateQueries.GetByKeyAsync(key, cancellationToken);
         if (existingResult.IsError)
@@ -161,15 +166,13 @@ public class EmailService : IEmailService
         var allowedPlaceholders = EmailTemplateHelper.ParseAllowedPlaceholders(
             existingResult.Value.AllowedPlaceholdersJson);
 
-        var validationReasons = EmailTemplateHelper.ValidateTemplate(
-            subject,
-            body,
-            allowedPlaceholders);
-
-        if (validationReasons.Count > 0)
-            return Result<EmailTemplate>.Fail(
-                ErrorType.EMAIL_TEMPLATE_INVALID,
-                string.Join('\n', validationReasons));
+        if (!EmailTemplateHelper.IsValidTemplate(
+                subject, 
+                body, 
+                allowedPlaceholders, 
+                _settings.MaxSubjectLength,
+                _settings.MaxBodyLength))
+            return ErrorType.EMAIL_TEMPLATE_INVALID;
 
         return await _templateQueries.UpdateAsync(
             key,

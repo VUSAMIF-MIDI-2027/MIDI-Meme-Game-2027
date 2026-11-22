@@ -85,8 +85,7 @@ namespace MidiMemeGame.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DeduplicationKey")
-                        .IsUnique()
-                        .HasFilter("\"DeduplicationKey\" IS NOT NULL");
+                        .IsUnique();
 
                     b.HasIndex("Status", "NextAttemptAtUtc");
 

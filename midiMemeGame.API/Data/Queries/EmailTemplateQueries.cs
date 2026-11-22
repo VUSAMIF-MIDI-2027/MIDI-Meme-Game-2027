@@ -22,9 +22,15 @@ public class EmailTemplateQueries
     {
         try
         {
+            FormattableString query = $"""
+                SELECT "Key", "Subject", "Body", "IsHtml", "AllowedPlaceholdersJson", "UpdatedAtUtc"
+                FROM "EmailTemplates"
+                ORDER BY "Key"
+                """;
+
             var templates = await _db.EmailTemplates
+                .FromSqlInterpolated(query)
                 .AsNoTracking()
-                .OrderBy(t => t.Key)
                 .ToListAsync(cancellationToken);
 
             return templates;
@@ -34,7 +40,7 @@ public class EmailTemplateQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -45,9 +51,16 @@ public class EmailTemplateQueries
     {
         try
         {
+            FormattableString query = $"""
+                SELECT "Key", "Subject", "Body", "IsHtml", "AllowedPlaceholdersJson", "UpdatedAtUtc"
+                FROM "EmailTemplates"
+                WHERE "Key" = {key}
+                """;
+
             var template = await _db.EmailTemplates
+                .FromSqlInterpolated(query)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Key == key, cancellationToken);
+                .SingleOrDefaultAsync(cancellationToken);
 
             if (template is null)
                 return ErrorType.EMAIL_TEMPLATE_NOT_FOUND;
@@ -59,7 +72,7 @@ public class EmailTemplateQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -74,25 +87,30 @@ public class EmailTemplateQueries
     {
         try
         {
-            var template = await _db.EmailTemplates
-                .FirstOrDefaultAsync(t => t.Key == key, cancellationToken);
+            var updatedAtUtc = DateTime.UtcNow;
+            FormattableString query = $"""
+                UPDATE "EmailTemplates"
+                SET "Subject" = {subject}, "Body" = {body}, "UpdatedAtUtc" = {updatedAtUtc}
+                WHERE "Key" = {key}
+                RETURNING "Key", "Subject", "Body", "IsHtml", "AllowedPlaceholdersJson", "UpdatedAtUtc";
+                """;
 
-            if (template is null)
+            var updated = await _db.EmailTemplates
+                .FromSqlInterpolated(query)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            if (updated.Count == 0)
                 return ErrorType.EMAIL_TEMPLATE_NOT_FOUND;
 
-            template.Subject = subject;
-            template.Body = body;
-            template.UpdatedAtUtc = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync(cancellationToken);
-            return template;
+            return updated[0];
         }
         catch (SqliteException ex)
         {
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;

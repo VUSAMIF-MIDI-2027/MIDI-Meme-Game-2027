@@ -30,7 +30,19 @@ public static class LogMessages
         public const string SMTP_ERROR = "SMTP error while sending delivery {DeliveryId}.";
         public const string WORKER_ITERATION_FAILED = "Email delivery worker iteration failed.";
         public const string SCHEDULED_WORKER_ITERATION_FAILED = "Scheduled email worker iteration failed.";
-        public const string SCHEDULED_MILESTONE_FAILED = "Failed to process scheduled email milestone {Milestone} for event {EventId}.";
+        public const string SCHEDULED_MILESTONE_FAILED = "Failed to process scheduled email milestone {Milestone} for event {EventId}({Error}).";
+        public const string MARK_FAILED_ERROR = "Failed to mark email delivery {DeliveryId} as Failed ({Error}).";
+        public const string RELEASE_FAILED_ERROR = "Failed to release {Count} email deliveries after SMTP error ({Error}).";
+        public const string RELEASED_WITHOUT_ATTEMPT = "Released {Count} email deliveries without consuming attempts until {NextAttemptAtUtc:O}. Reason: {Reason}";
+        public const string MARK_SENT_FAILED_ERROR = "Email delivery {DeliveryId} was sent via SMTP, but failed to update status to Sent ({Error}). Duplicate send possible after lease expiry.";
+        public const string QUOTA_EXCEEDED_PAUSED = "SMTP quota exceeded on delivery {DeliveryId}; paused {Count} remaining deliveries without consuming attempts until {NextAttemptAtUtc:O}.";
+        public const string SCHEDULE_RETRY_FAILED_ERROR = "Failed to schedule retry for email delivery {DeliveryId} ({Error}).";
+        public const string SCHEDULED_MILESTONE_SKIPPED = "Skipping stale milestone {MilestoneKey} for event {EventId} (scheduled at {ScheduledAtUtc} UTC).";
+        public const string WORKER_STARTING = "{WorkerName} is starting.";
+        public const string WORKER_STOPPING = "{WorkerName} is stopping.";
+        public const string RELEASE_STALE_FAILED_ERROR = "Failed to release stale email deliveries ({Error}).";
+        public const string SCHEDULED_RECIPIENT_SKIPPED = "Skipping recipient {UserId} for milestone {MilestoneKey} in event {EventId} ({Error}).";
+        public const string CLAIM_BATCH_FAILED_ERROR = "Failed to claim pending email deliveries ({Error}).";
     }
 
     public const string APPLICATION_START_FAILED = "Application failed to start";

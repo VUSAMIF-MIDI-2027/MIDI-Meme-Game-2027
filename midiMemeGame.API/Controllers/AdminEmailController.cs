@@ -68,13 +68,11 @@ public class AdminEmailController : ControllerBase
     [HttpPut("email-templates/{key}")]
     public async Task<IActionResult> UpdateTemplate(
         string key,
-        [FromBody] UpdateEmailTemplateRequest request,
+        [FromBody] RenderedEmailContent request,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Subject) || string.IsNullOrWhiteSpace(request.Body))
-            return BadRequest(ErrorResponse.Create(
-                ErrorType.EMAIL_TEMPLATE_INVALID,
-                ["Subject and body are required."]));
+            return BadRequest(ErrorResponse.Create(ErrorType.EMAIL_TEMPLATE_INVALID));
 
         var result = await _emailService.UpdateTemplateAsync(
             key,
@@ -86,13 +84,7 @@ public class AdminEmailController : ControllerBase
             return NotFound(ErrorResponse.Create(result.Error));
 
         if (result.Error == ErrorType.EMAIL_TEMPLATE_INVALID)
-        {
-            var reasons = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                ? ["Email template validation failed."]
-                : result.ErrorMessage.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-            return BadRequest(ErrorResponse.Create(result.Error, reasons));
-        }
+            return BadRequest(ErrorResponse.Create(result.Error));
 
         if (result.IsError)
             return StatusCode(

@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
-using MidiMemeGame.Api.Models;
 
 namespace MidiMemeGame.Api.Data.Queries;
 
@@ -27,9 +26,16 @@ public class EmailMilestoneProgressQueries
     {
         try
         {
-            var exists = await _db.EmailMilestoneProgress
-                .AsNoTracking()
-                .AnyAsync(p => p.EventId == eventId && p.Milestone == milestone, ct);
+            FormattableString query = $"""
+                SELECT 1 AS "Value"
+                FROM "EmailMilestoneProgress"
+                WHERE "EventId" = {eventId} AND "Milestone" = {milestone}
+                LIMIT 1
+                """;
+
+            var exists = await _db.Database
+                .SqlQuery<int>(query)
+                .AnyAsync(ct);
 
             return exists;
         }
@@ -38,7 +44,7 @@ public class EmailMilestoneProgressQueries
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -51,38 +57,23 @@ public class EmailMilestoneProgressQueries
         DateTime queuedAtUtc,
         CancellationToken ct)
     {
-        var entity = new EmailMilestoneProgress
-        {
-            EventId = eventId,
-            Milestone = milestone,
-            QueuedAtUtc = queuedAtUtc
-        };
-
         try
         {
-            _db.EmailMilestoneProgress.Add(entity);
-            await _db.SaveChangesAsync(ct);
+            FormattableString query = $"""
+                INSERT INTO "EmailMilestoneProgress" ("EventId", "Milestone", "QueuedAtUtc")
+                VALUES ({eventId}, {milestone}, {queuedAtUtc})
+                ON CONFLICT ("EventId", "Milestone") DO NOTHING
+                """;
+
+            await _db.Database.ExecuteSqlInterpolatedAsync(query, ct);
             return true;
-        }
-        catch (DbUpdateException)
-        {
-            _db.Entry(entity).State = EntityState.Detached;
-
-            var exists = await _db.EmailMilestoneProgress
-                .AsNoTracking()
-                .AnyAsync(p => p.EventId == eventId && p.Milestone == milestone, ct);
-
-            if (exists)
-                return true;
-
-            return ErrorType.DB_EXCEPTION;
         }
         catch (SqliteException ex)
         {
             _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
             return ErrorType.DB_SQL_EXCEPTION;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
