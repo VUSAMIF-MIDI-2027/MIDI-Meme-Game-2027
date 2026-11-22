@@ -9,4 +9,5 @@ public class MemeResponseDto
     public long Score { get; init; }
     public DateTime CreatedAtUtc { get; init; }
     public DateTime UpdatedAtUtc { get; init; }
+    public bool IsInvalidatedBySourcePhoto { get; init; }
 }

@@ -112,7 +112,7 @@ export async function patchAdminPhoto(
     token: string,
     signal?: AbortSignal
 ): Promise<AdminPhoto> {
-    const response = await fetch(`${apiBaseUrl}/api/admin/photos/${photoId}`, {
+    const response = await fetch(`${apiBaseUrl}/api/admin/photos/${photoId}/availability`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",

@@ -110,7 +110,7 @@ public class AdminController : ControllerBase
         }));
     }
 
-    [HttpPatch("photos/{id:int}")]
+    [HttpPatch("photos/{id:int}/availability")]
     public async Task<IActionResult> UpdatePhotoEnabled(
         int id,
         [FromBody] UpdatePhotoEnabledRequest request,
@@ -124,15 +124,13 @@ public class AdminController : ControllerBase
             request.IsEnabled.Value,
             cancellationToken);
 
-        if (result.IsError)
-        {
-            if (result.Error == ErrorType.NOT_FOUND)
-                return NotFound(ErrorResponse.Create(result.Error));
+        if (result.Error == ErrorType.NOT_FOUND)
+            return NotFound(ErrorResponse.Create(result.Error));
 
+        if (result.IsError)
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 ErrorResponse.Create(result.Error));
-        }
 
         return Ok(new AdminPhotoResponse
         {
@@ -226,13 +224,13 @@ public class AdminController : ControllerBase
         return Ok(result.Value);
     }
 
-    [HttpPatch("memes/{id:int:min(1)}/status")]
+    [HttpPatch("memes/{id:int}/status")]
     public async Task<IActionResult> UpdateMemeStatus(
         int id,
         [FromQuery] MemeStatus statusId,
         CancellationToken cancellationToken)
     {
-        if (!Enum.IsDefined(statusId))
+        if (!Enum.IsDefined(typeof(MemeStatus), statusId))
             return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
 
         var result = await _memeQueries.UpdateStatusAsync(

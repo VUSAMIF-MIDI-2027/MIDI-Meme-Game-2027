@@ -15,5 +15,6 @@ public sealed class MemeConfiguration : IEntityTypeConfiguration<Meme>
         builder.Property(meme => meme.Caption).IsRequired();
         builder.Property(meme => meme.Score).HasDefaultValue(0L);
         builder.HasIndex(meme => new { meme.SourcePhotoId, meme.StatusId, meme.IsDeleted });
+        builder.Property(meme => meme.IsInvalidatedBySourcePhoto).HasDefaultValue(false);
     }
 }
