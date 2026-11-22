@@ -122,6 +122,7 @@ jobs:
       - name: Prepare API runtime configuration
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           CLERK_AUTHORITY: ${{ vars.CLERK_AUTHORITY }}
           CLERK_AUTHORIZED_PARTY: ${{ vars.CLERK_AUTHORIZED_PARTY || 'https://naktis.midi.lt' }}
         run: |
@@ -136,6 +137,14 @@ jobs:
               raise SystemExit("Set CLERK_SECRET_KEY to the production Clerk secret key")
 
           values = {"Clerk__SecretKey": secret}
+
+          smtp_password = os.environ["SMTP_PASSWORD"]
+          if not smtp_password.strip():
+              raise SystemExit("Set the SMTP_PASSWORD GitHub Actions secret")
+          if any(char in smtp_password for char in "'\\\r\n"):
+              raise SystemExit("SMTP_PASSWORD contains unsupported characters for api.env")
+
+          values["Smtp__Password"] = f"'{smtp_password}'"
           for source, target in [
               ("CLERK_AUTHORITY", "Clerk__Authority"),
               ("CLERK_AUTHORIZED_PARTY", "Clerk__AuthorizedParties__0"),
