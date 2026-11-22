@@ -196,33 +196,6 @@ public class EmailDeliveryQueries
         }
     }
 
-    public async Task<Result<List<EmailDelivery>>> GetRecentAsync(
-        EmailDeliveryStatus? status,
-        int limit,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var query = _db.EmailDeliveries.AsNoTracking();
-
-            if (status.HasValue)
-                query = query.Where(d => d.Status == status.Value);
-
-            var items = await query
-                .OrderByDescending(d => d.CreatedAtUtc)
-                .ThenByDescending(d => d.Id)
-                .Take(Math.Clamp(limit, 1, 200))
-                .ToListAsync(cancellationToken);
-
-            return items;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
-            return ErrorType.DB_EXCEPTION;
-        }
-    }
-
     public async Task<Result<int>> ReleaseStaleAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
     {
         try
