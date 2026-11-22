@@ -9,6 +9,7 @@ namespace MidiMemeGame.Api.Workers;
 public class ScheduledEmailWorker : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan MaxMilestoneAge = TimeSpan.FromHours(24);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ScheduledEmailWorker> _logger;
@@ -87,6 +88,24 @@ public class ScheduledEmailWorker : BackgroundService
 
             if (completedResult.Value)
                 continue;
+
+            if (nowUtc - milestone.At > MaxMilestoneAge)
+            {
+                _logger.LogInformation(
+                    "Skipping stale milestone {MilestoneKey} for event {EventId} (scheduled at {ScheduledAtUtc} UTC).",
+                    milestone.Key,
+                    eventId,
+                    milestone.At);
+
+                var skipMarkResult = await progressQueries.MarkCompletedAsync(eventId, milestone.Key, DateTime.UtcNow, ct);
+                if (skipMarkResult.IsError)
+                {
+                    _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId);
+                    return;
+                }
+
+                continue;
+            }
 
             var templateResult = await templateQueries.GetByKeyAsync(milestone.Key, ct);
             if (templateResult.IsError)
