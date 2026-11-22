@@ -9,7 +9,7 @@ public static class EventScheduleHelper
         EventStartsAt = schedule.EventStartsAt.ToUniversalTime(),
         VotingStartsAt = schedule.VotingStartsAt.ToUniversalTime(),
         EventEndsAt = schedule.EventEndsAt.ToUniversalTime()
-    };
+    }; 
 
     // Compared in memory: SQLite cannot translate DateTimeOffset comparisons in LINQ.
     public static bool IsChronological(EventSchedule schedule) =>

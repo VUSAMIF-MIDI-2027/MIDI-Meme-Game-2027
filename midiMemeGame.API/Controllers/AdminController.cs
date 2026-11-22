@@ -5,6 +5,7 @@ using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Photos;
 using MidiMemeGame.Api.Dto.Users;
+using MidiMemeGame.Api.Enums;
 using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Services;
 
@@ -19,17 +20,20 @@ public class AdminController : ControllerBase
     private readonly PhotoFileService _photoFiles;
     private readonly UserQueries _userQueries;
     private readonly ClerkUserService _clerkUserService;
+    private readonly MemeQueries _memeQueries;
 
     public AdminController(
         SourcePhotoQueries sourcePhotoQueries,
         PhotoFileService photoFiles,
         UserQueries userQueries,
-        ClerkUserService clerkUserService)
+        ClerkUserService clerkUserService,
+        MemeQueries memeQueries)
     {
         _sourcePhotoQueries = sourcePhotoQueries;
         _photoFiles = photoFiles;
         _userQueries = userQueries;
         _clerkUserService = clerkUserService;
+        _memeQueries = memeQueries;
     }
 
     [HttpPost("photos")]
@@ -78,7 +82,7 @@ public class AdminController : ControllerBase
 
         var createdPhoto = photoResult.Value;
 
-        return Ok(new AdminPhotoResponse
+        return StatusCode(StatusCodes.Status201Created, new AdminPhotoResponse
         {
             Id = createdPhoto.Id,
             IsEnabled = createdPhoto.IsEnabled
@@ -202,5 +206,46 @@ public class AdminController : ControllerBase
                 ErrorResponse.Create(result.Error));
 
         return NoContent();
+    }
+    [HttpGet("memes")]
+    public async Task<IActionResult> GetMemes(
+        [FromQuery] MemeStatus? statusId,
+        CancellationToken cancellationToken)
+    {
+        if (statusId.HasValue && !Enum.IsDefined(statusId.Value))
+            return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
+
+        var result = await _memeQueries.GetAdminMemesAsync(
+            statusId, cancellationToken);
+
+        if (result.IsError)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ErrorResponse.Create(result.Error));
+
+        return Ok(result.Value);
+    }
+
+    [HttpPatch("memes/{id:int:min(1)}/status")]
+    public async Task<IActionResult> UpdateMemeStatus(
+        int id,
+        [FromQuery] MemeStatus statusId,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.IsDefined(statusId))
+            return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
+
+        var result = await _memeQueries.UpdateStatusAsync(
+            id, statusId, cancellationToken);
+
+        if (result.Error == ErrorType.NOT_FOUND)
+            return NotFound(ErrorResponse.Create(result.Error));
+
+        if (result.IsError)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ErrorResponse.Create(result.Error));
+
+        return Ok(new { id, statusId = (int)statusId });
     }
 }
