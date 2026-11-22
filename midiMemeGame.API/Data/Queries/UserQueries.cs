@@ -312,4 +312,79 @@ public class UserQueries
             return ErrorType.DB_EXCEPTION;
         }
     }
+
+    public async Task<Result<string>> GetActiveEmailByIdAsync(int userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            FormattableString query = $"""
+                SELECT COALESCE("Email", '') AS "Value"
+                FROM "Users"
+                WHERE "Id" = {userId}
+                    AND "IsDeleted" = 0
+                """;
+
+            var email = await _db.Database
+                .SqlQuery<string>(query)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (email is null)
+                return ErrorType.NOT_FOUND;
+
+            if (string.IsNullOrWhiteSpace(email))
+                return ErrorType.EMAIL_RECIPIENT_MISSING;
+
+            return email;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    public async Task<Result<List<User>>> GetActiveEmailRecipientsAsync(CancellationToken ct)
+    {
+        try
+        {
+            FormattableString query = $"""
+                SELECT
+                    "Id",
+                    "ClerkId",
+                    "Email",
+                    "FirstName",
+                    "LastName",
+                    "CreatedAtUtc",
+                    "LastClerkUpdatedAt",
+                    "RulesAcknowledgedAtUtc",
+                    "IsDeleted"
+                FROM "Users"
+                WHERE "IsDeleted" = 0
+                    AND "Email" IS NOT NULL
+                    AND TRIM("Email") <> ''
+                """;
+
+            var users = await _db.Users
+                .FromSqlInterpolated(query)
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            return users;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
 }
