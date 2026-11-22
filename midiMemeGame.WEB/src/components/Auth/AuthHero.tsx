@@ -3,9 +3,9 @@
 import { authText } from "@/app/login/pageText";
 import { useLanguage } from "@/context/LanguageContext";
 import { ui } from "@/styles/ui";
-import { Clock } from "lucide-react";
 import Image from "next/image";
 import { FlyingCat } from "@/components/FlyingCat";
+import { CompetitionStatus } from "@/components/Shared/CompetitionStatus";
 import moon from "#/public/images/moon-current.webp";
 
 export function AuthHero() {
@@ -54,21 +54,7 @@ export function AuthHero() {
                     {t.description}
                 </p>
             </div>
-            <div className="pointer-events-none relative z-10 flex flex-wrap items-center gap-3 pt-6 lg:pt-8">
-                <Clock
-                    aria-hidden="true"
-                    className="size-4 shrink-0 text-midi-blue"
-                    strokeWidth={1.8}
-                />
-                <span
-                    className="text-xs font-semibold uppercase tracking-wide">
-                    {t.submissionsCloseIn}
-                </span>
-                <span
-                    className="text-3xl font-bold tabular-nums text-midi-blue">
-
-                </span>
-            </div>
+            <CompetitionStatus className="pointer-events-none relative z-10 pt-6 lg:pt-8" />
         </div>
     )
 }
