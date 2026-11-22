@@ -14,6 +14,7 @@ namespace MidiMemeGame.Api.Services;
 
 public class SmtpEmailSender : IEmailSender
 {
+    private const int SmtpTimeoutMs = 15_000;
     private readonly SmtpSettings _settings;
     private readonly ILogger<SmtpEmailSender> _logger;
 
@@ -25,8 +26,10 @@ public class SmtpEmailSender : IEmailSender
 
     public async Task<Result<IEmailSendSession>> OpenSessionAsync(CancellationToken cancellationToken)
     {
-        var client = new SmtpClient();
-        client.CheckCertificateRevocation = false;
+        var client = new SmtpClient
+        {
+            Timeout = SmtpTimeoutMs
+        };
 
         try
         {
