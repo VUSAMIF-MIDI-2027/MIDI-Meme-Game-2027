@@ -8,7 +8,6 @@ import YourMemes, {
   type MemeStatus,
   type YourMeme,
 } from "@/components/Home/Your-Memes/YourMemes";
-import { yourMemesText } from "@/components/Home/Your-Memes/yourMemesText";
 import { CompetitionStatus } from "@/components/Shared/CompetitionStatus";
 import CreateMemeButton from "@/components/MemeCreation/CreateMemeButton";
 import { useEventSchedule } from "@/hooks/useEventSchedule";
@@ -41,7 +40,6 @@ export default function DashboardPage() {
   const { lang } = useLanguage();
   const router = useRouter();
   const t = dashboardText[lang];
-  const memeT = yourMemesText[lang];
   const { state: scheduleState, retry: retrySchedule } = useEventSchedule();
   const schedule =
     scheduleState.status === "ready" ? scheduleState.schedule : undefined;
@@ -73,7 +71,7 @@ export default function DashboardPage() {
               return {
                 id: meme.id,
                 image: url,
-                imageAlt: memeT.photoAlt(meme.sourcePhotoId),
+                sourcePhotoId: meme.sourcePhotoId,
                 caption: meme.caption,
                 submittedAt: asUtc(meme.createdAtUtc),
                 status: statusById[meme.statusId] ?? "pending",
@@ -97,7 +95,7 @@ export default function DashboardPage() {
       controller.abort();
       createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [isSignedIn, getToken, memeT]);
+  }, [isSignedIn, getToken]);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace("/login");

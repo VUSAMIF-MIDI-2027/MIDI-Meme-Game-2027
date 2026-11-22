@@ -48,7 +48,7 @@ src/app/create/page.tsx      → auth guard, back link, page chrome
   steps/PreviewStep.tsx      → final meme preview + edit/submit + submit error
   steps/ConfirmationStep.tsx → success screen + two CTAs
   memeCreationText.ts        → all lt/en strings for the flow
-src/services/memeService.ts  → getPhotos(), submitMeme(), mock submit behind env flag
+src/services/memeService.ts  → getPhotos(), submitMeme(), getMyMemes() against the real API
 src/app/dashboard/page.tsx   → lift schedule fetch, enable "Kurti memą" by phase, navigate to /create
 src/components/Shared/CompetitionStatus.tsx → accept optional `schedule` prop (avoids a second fetch)
 src/components/Shared/MemeCard.tsx → widen `image` prop to `string | StaticImageData` for blob URLs
@@ -94,9 +94,9 @@ export default function StepIndicator({ step }: { step: 1 | 2 | 3 | 4 }) {
 
 ### Step 1 — Photo
 
-- On first entry: `GET /api/photos` for enabled photo ids, then `getPhotoBlob` per id → `URL.createObjectURL`. The flow owns the resulting `photoId → objectUrl` map for the session — re-entering the step reuses the cache without refetching; all URLs are revoked when the page unmounts.
+- On first entry: `GET /api/photos` for enabled photo ids, then `getPhotoBlob` per id → `URL.createObjectURL` (a photo whose blob fails is skipped so the rest of the pool still renders; if every blob fails, the error + retry state shows). The flow owns the resulting `photoId → objectUrl` map for the session — re-entering the step reuses the cache without refetching; all URLs are revoked when the page unmounts.
 - States: skeleton while loading; inline error + retry button on failure; empty state when the pool is empty.
-- Grid: 3 columns desktop, 2 columns mobile. Selecting a photo immediately advances to step 3 (per issue #77). Re-entering the step keeps the previous selection highlighted.
+- Grid: 3 columns desktop, 2 columns mobile. Selecting a photo immediately advances to step 2 (per issue #77). Re-entering the step keeps the previous selection highlighted.
 
 ### Step 2 — Caption
 
@@ -107,7 +107,7 @@ export default function StepIndicator({ step }: { step: 1 | 2 | 3 | 4 }) {
 
 ### Step 3 — Preview & submit
 
-- Shows the complete meme via `MemeCard` at ~75% of the step width, with the moon asset from `/` as a decorative background (low opacity, edge-faded, `aria-hidden`, `pointer-events-none`).
+- Shows the complete meme via `MemeCard` in a centered 60%-width column.
 - "Redaguoti" returns to step 2 preserving state; "Pateikti memą" sits beside it below the preview.
 - "Pateikti memą" calls `memeService.submitMeme`; the button is disabled (and marked busy) while the request is in flight.
 - On failure: inline error message, user's photo + caption preserved, retry possible.
@@ -116,7 +116,7 @@ export default function StepIndicator({ step }: { step: 1 | 2 | 3 | 4 }) {
 ### Confirmation
 
 - "Memas pateiktas!" heading + copy explaining the meme awaits organizer review.
-- "Kurti dar vieną" clears state and restarts at step 2 (photo select — instructions needn't repeat).
+- "Kurti dar vieną" clears state and restarts at step 1 (photo select — instructions needn't repeat).
 - "Mano memai" navigates to `/dashboard#your-memes`.
 
 ## Testing Strategy
@@ -124,11 +124,11 @@ export default function StepIndicator({ step }: { step: 1 | 2 | 3 | 4 }) {
 The repo has no test framework (`package.json` has no test script/deps) — none is added.
 
 - `npm run lint` and `npm run build` must pass clean.
-- Manual verification checklist per step (dev server + mock submit):
+- Manual verification checklist per step (dev server + real backend):
   - Open `/create` → all 3 steps reachable; indicator tracks progress; back-navigation preserves input.
   - Caption counters + validation edge cases (empty, 30/31 words, 250/251 chars).
   - Submit success → confirmation → both CTAs behave correctly.
-  - Mock a failed submit → error shown, input retained.
+  - Force a failed submit (e.g. submissions closed) → error shown, input retained.
   - Mobile viewport: the page is usable end-to-end.
   - Button disabled outside `submissions` phase.
 
@@ -141,7 +141,7 @@ The repo has no test framework (`package.json` has no test script/deps) — none
 ## Success Criteria
 
 - "Kurti memą" navigates to `/create` only during the `submissions` phase; otherwise it stays disabled with the notice. The page performs a single schedule fetch shared by the gating and `CompetitionStatus`.
-- All 3 steps + confirmation work end-to-end on desktop and mobile against the mock submit.
+- All 3 steps + confirmation work end-to-end on desktop and mobile against the real API.
 - Caption validation enforced: non-empty, ≤30 words, ≤250 chars.
 - Failed submit shows an error and preserves photo + caption.
 - Confirmation "Kurti dar vieną" restarts cleanly; "Mano memai" lands on the user's memes section.

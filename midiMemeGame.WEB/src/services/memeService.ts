@@ -41,6 +41,18 @@ async function readErrorCode(response: Response): Promise<number | undefined> {
     }
 }
 
+function isSubmittedMeme(value: unknown): value is SubmittedMeme {
+    const meme = value as SubmittedMeme | null;
+    return (
+        Number.isInteger(meme?.id) &&
+        Number.isInteger(meme?.sourcePhotoId) &&
+        typeof meme?.caption === "string" &&
+        Number.isInteger(meme?.statusId) &&
+        typeof meme?.createdAtUtc === "string" &&
+        Number.isFinite(Date.parse(meme.createdAtUtc))
+    );
+}
+
 export async function getPhotos(token: string, signal?: AbortSignal): Promise<Photo[]> {
     const response = await fetch(apiBaseUrl + "/api/photos", {
         headers: { Authorization: "Bearer " + token },
@@ -77,10 +89,10 @@ export async function submitMeme(
     }
 
     const meme: unknown = await response.json();
-    if (!Number.isInteger((meme as SubmittedMeme | null)?.id)) {
+    if (!isSubmittedMeme(meme)) {
         throw new Error("Invalid meme submission response.");
     }
-    return meme as SubmittedMeme;
+    return meme;
 }
 
 export async function getMyMemes(token: string, signal?: AbortSignal): Promise<SubmittedMeme[]> {
@@ -94,7 +106,7 @@ export async function getMyMemes(token: string, signal?: AbortSignal): Promise<S
     }
 
     const memes: unknown = await response.json();
-    if (!Array.isArray(memes) || !memes.every(m => Number.isInteger((m as SubmittedMeme | null)?.id))) {
+    if (!Array.isArray(memes) || !memes.every(isSubmittedMeme)) {
         throw new Error("Invalid memes response.");
     }
     return memes;

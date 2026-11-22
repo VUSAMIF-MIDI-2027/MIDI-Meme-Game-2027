@@ -65,9 +65,8 @@ export default function MemeCreationFlow({
   }
 
   // Fetch enabled photo ids + blobs into the session object-url cache.
+  // A photo that fails to load is skipped so the rest of the pool still renders.
   useEffect(() => {
-    if (photoAttempt === 0) return;
-
     const controller = new AbortController();
     let cancelled = false;
 
@@ -75,6 +74,7 @@ export default function MemeCreationFlow({
       setPhotoAuthError(false);
       setPhotos({ status: "loading" });
       let missingToken = false;
+      const urls: Record<number, string> = {};
       try {
         const token = await getToken();
         if (!token) {
@@ -82,10 +82,9 @@ export default function MemeCreationFlow({
           throw new Error("Missing session token.");
         }
         const list = await getPhotos(token, controller.signal);
-        const urls: Record<number, string> = {};
-        try {
-          await Promise.all(
-            list.map(async (photo) => {
+        await Promise.all(
+          list.map(async (photo) => {
+            try {
               const blob = await getPhotoBlob(
                 photo.id,
                 token,
@@ -94,16 +93,23 @@ export default function MemeCreationFlow({
               const url = URL.createObjectURL(blob);
               objectUrls.current.add(url);
               urls[photo.id] = url;
-            }),
-          );
-        } catch (error) {
+            } catch {
+              // Skip this photo.
+            }
+          }),
+        );
+        if (cancelled) {
           for (const url of Object.values(urls)) {
             URL.revokeObjectURL(url);
             objectUrls.current.delete(url);
           }
-          throw error;
+          return;
         }
-        if (!cancelled) setPhotos({ status: "ready", urls });
+        setPhotos(
+          list.length > 0 && Object.keys(urls).length === 0
+            ? { status: "error" }
+            : { status: "ready", urls },
+        );
       } catch {
         if (cancelled) return;
         setPhotoAuthError(missingToken);

@@ -9,7 +9,7 @@ export type MemeStatus = "approved" | "pending" | "rejected";
 export type YourMeme = {
   id: number;
   image: string;
-  imageAlt: string;
+  sourcePhotoId: number;
   caption: string;
   submittedAt: string;
   status: MemeStatus;
@@ -74,7 +74,7 @@ const YourMemes = ({ memes = [] }: YourMemesProps) => {
               <MemeCard
                 key={meme.id}
                 image={meme.image}
-                imageAlt={meme.imageAlt}
+                imageAlt={t.photoAlt(meme.sourcePhotoId)}
                 caption={meme.caption}
                 status={{
                   label: t.status[meme.status],
