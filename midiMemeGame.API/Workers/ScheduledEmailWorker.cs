@@ -11,6 +11,7 @@ public class ScheduledEmailWorker : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan MaxMilestoneAge = TimeSpan.FromHours(24);
+    private const string DefaultEventId = "default";
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ScheduledEmailWorker> _logger;
@@ -66,7 +67,7 @@ public class ScheduledEmailWorker : BackgroundService
 
         var schedule = scheduleResult.Value;
         var nowUtc = DateTimeOffset.UtcNow;
-        var eventId = schedule.EventStartsAt.ToUnixTimeSeconds().ToString();
+        const string eventId = DefaultEventId;
 
         var milestones = new (string Key, DateTimeOffset At)[]
         {
