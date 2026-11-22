@@ -21,7 +21,7 @@ export const MEME_STATUS_APPROVED = 3;
 // Backend ErrorType codes returned as `{ error: { code } }` with HTTP 500.
 export const MEME_ERROR_SUBMISSIONS_NOT_OPEN = 2402;
 export const MEME_ERROR_SUBMISSIONS_CLOSED = 2403;
-export const MEME_ERROR_PHOTO_DISABLED = 2501;
+export const MEME_ERROR_PHOTO_DISABLED = 2701;
 export const MEME_ERROR_ACCESS_DENIED = 4004;
 
 export class MemeServiceError extends Error {
