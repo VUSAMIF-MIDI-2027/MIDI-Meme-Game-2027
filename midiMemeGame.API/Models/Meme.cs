@@ -13,6 +13,7 @@ public class Meme
     public DateTime UpdatedAtUtc { get; set; }
     public long Score { get; set; }
     public bool IsDeleted { get; set; }
+    public bool IsInvalidatedBySourcePhoto { get; set; }
 }
 
 

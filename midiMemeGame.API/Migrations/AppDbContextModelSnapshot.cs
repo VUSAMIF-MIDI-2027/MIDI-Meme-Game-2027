@@ -65,6 +65,11 @@ namespace MidiMemeGame.Api.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsInvalidatedBySourcePhoto")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<long>("Score")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")

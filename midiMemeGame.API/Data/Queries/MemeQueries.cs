@@ -31,41 +31,56 @@ public class MemeQueries
 
             FormattableString query = $"""
                 INSERT INTO "Memes" (
-                    "SourcePhotoId", 
-                    "UserId", 
-                    "StatusId", 
-                    "Caption",
-                    "CreatedAtUtc", 
-                    "UpdatedAtUtc", 
-                    "IsDeleted", 
-                    "Score"
+                    "SourcePhotoId", "UserId", "StatusId", "Caption",
+                    "CreatedAtUtc", "UpdatedAtUtc", "IsDeleted", "Score",
+                    "IsInvalidatedBySourcePhoto"
                 )
-                VALUES (
-                    {sourcePhotoId}, 
-                    {userId}, 
-                    {(int)MemeStatus.Pending}, 
-                    {caption},
-                    {now}, 
-                    {now}, 
-                    0, 
-                    0
+                SELECT
+                    {sourcePhotoId}, {userId}, {(int)MemeStatus.Pending}, {caption},
+                    {now}, {now}, 0, 0, 0
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM "SourcePhotos"
+                    WHERE "Id" = CAST({sourcePhotoId} AS INTEGER)
+                        AND "IsEnabled" = 1
                 )
+                AND (
+                    SELECT COUNT(*)
+                    FROM "Memes"
+                    WHERE "UserId" = {userId}
+                        AND "IsInvalidatedBySourcePhoto" = 0
+                ) < 3
                 RETURNING
-                    "Id", 
-                    "SourcePhotoId", 
-                    "UserId", 
-                    "StatusId", 
-                    "Caption",
-                    "CreatedAtUtc", 
-                    "UpdatedAtUtc", 
-                    "IsDeleted", 
-                    "Score";
+                    "Id", "SourcePhotoId", "UserId", "StatusId", "Caption",
+                    "CreatedAtUtc", "UpdatedAtUtc", "IsDeleted", "Score",
+                    "IsInvalidatedBySourcePhoto";
                 """;
 
             var memes = await _db.Memes
                 .FromSqlInterpolated(query)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
+
+            if (memes.Count == 0)
+            {
+                FormattableString checkPhoto = $"""
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM "SourcePhotos"
+                        WHERE "Id" = CAST({sourcePhotoId} AS INTEGER)
+                            AND "IsEnabled" = 1
+                    ) AS "Value"
+                    """;
+
+                var photoIsEnabled = await _db.Database
+                    .SqlQuery<int>(checkPhoto)
+                    .SingleAsync(cancellationToken);
+
+                if (photoIsEnabled == 0)
+                    return ErrorType.MEME_SOURCE_PHOTO_DISABLED;
+
+                return ErrorType.MEME_LIMIT_REACHED;
+            }
 
             return memes.Single();
         }
@@ -89,6 +104,8 @@ public class MemeQueries
     {
         try
         {
+            var now = DateTime.UtcNow;
+
             FormattableString query = $"""
                 UPDATE "Memes"
                 SET
@@ -102,19 +119,22 @@ public class MemeQueries
                     "UpdatedAtUtc" = CASE
                         WHEN "SourcePhotoId" = {sourcePhotoId} AND "Caption" = {caption}
                         THEN "UpdatedAtUtc"
-                        ELSE {DateTime.UtcNow}
+                        ELSE {now}
                     END
-                WHERE "Id" = {memeId} AND "UserId" = {userId} AND "IsDeleted" = 0
+                WHERE "Id" = {memeId}
+                    AND "UserId" = {userId}
+                    AND "IsDeleted" = 0
+                    AND "IsInvalidatedBySourcePhoto" = 0
+                    AND EXISTS (
+                        SELECT 1
+                        FROM "SourcePhotos"
+                        WHERE "Id" = CAST({sourcePhotoId} AS INTEGER)
+                            AND "IsEnabled" = 1
+                    )
                 RETURNING
-                    "Id", 
-                    "SourcePhotoId", 
-                    "UserId", 
-                    "StatusId", 
-                    "Caption",
-                    "CreatedAtUtc", 
-                    "UpdatedAtUtc", 
-                    "IsDeleted", 
-                    "Score";
+                    "Id", "SourcePhotoId", "UserId", "StatusId", "Caption",
+                    "CreatedAtUtc", "UpdatedAtUtc", "IsDeleted", "Score",
+                    "IsInvalidatedBySourcePhoto";
                 """;
 
             var memes = await _db.Memes
@@ -144,7 +164,8 @@ public class MemeQueries
         {
             FormattableString query = $"""
             UPDATE "Memes"
-            SET "IsDeleted" = 1,
+            SET
+                "IsDeleted" = 1,
                 "UpdatedAtUtc" = {DateTime.UtcNow}
             WHERE "Id" = {memeId}
                 AND "UserId" = {userId}
@@ -175,19 +196,20 @@ public class MemeQueries
         try
         {
             FormattableString query = $"""
-            SELECT
-                "Id",
-                CAST("SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
-                "Caption",
-                "StatusId",
-                "Score",
-                "CreatedAtUtc",
-                "UpdatedAtUtc"
-            FROM "Memes"
-            WHERE "UserId" = {userId}
-                AND "IsDeleted" = 0
-            ORDER BY "CreatedAtUtc" DESC, "Id" DESC
-            """;
+                SELECT
+                    "Id",
+                    CAST("SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
+                    "Caption",
+                    "StatusId",
+                    "IsInvalidatedBySourcePhoto",
+                    "Score",
+                    "CreatedAtUtc",
+                    "UpdatedAtUtc"
+                FROM "Memes"
+                WHERE "UserId" = {userId}
+                    AND "IsDeleted" = 0
+                ORDER BY "CreatedAtUtc" DESC, "Id" DESC
+                """;
 
             return await _db.Database
                 .SqlQuery<MemeResponseDto>(query)
@@ -212,11 +234,21 @@ public class MemeQueries
         try
         {
             FormattableString query = $"""
-            UPDATE "Memes"
-            SET "StatusId" = {(int)status}
-            WHERE "Id" = {memeId}
-                AND "IsDeleted" = 0;
-            """;
+                UPDATE "Memes"
+                SET "StatusId" = {(int)status}
+                WHERE "Id" = {memeId}
+                    AND "IsDeleted" = 0
+                    AND "IsInvalidatedBySourcePhoto" = 0
+                    AND (
+                        {(int)status} = {(int)MemeStatus.Rejected}
+                        OR EXISTS (
+                            SELECT 1
+                            FROM "SourcePhotos" AS photo
+                            WHERE photo."Id" = CAST("Memes"."SourcePhotoId" AS INTEGER)
+                                AND photo."IsEnabled" = 1
+                        )
+                    );
+                """;
 
             var affected = await _db.Database.ExecuteSqlInterpolatedAsync(
                 query, cancellationToken);
@@ -246,19 +278,20 @@ public class MemeQueries
             int? statusFilter = (int?)statusId;
 
             FormattableString query = $"""
-            SELECT
-                "Id",
-                CAST("SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
-                "Caption",
-                "StatusId",
-                "Score",
-                "CreatedAtUtc",
-                "UpdatedAtUtc"
-            FROM "Memes"
-            WHERE "IsDeleted" = 0
-                AND ({statusFilter} IS NULL OR "StatusId" = {statusFilter})
-            ORDER BY "CreatedAtUtc" DESC, "Id" DESC
-            """;
+                SELECT
+                    "Id",
+                    CAST("SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
+                    "Caption",
+                    "StatusId",
+                    "IsInvalidatedBySourcePhoto",
+                    "Score",
+                    "CreatedAtUtc",
+                    "UpdatedAtUtc"
+                FROM "Memes"
+                WHERE "IsDeleted" = 0
+                    AND ({statusFilter} IS NULL OR "StatusId" = {statusFilter})
+                ORDER BY "CreatedAtUtc" DESC, "Id" DESC
+                """;
 
             return await _db.Database
                 .SqlQuery<MemeResponseDto>(query)

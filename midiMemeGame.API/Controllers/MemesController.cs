@@ -26,7 +26,7 @@ namespace MidiMemeGame.Api.Controllers
             return SaveAsync(null, request, cancellationToken);
         }
 
-        [HttpPatch("{id:int:min(1)}")]
+        [HttpPatch("{id:int}")]
         public Task<IActionResult> Update(
             int id,
             [FromBody] MemeRequestDto request,
@@ -34,7 +34,7 @@ namespace MidiMemeGame.Api.Controllers
         {
             return SaveAsync(id, request, cancellationToken);
         }
-        [HttpDelete("{id:int:min(1)}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
         {
             var clerkId = User.FindFirst("sub")?.Value;
