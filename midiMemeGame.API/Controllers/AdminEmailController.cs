@@ -1,12 +1,11 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Email;
+using MidiMemeGame.Api.Helpers;
 using MidiMemeGame.Api.Models;
-using MidiMemeGame.Api.Services;
 using MidiMemeGame.Api.Services.Interfaces;
 
 namespace MidiMemeGame.Api.Controllers;
@@ -73,7 +72,9 @@ public class AdminEmailController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Subject) || string.IsNullOrWhiteSpace(request.Body))
-            return BadRequest(ErrorResponse.Create(ErrorType.EMAIL_TEMPLATE_INVALID));
+            return BadRequest(ErrorResponse.Create(
+                ErrorType.EMAIL_TEMPLATE_INVALID,
+                ["Subject and body are required."]));
 
         var result = await _emailService.UpdateTemplateAsync(
             key,
@@ -85,7 +86,13 @@ public class AdminEmailController : ControllerBase
             return NotFound(ErrorResponse.Create(result.Error));
 
         if (result.Error == ErrorType.EMAIL_TEMPLATE_INVALID)
-            return BadRequest(ErrorResponse.Create(result.Error));
+        {
+            var reasons = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                ? ["Email template validation failed."]
+                : result.ErrorMessage.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            return BadRequest(ErrorResponse.Create(result.Error, reasons));
+        }
 
         if (result.IsError)
             return StatusCode(
@@ -141,14 +148,14 @@ public class AdminEmailController : ControllerBase
 
     private static EmailTemplateDetailResponse ToDetailResponse(EmailTemplate template)
     {
-        var placeholders = JsonSerializer.Deserialize<List<string>>(template.AllowedPlaceholdersJson) ?? [];
+        var placeholders = EmailTemplateHelper.ParseAllowedPlaceholders(template.AllowedPlaceholdersJson);
 
         return new EmailTemplateDetailResponse
         {
             Key = template.Key,
             Subject = template.Subject,
             Body = template.Body,
-            SupportedPlaceholders = placeholders,
+            SupportedPlaceholders = [.. placeholders],
             UpdatedAtUtc = template.UpdatedAtUtc
         };
     }

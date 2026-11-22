@@ -8,43 +8,71 @@ namespace MidiMemeGame.Api.Helpers;
 
 public static class EmailTemplateHelper
 {
+    public const int MaxSubjectLength = 200;
+    public const int MaxBodyLength = 50_000;
+
     private static readonly Regex PlaceholderRegex = new(@"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}");
 
-    public static IReadOnlyList<string> ParseAllowedPlaceholders(string json)
+    public static IReadOnlyList<string> ParseAllowedPlaceholders(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
             return [];
 
-        return JsonSerializer.Deserialize<string[]>(json) ?? [];
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(json) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 
-    public static ErrorType ValidatePlaceholders(
+    public static IReadOnlyList<string> ValidateTemplate(
         string subject,
         string body,
         IEnumerable<string> allowedPlaceholders)
     {
+        var reasons = new List<string>();
+        var trimmedSubject = subject.Trim();
+
+        if (string.IsNullOrWhiteSpace(trimmedSubject))
+            reasons.Add("Subject cannot be empty.");
+        else if (trimmedSubject.Length > MaxSubjectLength)
+            reasons.Add($"Subject cannot exceed {MaxSubjectLength} characters (got {trimmedSubject.Length}).");
+
+        if (string.IsNullOrWhiteSpace(body))
+            reasons.Add("Body cannot be empty.");
+        else if (body.Length > MaxBodyLength)
+            reasons.Add($"Body cannot exceed {MaxBodyLength} characters (got {body.Length}).");
+
         var allowed = new HashSet<string>(allowedPlaceholders, StringComparer.Ordinal);
+        CollectPlaceholderErrors("Subject", subject, allowed, reasons);
+        CollectPlaceholderErrors("Body", body, allowed, reasons);
 
-        if (!IsTextValid(subject, allowed) || !IsTextValid(body, allowed))
-            return ErrorType.EMAIL_TEMPLATE_INVALID;
-
-        return ErrorType.NONE;
+        return reasons;
     }
 
-    private static bool IsTextValid(string text, HashSet<string> allowed)
+    private static void CollectPlaceholderErrors(
+        string fieldName,
+        string text,
+        HashSet<string> allowed,
+        List<string> reasons)
     {
         var stripped = PlaceholderRegex.Replace(text, string.Empty);
         if (stripped.Contains("{{") || stripped.Contains("}}"))
-            return false;
+            reasons.Add($"{fieldName} contains malformed or unclosed placeholder braces.");
 
+        var invalidNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (Match match in PlaceholderRegex.Matches(text))
         {
             var name = match.Groups[1].Value;
             if (!allowed.Contains(name))
-                return false;
+                invalidNames.Add(name);
         }
 
-        return true;
+        foreach (var name in invalidNames)
+            reasons.Add($"{fieldName} uses unsupported placeholder '{{{{{name}}}}}'. Allowed: {(allowed.Count > 0 ? string.Join(", ", allowed) : "none")}.");
     }
 
     public static Result<(string Subject, string Body)> Render(

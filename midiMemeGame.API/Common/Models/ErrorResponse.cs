@@ -45,6 +45,7 @@ public class Error
     public Error(ErrorType code, string[] reasons)
     {
         Code = (int)code;
+        Message = GetMessageFromCode(code);
         Reasons = reasons;
     }
 

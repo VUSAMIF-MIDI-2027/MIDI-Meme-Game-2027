@@ -1,5 +1,4 @@
 using System.Net.Mail;
-using System.Text.Json;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
@@ -95,13 +94,17 @@ public class EmailService : IEmailService
         if (!IsValidEmail(trimmedRecipient))
             return ErrorType.EMAIL_RECIPIENT_ADDRESS_INVALID;
 
-        if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))
+        var trimmedSubject = subject.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedSubject)
+            || trimmedSubject.Length > EmailTemplateHelper.MaxSubjectLength
+            || string.IsNullOrWhiteSpace(body)
+            || body.Length > EmailTemplateHelper.MaxBodyLength)
             return ErrorType.EMAIL_TEMPLATE_INVALID;
 
         return await SaveToQueueAsync(
             templateKey: null,
             trimmedRecipient,
-            subject.Trim(),
+            trimmedSubject,
             body,
             isHtml: false,
             deduplicationKey: null,
@@ -149,22 +152,24 @@ public class EmailService : IEmailService
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))
-            return ErrorType.EMAIL_TEMPLATE_INVALID;
+            return Result<EmailTemplate>.Fail(ErrorType.EMAIL_TEMPLATE_INVALID, "Subject and body are required.");
 
         var existingResult = await _templateQueries.GetByKeyAsync(key, cancellationToken);
         if (existingResult.IsError)
             return existingResult.Error;
 
-        var allowedPlaceholders = JsonSerializer.Deserialize<List<string>>(
-            existingResult.Value.AllowedPlaceholdersJson) ?? [];
+        var allowedPlaceholders = EmailTemplateHelper.ParseAllowedPlaceholders(
+            existingResult.Value.AllowedPlaceholdersJson);
 
-        var validationError = EmailTemplateHelper.ValidatePlaceholders(
+        var validationReasons = EmailTemplateHelper.ValidateTemplate(
             subject,
             body,
             allowedPlaceholders);
 
-        if (validationError != ErrorType.NONE)
-            return validationError;
+        if (validationReasons.Count > 0)
+            return Result<EmailTemplate>.Fail(
+                ErrorType.EMAIL_TEMPLATE_INVALID,
+                string.Join('\n', validationReasons));
 
         return await _templateQueries.UpdateAsync(
             key,
