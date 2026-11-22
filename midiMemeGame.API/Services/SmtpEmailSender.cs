@@ -44,16 +44,20 @@ public class SmtpEmailSender : IEmailSender
 
             if (ex is SmtpCommandException cmdEx)
             {
-                if (IsQuotaExceeded(cmdEx))
-                    return ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED;
-
                 var code = (int)cmdEx.StatusCode;
+                var detail = $"SMTP {code} ({cmdEx.StatusCode}): {cmdEx.Message}";
+
+                if (IsQuotaExceeded(cmdEx))
+                    return Result.Fail(ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED, detail);
+
                 return code is >= 400 and < 500
-                    ? ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE
-                    : ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
+                    ? Result.Fail(ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE, detail)
+                    : Result.Fail(ErrorType.EMAIL_SMTP_PERMANENT_FAILURE, detail);
             }
 
-            return ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE;
+            return Result.Fail(
+                ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE,
+                $"SMTP connection/auth error ({ex.GetType().Name}): {ex.Message}");
         }
     }
 
@@ -68,7 +72,7 @@ public class SmtpEmailSender : IEmailSender
     {
         var sessionResult = await OpenSessionAsync(cancellationToken);
         if (sessionResult.IsError)
-            return sessionResult.Error;
+            return Result.Fail(sessionResult.Error, sessionResult.ErrorMessage ?? "Failed to open SMTP session.");
 
         await using var session = sessionResult.Value;
         return await session.SendAsync(deliveryId, toAddress, toName, subject, body, isHtml, cancellationToken);
@@ -132,13 +136,15 @@ public class SmtpEmailSender : IEmailSender
             {
                 _logger.LogWarning(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
 
-                if (IsQuotaExceeded(ex))
-                    return ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED;
-
                 var code = (int)ex.StatusCode;
+                var detail = $"SMTP {code} ({ex.StatusCode}): {ex.Message}";
+
+                if (IsQuotaExceeded(ex))
+                    return Result.Fail(ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED, detail);
+
                 return code is >= 400 and < 500
-                    ? ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE
-                    : ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
+                    ? Result.Fail(ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE, detail)
+                    : Result.Fail(ErrorType.EMAIL_SMTP_PERMANENT_FAILURE, detail);
             }
             catch (Exception ex) when (ex is SmtpProtocolException
                                           or ServiceNotConnectedException
@@ -148,12 +154,16 @@ public class SmtpEmailSender : IEmailSender
                                           or TimeoutException)
             {
                 _logger.LogWarning(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
-                return ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE;
+                return Result.Fail(
+                    ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE,
+                    $"SMTP transport error ({ex.GetType().Name}): {ex.Message}");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, LogMessages.Email.SMTP_ERROR, deliveryId);
-                return ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
+                return Result.Fail(
+                    ErrorType.EMAIL_SMTP_PERMANENT_FAILURE,
+                    $"Unexpected SMTP error ({ex.GetType().Name}): {ex.Message}");
             }
         }
 

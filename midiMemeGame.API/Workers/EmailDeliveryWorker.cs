@@ -75,16 +75,31 @@ public class EmailDeliveryWorker : BackgroundService
             var attemptedAt = DateTime.UtcNow;
             var isPermanent = sessionResult.Error == ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
             var isQuotaExceeded = sessionResult.Error == ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED;
+            var sessionError = !string.IsNullOrWhiteSpace(sessionResult.ErrorMessage)
+                ? sessionResult.ErrorMessage
+                : (isPermanent ? "Permanent SMTP authentication/connection failure." : "SMTP connection failure.");
 
             foreach (var delivery in claimResult.Value)
             {
                 var nextAttemptNumber = delivery.AttemptCount + 1;
                 if (isPermanent || nextAttemptNumber >= _settings.MaxAttempts)
                 {
-                    await deliveryQueries.MarkFailedAsync(
-                        delivery.Id,
-                        isPermanent ? "Permanent SMTP authentication/connection failure." : $"Exceeded max retry attempts ({_settings.MaxAttempts}).",
-                        cancellationToken);
+                    var reason = isPermanent
+                        ? sessionError
+                        : $"Exceeded max retry attempts ({_settings.MaxAttempts}). Last error: {sessionError}";
+
+                    var markFailedResult = await deliveryQueries.MarkFailedAsync(delivery.Id, reason, cancellationToken);
+                    if (markFailedResult.IsError)
+                    {
+                        _logger.LogError(
+                            "Failed to mark email delivery {DeliveryId} as Failed ({Error}).",
+                            delivery.Id,
+                            markFailedResult.Error);
+                    }
+                    else
+                    {
+                        _logger.LogError(LogMessages.Email.SEND_FAILED, delivery.Id, nextAttemptNumber);
+                    }
                 }
                 else
                 {
@@ -92,11 +107,28 @@ public class EmailDeliveryWorker : BackgroundService
                         ? TimeSpan.FromHours(1)
                         : TimeSpan.FromMinutes(Math.Min(Math.Pow(2, delivery.AttemptCount), 60));
 
-                    await deliveryQueries.ScheduleRetryAsync(
+                    var nextAttemptAt = attemptedAt.Add(retryDelay);
+                    var retryResult = await deliveryQueries.ScheduleRetryAsync(
                         delivery.Id,
-                        attemptedAt.Add(retryDelay),
-                        isQuotaExceeded ? "SMTP daily sending quota exceeded; scheduled for retry in 1 hour." : "SMTP connection failure; scheduled for retry.",
+                        nextAttemptAt,
+                        sessionError,
                         cancellationToken);
+
+                    if (retryResult.IsError)
+                    {
+                        _logger.LogError(
+                            "Failed to schedule retry for email delivery {DeliveryId} ({Error}).",
+                            delivery.Id,
+                            retryResult.Error);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            LogMessages.Email.SEND_RETRY,
+                            delivery.Id,
+                            nextAttemptNumber,
+                            nextAttemptAt);
+                    }
                 }
             }
             return;
@@ -140,12 +172,15 @@ public class EmailDeliveryWorker : BackgroundService
             var isPermanent = sendResult.Error == ErrorType.EMAIL_SMTP_PERMANENT_FAILURE;
             var isQuotaExceeded = sendResult.Error == ErrorType.EMAIL_SMTP_QUOTA_EXCEEDED;
             var nextAttemptNumber = delivery.AttemptCount + 1;
+            var sendError = !string.IsNullOrWhiteSpace(sendResult.ErrorMessage)
+                ? sendResult.ErrorMessage
+                : (isPermanent ? "Permanent SMTP failure." : "Transient SMTP failure.");
 
             if (isPermanent || nextAttemptNumber >= _settings.MaxAttempts)
             {
                 var reason = isPermanent
-                    ? "Permanent SMTP failure."
-                    : $"Exceeded max retry attempts ({_settings.MaxAttempts}).";
+                    ? sendError
+                    : $"Exceeded max retry attempts ({_settings.MaxAttempts}). Last error: {sendError}";
 
                 var markFailedResult = await deliveryQueries.MarkFailedAsync(delivery.Id, reason, cancellationToken);
                 if (markFailedResult.IsError)
@@ -168,14 +203,10 @@ public class EmailDeliveryWorker : BackgroundService
                     : TimeSpan.FromMinutes(backoffMinutes);
 
                 var nextAttemptAt = attemptedAt.Add(retryDelay);
-                var retryReason = isQuotaExceeded
-                    ? "SMTP daily sending quota exceeded; scheduled for retry in 1 hour."
-                    : "Transient SMTP failure; scheduled for retry.";
-
                 var retryResult = await deliveryQueries.ScheduleRetryAsync(
                     delivery.Id,
                     nextAttemptAt,
-                    retryReason,
+                    sendError,
                     cancellationToken);
 
                 if (retryResult.IsError)
