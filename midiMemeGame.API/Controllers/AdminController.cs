@@ -78,7 +78,7 @@ public class AdminController : ControllerBase
 
         var createdPhoto = photoResult.Value;
 
-        return Ok(new AdminPhotoResponse
+        return StatusCode(StatusCodes.Status201Created, new AdminPhotoResponse
         {
             Id = createdPhoto.Id,
             IsEnabled = createdPhoto.IsEnabled
