@@ -122,8 +122,18 @@ public class EmailDeliveryWorker : BackgroundService
 
             if (!sendResult.IsError)
             {
-                await deliveryQueries.MarkSentAsync(delivery.Id, attemptedAt, cancellationToken);
-                _logger.LogInformation(LogMessages.Email.SENT, delivery.Id);
+                var markSentResult = await deliveryQueries.MarkSentAsync(delivery.Id, attemptedAt, cancellationToken);
+                if (markSentResult.IsError)
+                {
+                    _logger.LogError(
+                        "Email delivery {DeliveryId} was sent via SMTP, but failed to update status to Sent ({Error}). Duplicate send possible after lease expiry.",
+                        delivery.Id,
+                        markSentResult.Error);
+                }
+                else
+                {
+                    _logger.LogInformation(LogMessages.Email.SENT, delivery.Id);
+                }
                 continue;
             }
 
@@ -137,8 +147,18 @@ public class EmailDeliveryWorker : BackgroundService
                     ? "Permanent SMTP failure."
                     : $"Exceeded max retry attempts ({_settings.MaxAttempts}).";
 
-                await deliveryQueries.MarkFailedAsync(delivery.Id, reason, cancellationToken);
-                _logger.LogError(LogMessages.Email.SEND_FAILED, delivery.Id, nextAttemptNumber);
+                var markFailedResult = await deliveryQueries.MarkFailedAsync(delivery.Id, reason, cancellationToken);
+                if (markFailedResult.IsError)
+                {
+                    _logger.LogError(
+                        "Failed to mark email delivery {DeliveryId} as Failed ({Error}).",
+                        delivery.Id,
+                        markFailedResult.Error);
+                }
+                else
+                {
+                    _logger.LogError(LogMessages.Email.SEND_FAILED, delivery.Id, nextAttemptNumber);
+                }
             }
             else
             {
@@ -152,17 +172,27 @@ public class EmailDeliveryWorker : BackgroundService
                     ? "SMTP daily sending quota exceeded; scheduled for retry in 1 hour."
                     : "Transient SMTP failure; scheduled for retry.";
 
-                await deliveryQueries.ScheduleRetryAsync(
+                var retryResult = await deliveryQueries.ScheduleRetryAsync(
                     delivery.Id,
                     nextAttemptAt,
                     retryReason,
                     cancellationToken);
 
-                _logger.LogWarning(
-                    LogMessages.Email.SEND_RETRY,
-                    delivery.Id,
-                    nextAttemptNumber,
-                    nextAttemptAt);
+                if (retryResult.IsError)
+                {
+                    _logger.LogError(
+                        "Failed to schedule retry for email delivery {DeliveryId} ({Error}).",
+                        delivery.Id,
+                        retryResult.Error);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        LogMessages.Email.SEND_RETRY,
+                        delivery.Id,
+                        nextAttemptNumber,
+                        nextAttemptAt);
+                }
             }
         }
     }

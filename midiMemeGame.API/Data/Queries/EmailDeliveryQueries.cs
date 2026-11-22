@@ -62,7 +62,6 @@ public class EmailDeliveryQueries
             if (inserted.Count > 0)
                 return (inserted[0], true);
 
-            // Jei eilutė neįterpta dėl lygiagretaus konflikto (ON CONFLICT DO NOTHING), nuskaitome esamą
             if (!string.IsNullOrEmpty(delivery.DeduplicationKey))
             {
                 var existing = await _db.EmailDeliveries
@@ -124,18 +123,17 @@ public class EmailDeliveryQueries
     {
         try
         {
-            var delivery = await _db.EmailDeliveries.FirstOrDefaultAsync(d => d.Id == deliveryId, cancellationToken);
-            if (delivery is null)
-                return ErrorType.NOT_FOUND;
+            var updated = await _db.EmailDeliveries
+                .Where(d => d.Id == deliveryId && d.Status == EmailDeliveryStatus.Processing)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(d => d.Status, EmailDeliveryStatus.Sent)
+                    .SetProperty(d => d.AttemptCount, d => d.AttemptCount + 1)
+                    .SetProperty(d => d.SentAtUtc, sentAtUtc)
+                    .SetProperty(d => d.LastError, (string?)null)
+                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
+                    cancellationToken);
 
-            delivery.Status = EmailDeliveryStatus.Sent;
-            delivery.AttemptCount += 1;
-            delivery.SentAtUtc = sentAtUtc;
-            delivery.LastError = null;
-            delivery.ClaimedAtUtc = null;
-
-            await _db.SaveChangesAsync(cancellationToken);
-            return true;
+            return updated > 0 ? true : ErrorType.NOT_FOUND;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -152,18 +150,18 @@ public class EmailDeliveryQueries
     {
         try
         {
-            var delivery = await _db.EmailDeliveries.FirstOrDefaultAsync(d => d.Id == deliveryId, cancellationToken);
-            if (delivery is null)
-                return ErrorType.NOT_FOUND;
+            var truncatedError = TruncateError(error);
+            var updated = await _db.EmailDeliveries
+                .Where(d => d.Id == deliveryId && d.Status == EmailDeliveryStatus.Processing)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(d => d.Status, EmailDeliveryStatus.Pending)
+                    .SetProperty(d => d.AttemptCount, d => d.AttemptCount + 1)
+                    .SetProperty(d => d.NextAttemptAtUtc, nextAttemptAtUtc)
+                    .SetProperty(d => d.LastError, truncatedError)
+                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
+                    cancellationToken);
 
-            delivery.Status = EmailDeliveryStatus.Pending;
-            delivery.AttemptCount += 1;
-            delivery.NextAttemptAtUtc = nextAttemptAtUtc;
-            delivery.LastError = TruncateError(error);
-            delivery.ClaimedAtUtc = null;
-
-            await _db.SaveChangesAsync(cancellationToken);
-            return true;
+            return updated > 0 ? true : ErrorType.NOT_FOUND;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -179,17 +177,17 @@ public class EmailDeliveryQueries
     {
         try
         {
-            var delivery = await _db.EmailDeliveries.FirstOrDefaultAsync(d => d.Id == deliveryId, cancellationToken);
-            if (delivery is null)
-                return ErrorType.NOT_FOUND;
+            var truncatedError = TruncateError(error);
+            var updated = await _db.EmailDeliveries
+                .Where(d => d.Id == deliveryId && d.Status == EmailDeliveryStatus.Processing)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(d => d.Status, EmailDeliveryStatus.Failed)
+                    .SetProperty(d => d.AttemptCount, d => d.AttemptCount + 1)
+                    .SetProperty(d => d.LastError, truncatedError)
+                    .SetProperty(d => d.ClaimedAtUtc, (DateTime?)null),
+                    cancellationToken);
 
-            delivery.Status = EmailDeliveryStatus.Failed;
-            delivery.AttemptCount += 1;
-            delivery.LastError = TruncateError(error);
-            delivery.ClaimedAtUtc = null;
-
-            await _db.SaveChangesAsync(cancellationToken);
-            return true;
+            return updated > 0 ? true : ErrorType.NOT_FOUND;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
