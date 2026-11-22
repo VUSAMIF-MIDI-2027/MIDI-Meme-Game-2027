@@ -313,34 +313,25 @@ public class UserQueries
         }
     }
 
-    public async Task<Result<string?>> GetActiveEmailByIdAsync(
-        int userId,
-        CancellationToken cancellationToken)
+    public async Task<Result<string>> GetActiveEmailByIdAsync(int userId, CancellationToken cancellationToken)
     {
         try
         {
-            FormattableString query = $"""
-            SELECT "Email" AS "Value"
-            FROM "Users"
-            WHERE "Id" = {userId}
-                AND "IsDeleted" = 0
-            """;
+            var email = await _db.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId && !u.IsDeleted)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            var rows = await _db.Database
-                .SqlQuery<string?>(query)
-                .ToListAsync(cancellationToken);
-
-            if (rows.Count == 0)
+            if (email is null)
                 return ErrorType.NOT_FOUND;
 
-            return rows[0];
+            if (string.IsNullOrWhiteSpace(email))
+                return ErrorType.EMAIL_RECIPIENT_MISSING;
+
+            return email;
         }
-        catch (SqliteException ex)
-        {
-            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
-            return ErrorType.DB_SQL_EXCEPTION;
-        }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
@@ -348,20 +339,20 @@ public class UserQueries
     }
 
     public async Task<Result<List<User>>> GetActiveEmailRecipientsAsync(CancellationToken ct)
-{
-    try
     {
-        var users = await _db.Users
-            .AsNoTracking()
-            .Where(u => !u.IsDeleted && !string.IsNullOrWhiteSpace(u.Email))
-            .ToListAsync(ct);
+        try
+        {
+            var users = await _db.Users
+                .AsNoTracking()
+                .Where(u => !u.IsDeleted && !string.IsNullOrWhiteSpace(u.Email))
+                .ToListAsync(ct);
 
-        return users;
+            return users;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
     }
-    catch (Exception ex) when (ex is not OperationCanceledException)
-    {
-        _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
-        return ErrorType.DB_EXCEPTION;
-    }
-}
 }
