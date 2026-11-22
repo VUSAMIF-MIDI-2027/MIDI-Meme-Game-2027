@@ -204,4 +204,75 @@ public class MemeQueries
             return ErrorType.DB_EXCEPTION;
         }
     }
+    public async Task<Result> UpdateStatusAsync(
+        int memeId,
+        MemeStatus status,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            FormattableString query = $"""
+            UPDATE "Memes"
+            SET "StatusId" = {(int)status}
+            WHERE "Id" = {memeId}
+                AND "IsDeleted" = 0;
+            """;
+
+            var affected = await _db.Database.ExecuteSqlInterpolatedAsync(
+                query, cancellationToken);
+
+            if (affected == 0)
+                return ErrorType.NOT_FOUND;
+
+            return Result.Ok();
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+    public async Task<Result<List<MemeResponseDto>>> GetAdminMemesAsync(
+        MemeStatus? statusId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            int? statusFilter = (int?)statusId;
+
+            FormattableString query = $"""
+            SELECT
+                "Id",
+                CAST("SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
+                "Caption",
+                "StatusId",
+                "Score",
+                "CreatedAtUtc",
+                "UpdatedAtUtc"
+            FROM "Memes"
+            WHERE "IsDeleted" = 0
+                AND ({statusFilter} IS NULL OR "StatusId" = {statusFilter})
+            ORDER BY "CreatedAtUtc" DESC, "Id" DESC
+            """;
+
+            return await _db.Database
+                .SqlQuery<MemeResponseDto>(query)
+                .ToListAsync(cancellationToken);
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
 }
