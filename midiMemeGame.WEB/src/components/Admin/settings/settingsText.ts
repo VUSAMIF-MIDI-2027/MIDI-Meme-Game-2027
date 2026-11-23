@@ -12,11 +12,6 @@ type GrantAdminText = {
     warning: string;
     cancel: string;
     success: string;
-    notFound: string;
-    invalid: string;
-    ambiguous: string;
-    denied: string;
-    error: string;
 };
 
 type ResetRulesText = {
@@ -30,8 +25,6 @@ type ResetRulesText = {
     saving: string;
     empty: string;
     success: string;
-    denied: string;
-    error: string;
 };
 
 type SettingsText = {
@@ -47,8 +40,6 @@ type SettingsText = {
     scheduleSaved: string;
     invalidRangeError: string;
     loading: string;
-    loadError: string;
-    saveError: string;
     currentScheduleLabel: string;
     notSet: string;
     grantAdmin: GrantAdminText;
@@ -71,8 +62,6 @@ export const settingsText: Record<Lang, SettingsText> = {
         invalidRangeError:
             "Balsavimo pabaigos / rezultatų atidarymo laikas turi būti vėlesnis nei balsavimo pradžios laikas.",
         loading: "Kraunami nustatymai…",
-        loadError: "Nepavyko įkelti tvarkaraščio.",
-        saveError: "Nepavyko išsaugoti tvarkaraščio.",
         currentScheduleLabel: "Patvirtintas tvarkaraštis",
         notSet: "Nenustatyta",
         grantAdmin: {
@@ -88,11 +77,6 @@ export const settingsText: Record<Lang, SettingsText> = {
                 "Šis naudotojas įgis pilną prieigą prie administratoriaus skydelio ir galės valdyti renginio nustatymus bei turinį.",
             cancel: "Atšaukti",
             success: "Administratoriaus teisės sėkmingai suteiktos.",
-            notFound: "Naudotojas su tokiu el. paštu nerastas.",
-            invalid: "Neteisingas el. pašto adresas.",
-            ambiguous: "Rasti keli naudotojai su šiuo el. pašto adresu.",
-            denied: "Neturi teisių atlikti šio veiksmo.",
-            error: "Nepavyko atlikti užklausos. Bandyk dar kartą.",
         },
         resetRules: {
             title: "Atstatyti taisyklių patvirtinimus",
@@ -107,8 +91,6 @@ export const settingsText: Record<Lang, SettingsText> = {
             saving: "Atstatoma…",
             empty: "Nebuvo nė vieno patvirtinimo, kurį reikėtų atstatyti.",
             success: "Atstatytų patvirtinimų skaičius:",
-            denied: "Neturi teisių atlikti šio veiksmo.",
-            error: "Nepavyko atstatyti taisyklių patvirtinimų.",
         },
     },
     en: {
@@ -126,8 +108,6 @@ export const settingsText: Record<Lang, SettingsText> = {
         invalidRangeError:
             "Voting end / results opening time must be later than voting start time.",
         loading: "Loading settings…",
-        loadError: "Failed to load schedule.",
-        saveError: "Failed to save schedule.",
         currentScheduleLabel: "Saved schedule",
         notSet: "Not set",
         grantAdmin: {
@@ -143,11 +123,6 @@ export const settingsText: Record<Lang, SettingsText> = {
                 "This user will gain full access to the admin panel and will be able to manage event settings and content.",
             cancel: "Cancel",
             success: "Admin permissions granted successfully.",
-            notFound: "No user found with that email address.",
-            invalid: "Invalid email address.",
-            ambiguous: "Multiple users matched this email address.",
-            denied: "You do not have permission to perform this action.",
-            error: "Request failed. Please try again.",
         },
         resetRules: {
             title: "Reset rules acknowledgements",
@@ -162,8 +137,6 @@ export const settingsText: Record<Lang, SettingsText> = {
             saving: "Resetting…",
             empty: "There were no acknowledgements to reset.",
             success: "Reset acknowledgements count:",
-            denied: "You do not have permission to perform this action.",
-            error: "Failed to reset rules acknowledgements.",
         },
     },
 };

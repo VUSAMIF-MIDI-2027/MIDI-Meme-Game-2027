@@ -45,14 +45,13 @@ export function EventPhaseSummary({ schedule, lang }: Props) {
                 </div>
             )}
 
-            <p className="mt-5.75 flex flex-wrap items-center justify-center gap-1.25 text-base font-bold sm:gap-1.75 sm:text-[19px]">
-                <Clock
-                    aria-hidden="true"
-                    className="size-5 shrink-0 text-midi-blue"
-                    strokeWidth={2}
-                />
+            <p className="mt-5.75 flex flex-col items-center gap-1.5 text-base font-bold sm:flex-row sm:flex-wrap sm:justify-center sm:gap-1.75 sm:text-[19px]">
+                <span className="inline-flex items-center gap-1.5">
+                    <Clock aria-hidden="true" className="size-5 shrink-0 text-midi-blue" />
+                    {stage.dateLabel}
+                </span>
+                <span aria-hidden="true" className="hidden sm:inline">·</span>
                 <span>
-                    {stage.dateLabel} ·{" "}
                     <time dateTime={dateTime}>{formatEventDateTime(dateTime, lang)}</time>
                     {" "}· {copy.timeZone}
                 </span>

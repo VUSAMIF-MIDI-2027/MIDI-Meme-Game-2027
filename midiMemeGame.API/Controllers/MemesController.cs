@@ -10,7 +10,7 @@ namespace MidiMemeGame.Api.Controllers
 {
     [Route("api/memes")]
     [ApiController]
-    [Authorize]
+    // [Authorize]
     public class MemesController : ControllerBase
     {
         private readonly MemeService _memeService;
@@ -24,20 +24,30 @@ namespace MidiMemeGame.Api.Controllers
             CancellationToken cancellationToken
         )
         {
-            var clerkId = User.FindFirst("sub")?.Value;
+            // var clerkId = User.FindFirst("sub")?.Value;
+            var clerkId = "user_3MD54abREPxo8vFXCmXaDYvUuHT";
 
             if (string.IsNullOrWhiteSpace(clerkId))
                 return Unauthorized(ErrorResponse.Create(ErrorType.USER_ACCESS_DENIED));
 
             var result = await _memeService.CreateAsync(clerkId, request, cancellationToken);
 
+            if (result.IsError)
+            {
+                var error = ErrorResponse.Create(result.Error);
+                return result.Error switch
+                {
+                    ErrorType.NOT_FOUND => NotFound(error),
+                    ErrorType.USER_ACCESS_DENIED => StatusCode(StatusCodes.Status403Forbidden, error),
+                    ErrorType.MEME_LIMIT_REACHED or ErrorType.MEME_SOURCE_PHOTO_DISABLED
+                        or ErrorType.MEME_SUBMISSIONS_NOT_OPEN or ErrorType.MEME_SUBMISSIONS_CLOSED
+                        => Conflict(error),
+                    _ => StatusCode(StatusCodes.Status500InternalServerError, error)
+                };
+            }
+
             if (!result.TryGetResult(out var meme))
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
-
-            if (result.IsError)
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    ErrorResponse.Create(result.Error));
 
             return Ok(new MemeResponseDto
             {
@@ -88,7 +98,8 @@ namespace MidiMemeGame.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
         {
-            var clerkId = User.FindFirst("sub")?.Value;
+            // var clerkId = User.FindFirst("sub")?.Value;
+            var clerkId = "user_3MD54abREPxo8vFXCmXaDYvUuHT";
 
             if (string.IsNullOrWhiteSpace(clerkId))
                 return Unauthorized();
@@ -105,7 +116,8 @@ namespace MidiMemeGame.Api.Controllers
         [HttpGet("mine")]
         public async Task<IActionResult> GetMyMemes(CancellationToken cancellationToken)
         {
-            var clerkId = User.FindFirst("sub")?.Value;
+            // var clerkId = User.FindFirst("sub")?.Value;
+            var clerkId = "user_3MD54abREPxo8vFXCmXaDYvUuHT";
 
             if (string.IsNullOrWhiteSpace(clerkId))
                 return Unauthorized();

@@ -4,19 +4,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuth } from "@clerk/react";
 import { ShieldPlus } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { AdminUserError, lookupAdminUser, grantAdminRole, type AdminUser } from "@/services/adminService";
+import { lookupAdminUser, grantAdminRole, type AdminUser } from "@/services/adminService";
+import { ApiError } from "@/services/ApiError";
+import { ErrorNotice } from "@/components/ErrorNotice";
 import { settingsText } from "./settingsText";
-
-type ErrorKey = "notFound" | "invalid" | "ambiguous" | "denied" | "error";
-
-function getErrorKey(error: unknown): ErrorKey {
-    if (!(error instanceof AdminUserError)) return "error";
-    if (error.status === 404) return "notFound";
-    if (error.status === 400) return "invalid";
-    if (error.status === 409) return "ambiguous";
-    if (error.status === 401 || error.status === 403) return "denied";
-    return "error";
-}
 
 export function GrantAdminSection() {
     const { getToken } = useAuth();
@@ -26,7 +17,7 @@ export function GrantAdminSection() {
     const [email, setEmail] = useState("");
     const [user, setUser] = useState<AdminUser | null>(null);
     const [busy, setBusy] = useState<"search" | "grant" | null>(null);
-    const [error, setError] = useState<ErrorKey | null>(null);
+    const [error, setError] = useState<unknown>(null);
     const [success, setSuccess] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -52,7 +43,7 @@ export function GrantAdminSection() {
             const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]);
             const token = await getToken();
             signal.throwIfAborted();
-            if (!token) throw new AdminUserError(401);
+            if (!token) throw ApiError.unauthorized();
 
             if (action === "search") {
                 const found = await lookupAdminUser(email, token, signal);
@@ -65,7 +56,7 @@ export function GrantAdminSection() {
                 }
             }
         } catch (cause) {
-            if (!controller.signal.aborted) setError(getErrorKey(cause));
+            if (!controller.signal.aborted) setError(cause);
         } finally {
             if (request.current === controller) request.current = null;
             if (!controller.signal.aborted) setBusy(null);
@@ -117,11 +108,7 @@ export function GrantAdminSection() {
                 </div>
             </form>
 
-            {error && !confirmOpen && (
-                <p role="alert" className="mt-4 text-sm font-medium text-rose-400">
-                    {t[error]}
-                </p>
-            )}
+            {!confirmOpen && <ErrorNotice error={error} scope="admins" className="mt-4" />}
 
             {user && (
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-[#0b0f12] p-4">
@@ -171,11 +158,7 @@ export function GrantAdminSection() {
                 </p>
                 <p className="break-all text-sm text-[#70cfff]">{user?.email}</p>
                 <p className="mt-4 text-sm leading-relaxed text-white/75">{t.warning}</p>
-                {error && (
-                    <p role="alert" className="mt-4 text-sm font-medium text-rose-400">
-                        {t[error]}
-                    </p>
-                )}
+                <ErrorNotice error={error} scope="admins" className="mt-4" />
                 <div className="mt-6 flex flex-wrap justify-end gap-3">
                     <button
                         type="button"

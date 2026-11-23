@@ -21,19 +21,22 @@ public class AdminController : ControllerBase
     private readonly UserQueries _userQueries;
     private readonly ClerkUserService _clerkUserService;
     private readonly MemeQueries _memeQueries;
+    private readonly MemeModerationService _memeModerationService;
 
     public AdminController(
         SourcePhotoQueries sourcePhotoQueries,
         PhotoFileService photoFiles,
         UserQueries userQueries,
         ClerkUserService clerkUserService,
-        MemeQueries memeQueries)
+        MemeQueries memeQueries,
+        MemeModerationService memeModerationService)
     {
         _sourcePhotoQueries = sourcePhotoQueries;
         _photoFiles = photoFiles;
         _userQueries = userQueries;
         _clerkUserService = clerkUserService;
         _memeQueries = memeQueries;
+        _memeModerationService = memeModerationService;
     }
 
     [HttpPost("photos")]
@@ -233,8 +236,7 @@ public class AdminController : ControllerBase
         if (!Enum.IsDefined(typeof(MemeStatus), statusId))
             return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
 
-        var result = await _memeQueries.UpdateStatusAsync(
-            id, statusId, cancellationToken);
+        var result = await _memeModerationService.UpdateStatusAsync(id, statusId, cancellationToken);
 
         if (result.Error == ErrorType.NOT_FOUND)
             return NotFound(ErrorResponse.Create(result.Error));

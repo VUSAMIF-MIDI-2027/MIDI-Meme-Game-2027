@@ -59,7 +59,10 @@ public class ScheduledEmailService : IScheduledEmailService
             if (milestone.At > nowUtc)
                 continue;
 
-            var completedResult = await _progressQueries.IsCompletedAsync(eventId, milestone.Key, ct);
+            var occurrenceKey = FormattableString.Invariant(
+                $"{milestone.Key}:{milestone.At.UtcTicks}");
+            var completedResult = await _progressQueries.IsCompletedAsync(
+                eventId, milestone.Key, occurrenceKey, milestone.At.UtcDateTime, ct);
             if (completedResult.IsError)
             {
                 _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId, completedResult.Error);
@@ -77,7 +80,8 @@ public class ScheduledEmailService : IScheduledEmailService
                     eventId,
                     milestone.At);
 
-                var skipMarkResult = await _progressQueries.MarkCompletedAsync(eventId, milestone.Key, DateTime.UtcNow, ct);
+                var skipMarkResult = await _progressQueries.MarkCompletedAsync(
+                    eventId, occurrenceKey, DateTime.UtcNow, ct);
                 if (skipMarkResult.IsError)
                 {
                     _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId, skipMarkResult.Error);
@@ -112,7 +116,8 @@ public class ScheduledEmailService : IScheduledEmailService
                     ["recipientName"] = EmailTemplateHelper.BuildRecipientName(user.FirstName, user.LastName)
                 };
 
-                var deduplicationKey = $"{eventId}:{milestone.Key}:user:{user.Id}";
+                var deduplicationKey = FormattableString.Invariant(
+                    $"{eventId}:{occurrenceKey}:user:{user.Id}");
                 var enqueueResult = await _emailService.EnqueueTemplatedAsync(
                     templateResult.Value,
                     user.Email,
@@ -138,7 +143,8 @@ public class ScheduledEmailService : IScheduledEmailService
                 }
             }
 
-            var markResult = await _progressQueries.MarkCompletedAsync(eventId, milestone.Key, DateTime.UtcNow, ct);
+            var markResult = await _progressQueries.MarkCompletedAsync(
+                eventId, occurrenceKey, DateTime.UtcNow, ct);
             if (markResult.IsError)
             {
                 _logger.LogError(LogMessages.Email.SCHEDULED_MILESTONE_FAILED, milestone.Key, eventId, markResult.Error);

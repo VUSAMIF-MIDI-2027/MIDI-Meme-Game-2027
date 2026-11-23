@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { getPhotoBlob } from "@/services/userService";
 import { type AdminPhoto } from "@/services/adminService";
+import { ApiError } from "@/services/ApiError";
+import { ErrorNotice } from "@/components/ErrorNotice";
 import { useLanguage } from "@/context/LanguageContext";
 import { photoCardText } from "./photoCardText";
 
@@ -20,7 +22,7 @@ export default function PhotoCard({
     const t = photoCardText[lang];
 
     const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [failed, setFailed] = useState(false);
+    const [loadError, setLoadError] = useState<unknown>(null);
     const [confirming, setConfirming] = useState(false);
     const [updating, setUpdating] = useState(false);
 
@@ -29,7 +31,7 @@ export default function PhotoCard({
         let objectUrl: string | null = null;
 
         async function loadImage() {
-            setFailed(false);
+            setLoadError(null);
             try {
                 const signal = AbortSignal.any([
                     controller.signal,
@@ -37,7 +39,7 @@ export default function PhotoCard({
                 ]);
                 const token = await getToken();
                 signal.throwIfAborted();
-                if (!token) throw new Error("401 ADD LATER");
+                if (!token) throw ApiError.unauthorized();
 
                 const blob = await getPhotoBlob(photo.id, token, signal);
                 if (controller.signal.aborted) return;
@@ -46,8 +48,7 @@ export default function PhotoCard({
                 setImageUrl(objectUrl);
             } catch (cause) {
                 if (!controller.signal.aborted) {
-                    console.error(`Failed to load photo ${photo.id}:`, cause);
-                    setFailed(true);
+                    setLoadError(cause);
                 }
             }
         }
@@ -76,10 +77,8 @@ export default function PhotoCard({
     return (
         <article className="flex flex-col overflow-hidden rounded-xl border border-white/15 bg-[#0d1013]">
             <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-neutral-900">
-                {failed ? (
-                    <span className="text-sm text-rose-400">
-                        {t.failedToLoad}
-                    </span>
+                {loadError != null ? (
+                    <ErrorNotice error={loadError} scope="photoLoad" className="mx-3 text-center" />
                 ) : !imageUrl ? (
                     <span className="text-sm text-white/50">
                         {t.loadingPhoto}
@@ -107,7 +106,7 @@ export default function PhotoCard({
                             <button
                                 type="button"
                                 disabled={updating}
-                                onClick={handleConfirmToggle}
+                                onClick={() => void handleConfirmToggle()}
                                 className="flex-1 cursor-pointer rounded-md bg-midi-blue px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                             >
                                 {updating ? t.saving : t.confirm}

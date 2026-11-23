@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { SECTIONS, type AdminTranslations, type Section } from "@/app/admin/types";
-import { overviewText } from "@/components/Admin/overviewText";
+import { overviewText } from "@/components/Admin/overview/overviewText";
 
 type AdminSidebarProps = {
     t: AdminTranslations;

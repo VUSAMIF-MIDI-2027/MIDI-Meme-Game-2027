@@ -12,8 +12,8 @@ export type SectionConfig = {
 export const SECTIONS: readonly SectionConfig[] = [
     {
         id: "overview",
-        getTitle: (t) => t.title,
-        getDescription: (t) => t.description,
+        getTitle: (t) => t.overview,
+        getDescription: (t) => t.overviewDescription,
     },
     {
         id: "meme-approval",

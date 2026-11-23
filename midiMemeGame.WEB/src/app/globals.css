@@ -74,3 +74,15 @@ body {
     scroll-behavior: smooth;
   }
 }
+.admin-content:has([data-section-loading]) {
+  display: flex;
+  min-height: 0;
+}
+
+.admin-content :has([data-section-loading]) {
+  display: contents;
+}
+
+.admin-content:has([data-section-loading]) :not(:has([data-section-loading]), [data-section-loading], [data-section-loading] *) {
+  display: none;
+}

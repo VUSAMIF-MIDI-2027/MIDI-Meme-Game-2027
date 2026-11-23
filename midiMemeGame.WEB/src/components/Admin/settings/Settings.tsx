@@ -10,11 +10,19 @@ import {
     saveEventSchedule,
     type EventSchedule,
 } from "@/services/eventScheduleService";
+import { ApiError } from "@/services/ApiError";
+import { ErrorNotice } from "@/components/ErrorNotice";
 import { EventScheduleSection } from "./EventScheduleSection";
 import { GrantAdminSection } from "./GrantAdminSection";
 import { ResetRulesAcknowledgementsSection } from "./ResetRulesAcknowledgementsSection";
 
 const REQUEST_TIMEOUT_MS = 20_000;
+
+type ScheduleError = { cause: unknown; scope: "scheduleLoad" | "scheduleSave" } | null;
+
+// eventScheduleService doesn't throw ApiError yet: map it so ErrorNotice can read status and code
+const toApiError = (cause: unknown) =>
+    cause instanceof EventScheduleError ? new ApiError(cause.status, cause.code ?? null) : cause;
 
 export function Settings() {
     const { getToken } = useAuth();
@@ -28,7 +36,7 @@ export function Settings() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-    const [errorKey, setErrorKey] = useState<"loadError" | "saveError" | "invalidRangeError" | null>(null);
+    const [error, setError] = useState<ScheduleError>(null);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -36,7 +44,7 @@ export function Settings() {
 
         async function load() {
             setLoading(true);
-            setErrorKey(null);
+            setError(null);
             try {
                 const signal = AbortSignal.any([
                     controller.signal,
@@ -49,8 +57,7 @@ export function Settings() {
                 }
             } catch (cause) {
                 if (!controller.signal.aborted) {
-                    console.error("Failed to load schedule:", cause);
-                    setErrorKey("loadError");
+                    setError({ cause: toApiError(cause), scope: "scheduleLoad" });
                 }
             } finally {
                 if (activeLoad.current === controller) {
@@ -74,7 +81,7 @@ export function Settings() {
         if (activeSave.current) return;
 
         setFeedbackMessage(null);
-        setErrorKey(null);
+        setError(null);
         setSaving(true);
 
         const controller = new AbortController();
@@ -87,7 +94,7 @@ export function Settings() {
             ]);
             const token = await getToken();
             signal.throwIfAborted();
-            if (!token) throw new Error("Missing authentication token");
+            if (!token) throw ApiError.unauthorized();
 
             const updated = await saveEventSchedule(nextSchedule, token, signal);
             if (!controller.signal.aborted) {
@@ -96,12 +103,7 @@ export function Settings() {
             }
         } catch (cause) {
             if (!controller.signal.aborted) {
-                console.error("Failed to save schedule:", cause);
-                if (cause instanceof EventScheduleError && cause.code === 2401) {
-                    setErrorKey("invalidRangeError");
-                } else {
-                    setErrorKey("saveError");
-                }
+                setError({ cause: toApiError(cause), scope: "scheduleSave" });
             }
         } finally {
             if (activeSave.current === controller) {
@@ -115,14 +117,7 @@ export function Settings() {
 
     return (
         <div className="space-y-6">
-            {errorKey && (
-                <div
-                    role="alert"
-                    className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-300"
-                >
-                    {t[errorKey]}
-                </div>
-            )}
+            <ErrorNotice error={error?.cause} scope={error?.scope} />
 
             {feedbackMessage && (
                 <div
@@ -140,7 +135,7 @@ export function Settings() {
                 onSave={handleSaveSchedule}
                 onInputEdit={() => {
                     setFeedbackMessage(null);
-                    setErrorKey(null);
+                    setError(null);
                 }}
             />
             <GrantAdminSection />
