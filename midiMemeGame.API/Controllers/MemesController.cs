@@ -33,18 +33,7 @@ namespace MidiMemeGame.Api.Controllers
             var result = await _memeService.CreateAsync(clerkId, request, cancellationToken);
 
             if (result.IsError)
-            {
-                var error = ErrorResponse.Create(result.Error);
-                return result.Error switch
-                {
-                    ErrorType.NOT_FOUND => NotFound(error),
-                    ErrorType.USER_ACCESS_DENIED => StatusCode(StatusCodes.Status403Forbidden, error),
-                    ErrorType.MEME_LIMIT_REACHED or ErrorType.MEME_SOURCE_PHOTO_DISABLED
-                        or ErrorType.MEME_SUBMISSIONS_NOT_OPEN or ErrorType.MEME_SUBMISSIONS_CLOSED
-                        => Conflict(error),
-                    _ => StatusCode(StatusCodes.Status500InternalServerError, error)
-                };
-            }
+                return MapMemeMutationError(result.Error);
 
             if (!result.TryGetResult(out var meme))
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
@@ -75,13 +64,11 @@ namespace MidiMemeGame.Api.Controllers
 
             var result = await _memeService.UpdateAsync(id, clerkId, request.Caption, cancellationToken);
 
+            if (result.IsError)
+                return MapMemeMutationError(result.Error);
+
             if (!result.TryGetResult(out var meme))
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
-
-            if (result.IsError)
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    ErrorResponse.Create(result.Error));
 
             return Ok(new MemeResponseDto
             {
@@ -107,9 +94,7 @@ namespace MidiMemeGame.Api.Controllers
             var result = await _memeService.DeleteAsync(id, clerkId, cancellationToken);
 
             if (result.IsError)
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    ErrorResponse.Create(result.Error));
+                return MapMemeMutationError(result.Error);
 
             return Ok();
         }
@@ -135,6 +120,20 @@ namespace MidiMemeGame.Api.Controllers
                     ErrorResponse.Create(result.Error));
 
             return Ok(result.Value);
+        }
+
+        private IActionResult MapMemeMutationError(ErrorType errorType)
+        {
+            var error = ErrorResponse.Create(errorType);
+            return errorType switch
+            {
+                ErrorType.NOT_FOUND => NotFound(error),
+                ErrorType.USER_ACCESS_DENIED => StatusCode(StatusCodes.Status403Forbidden, error),
+                ErrorType.MEME_LIMIT_REACHED or ErrorType.MEME_SOURCE_PHOTO_DISABLED
+                    or ErrorType.MEME_SUBMISSIONS_NOT_OPEN or ErrorType.MEME_SUBMISSIONS_CLOSED
+                    => Conflict(error),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, error)
+            };
         }
     }
 }

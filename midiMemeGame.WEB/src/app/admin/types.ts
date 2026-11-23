@@ -1,6 +1,6 @@
 import { adminText } from "./pageText";
 
-export type Section = "overview" | "meme-approval" | "photos" | "settings";
+export type Section = "overview" | "meme-approval" | "photos" | "results" | "settings";
 export type AdminTranslations = (typeof adminText)["en"];
 
 export type SectionConfig = {
@@ -24,6 +24,11 @@ export const SECTIONS: readonly SectionConfig[] = [
         id: "photos",
         getTitle: (t) => t.photos,
         getDescription: (t) => t.photosDescription,
+    },
+    {
+        id: "results",
+        getTitle: (t) => t.results,
+        getDescription: (t) => t.resultsDescription,
     },
     {
         id: "settings",

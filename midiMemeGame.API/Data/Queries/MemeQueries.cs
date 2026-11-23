@@ -4,8 +4,10 @@ using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Dto.Memes;
+using MidiMemeGame.Api.Dto.Memes.Results;
 using MidiMemeGame.Api.Enums;
 using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Models.Memes;
 using MidiMemeGame.Api.Services;
 using MidiMemeGame.Api.Services.Interfaces;
 
@@ -15,18 +17,12 @@ public class MemeQueries
 {
     private readonly AppDbContext _db;
     private readonly ILogger<MemeQueries> _logger;
-    private readonly IEmailService _emailService;
-    private readonly PhotoFileService _photoFiles;
     public MemeQueries(
         AppDbContext db,
-        ILogger<MemeQueries> logger,
-        IEmailService emailService,
-        PhotoFileService photoFiles)
+        ILogger<MemeQueries> logger)
     {
         _logger = logger;
         _db = db;
-        _emailService = emailService;
-        _photoFiles = photoFiles;
     }
     public async Task<Result<Meme>> UpdateAsync(
         int memeId,
@@ -407,7 +403,7 @@ public class MemeQueries
             var result = await _db.Database.SqlQuery<ModerationDetails>(query)
                 .SingleOrDefaultAsync(cancellationToken);
 
-            if(result == null)
+            if (result == null)
                 return ErrorType.NOT_FOUND;
 
             return result;
@@ -422,6 +418,46 @@ public class MemeQueries
             _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
             return ErrorType.DB_EXCEPTION;
         }
+    }
+    public async Task<Result<List<ResultCandidateDto>>> GetResultCandidatesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            FormattableString query = $"""
+            SELECT
+                m."Id",
+                CAST(m."SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
+                m."Caption",
+                NULLIF(TRIM(u."FirstName" || ' ' || u."LastName"), '') AS "UserName",
+                m."StatusId",
+                m."Score",
+                m."CreatedAtUtc",
+                m."UpdatedAtUtc",
+                u."Email" AS "Email"
+            FROM "Memes" AS m
+            INNER JOIN "SourcePhotos" AS p
+                ON p."Id" = CAST(m."SourcePhotoId" AS INTEGER)
+            LEFT JOIN "Users" AS u
+                ON u."Id" = m."UserId"
+                AND u."IsDeleted" = 0
+            WHERE m."StatusId" = {(int)MemeStatus.Approved}
+                AND m."IsDeleted" = 0
+                AND m."IsInvalidatedBySourcePhoto" = 0
+                AND p."IsEnabled" = 1
+            ORDER BY m."Score" DESC, m."CreatedAtUtc" ASC, m."Id" ASC
+            """;
 
+            return await _db.Database.SqlQuery<ResultCandidateDto>(query).ToListAsync(cancellationToken);
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
     }
 }

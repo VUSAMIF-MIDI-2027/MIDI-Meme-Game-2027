@@ -1,6 +1,6 @@
 using MidiMemeGame.Api.Enums;
 
-namespace MidiMemeGame.Api.Models;
+namespace MidiMemeGame.Api.Models.Memes;
 
 public class Meme
 {

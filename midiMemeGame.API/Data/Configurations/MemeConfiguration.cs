@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Models.Memes;
 
 namespace MidiMemeGame.Api.Data.Configurations;
 
