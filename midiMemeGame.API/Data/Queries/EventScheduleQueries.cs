@@ -4,6 +4,7 @@ using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Models.Memes.Results;
 
 namespace MidiMemeGame.Api.Data.Queries;
 
@@ -92,12 +93,30 @@ public class EventScheduleQueries
 
         try
         {
+            await using var transaction =
+            await _db.Database.BeginTransactionAsync(cancellationToken);
+
             var schedules = await _db.EventSchedules
                 .FromSqlInterpolated(query)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
-            return schedules.Single();
+            var updatedSchedule = schedules.Single();
+
+            if (updatedSchedule.EventEndsAt > DateTimeOffset.UtcNow)
+            {
+                await _db.Set<PublishedMemeResult>()
+                    .Where(x => x.EventScheduleId == EventSchedule.SingletonId)
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                await _db.ResultPublications
+                    .Where(x => x.EventScheduleId == EventSchedule.SingletonId)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+
+            return updatedSchedule;
         }
         catch (SqliteException ex)
         {

@@ -49,6 +49,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<MemeModerationService>();
         services.AddScoped<MemeNotificationService>();
         services.AddScoped<VoteQueries>();
+        services.AddScoped<ResultPublicationService>();
+        services.AddScoped<ResultPublicationQueries>();
 
         return services;
     }

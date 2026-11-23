@@ -8,20 +8,20 @@ using MidiMemeGame.Api.Services;
 
 namespace MidiMemeGame.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/results")]
     [ApiController]
     [AllowAnonymous]
     public class ResultsController : ControllerBase
     {
         private readonly EventPhaseService _eventPhase;
-        private readonly MemeQueries _memeQueries;
+        private readonly ResultPublicationService _resultPublicationQueries;
 
         public ResultsController(
             EventPhaseService eventPhase,
-            MemeQueries memeQueries)
+            ResultPublicationService resultPublicationService)
         {
             _eventPhase = eventPhase;
-            _memeQueries = memeQueries;
+            _resultPublicationQueries = resultPublicationService;
         }
 
         [HttpGet]
@@ -29,25 +29,24 @@ namespace MidiMemeGame.Api.Controllers
         {
             var phase = await _eventPhase.EnsureEventEndedAsync(cancellationToken);
 
-            if (phase.Error == ErrorType.RESULTS_NOT_AVAILABLE)
-                return Conflict(ErrorResponse.Create(phase.Error));
-
             if (phase.Error == ErrorType.EVENT_SCHEDULE_NOT_FOUND)
                 return NotFound(ErrorResponse.Create(phase.Error));
 
+            if (phase.Error == ErrorType.RESULTS_NOT_AVAILABLE)
+                return Conflict(ErrorResponse.Create(phase.Error));
+
             if (phase.IsError)
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    ErrorResponse.Create(phase.Error));
+                return StatusCode(500, ErrorResponse.Create(phase.Error));
+            
+            var result = await _resultPublicationQueries.GetPublicAsync(cancellationToken);
 
-            var result = await _memeQueries.GetResultsAsync(cancellationToken);
+            if (result.IsSuccess)
+                return Ok(result.Value);
 
-            if (result.IsError)
-                return StatusCode(
-                    StatusCodes.Status500InternalServerError,
-                    ErrorResponse.Create(result.Error));
+            if (result.Error != ErrorType.RESULTS_NOT_PUBLISHED)
+                return StatusCode(500, ErrorResponse.Create(result.Error));
 
-            return Ok(result.Value);
+            return Conflict(ErrorResponse.Create(ErrorType.RESULTS_NOT_PUBLISHED));
         }
     }
 }

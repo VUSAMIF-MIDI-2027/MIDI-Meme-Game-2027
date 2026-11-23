@@ -4,6 +4,7 @@ using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Dto.Memes;
+using MidiMemeGame.Api.Dto.Memes.Results;
 using MidiMemeGame.Api.Enums;
 using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Models.Memes;
@@ -418,7 +419,7 @@ public class MemeQueries
             return ErrorType.DB_EXCEPTION;
         }
     }
-    public async Task<Result<List<MemeResponseDto>>> GetResultsAsync(CancellationToken cancellationToken)
+    public async Task<Result<List<ResultCandidateDto>>> GetResultCandidatesAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -432,7 +433,7 @@ public class MemeQueries
                 m."Score",
                 m."CreatedAtUtc",
                 m."UpdatedAtUtc",
-                m."IsInvalidatedBySourcePhoto"
+                u."Email" AS "Email"
             FROM "Memes" AS m
             INNER JOIN "SourcePhotos" AS p
                 ON p."Id" = CAST(m."SourcePhotoId" AS INTEGER)
@@ -446,8 +447,7 @@ public class MemeQueries
             ORDER BY m."Score" DESC, m."CreatedAtUtc" ASC, m."Id" ASC
             """;
 
-            return await _db.Database.SqlQuery<MemeResponseDto>(query)
-                .ToListAsync(cancellationToken);
+            return await _db.Database.SqlQuery<ResultCandidateDto>(query).ToListAsync(cancellationToken);
         }
         catch (SqliteException ex)
         {
