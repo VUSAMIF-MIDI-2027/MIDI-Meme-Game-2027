@@ -1,60 +1,38 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { ImageUp, Loader2, Upload } from "lucide-react";
 import { useAuth } from "@clerk/react";
 import { errorMessage, UPLOAD_LIMITS } from "@/lib/admin/api";
-import { useLanguage } from "@/context/LanguageContext";
-import { photosText } from "./photosText";
 import {
-    getAdminPhotos,
+    readStoredPhotos,
+    syncAdminPhotosToStorage,
+    writeStoredPhotos,
+} from "@/lib/admin/photoStorage";
+import { useLanguage } from "@/context/LanguageContext";
+import {
     AdminUserError,
     uploadAdminPhoto,
     patchAdminPhoto,
     type AdminPhoto,
 } from "@/services/adminService";
-import PhotoCard from "./PhotoCard";
+import { PhotoGridSection } from "./PhotoGridSection";
+import { PhotoUploadSection } from "./PhotoUploadSection";
+import { photosText } from "./photosText";
 
 type NoticeState = { type: "success" | "error"; text: string } | null;
-
-const PHOTOS_STORAGE_KEY = "admin_photos";
-
-function readStoredPhotos(): AdminPhoto[] {
-    try {
-        const raw = localStorage.getItem(PHOTOS_STORAGE_KEY);
-        if (!raw) return [];
-        const parsed: unknown = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
-        return parsed.filter(
-            (item): item is AdminPhoto =>
-                typeof item === "object" &&
-                item !== null &&
-                typeof (item as AdminPhoto).id === "number" &&
-                typeof (item as AdminPhoto).isEnabled === "boolean"
-        );
-    } catch {
-        return [];
-    }
-}
-
-function writeStoredPhotos(photos: AdminPhoto[]): void {
-    localStorage.setItem(PHOTOS_STORAGE_KEY, JSON.stringify(photos));
-}
 
 export function Photos() {
     const { getToken } = useAuth();
     const { lang } = useLanguage();
     const t = photosText[lang];
-    const request = useRef<AbortController | null>(null);
-    const input = useRef<HTMLInputElement>(null);
-    const previewUrl = useRef<string | null>(null);
+
+    const requestRef = useRef<AbortController | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const previewUrlRef = useRef<string | null>(null);
 
     const [photos, setPhotos] = useState<AdminPhoto[]>(() => readStoredPhotos());
-    const [loading, setLoading] = useState<boolean>(true);
-
+    const [loading, setLoading] = useState(true);
     const [selection, setSelection] = useState<{ file: File; preview: string } | null>(null);
-    const { file, preview } = selection ?? { file: null, preview: null };
     const [progress, setProgress] = useState<number | null>(null);
     const [notice, setNotice] = useState<NoticeState>(null);
 
@@ -62,13 +40,13 @@ export function Photos() {
 
     useEffect(() => {
         return () => {
-            if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+            if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
         };
     }, []);
 
     useEffect(() => {
         const controller = new AbortController();
-        request.current = controller;
+        requestRef.current = controller;
 
         async function loadPhotos() {
             setLoading(true);
@@ -81,18 +59,17 @@ export function Photos() {
                 signal.throwIfAborted();
                 if (!token) throw new AdminUserError(401);
 
-                const fetched = await getAdminPhotos(token, signal);
+                const fetched = await syncAdminPhotosToStorage(token, signal);
                 if (!controller.signal.aborted) {
-                    writeStoredPhotos(fetched);
                     setPhotos(fetched);
                 }
             } catch (cause) {
                 if (!controller.signal.aborted) {
-                    console.error("Failed to load photos:", cause);
+                    setNotice({ type: "error", text: errorMessage(cause) });
                 }
             } finally {
-                if (request.current === controller) {
-                    request.current = null;
+                if (requestRef.current === controller) {
+                    requestRef.current = null;
                 }
                 if (!controller.signal.aborted) {
                     setLoading(false);
@@ -102,34 +79,40 @@ export function Photos() {
 
         void loadPhotos();
 
-        return () => {
-            controller.abort();
-        };
+        return () => controller.abort();
     }, [getToken]);
 
-    function pick(f: File | null) {
+    function handlePick(nextFile: File | null) {
         setNotice(null);
-        if (f && !UPLOAD_LIMITS.types.includes(f.type)) {
+
+        let validated: File | null = nextFile;
+        if (validated && !UPLOAD_LIMITS.types.includes(validated.type)) {
             setNotice({ type: "error", text: t.badType });
-            f = null;
-        } else if (f && f.size > UPLOAD_LIMITS.maxBytes) {
+            validated = null;
+        } else if (validated && validated.size > UPLOAD_LIMITS.maxBytes) {
             setNotice({ type: "error", text: t.tooBig });
-            f = null;
+            validated = null;
         }
-        if (!f && input.current) {
-            input.current.value = "";
+
+        if (!validated && inputRef.current) {
+            inputRef.current.value = "";
         }
-        if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
-        const nextSelection = f ? { file: f, preview: URL.createObjectURL(f) } : null;
-        previewUrl.current = nextSelection?.preview ?? null;
+        if (previewUrlRef.current) {
+            URL.revokeObjectURL(previewUrlRef.current);
+        }
+
+        const nextSelection = validated
+            ? { file: validated, preview: URL.createObjectURL(validated) }
+            : null;
+        previewUrlRef.current = nextSelection?.preview ?? null;
         setSelection(nextSelection);
     }
 
-    async function upload() {
-        if (!file || uploading) return;
+    async function handleUpload() {
+        if (!selection?.file || uploading) return;
 
         const controller = new AbortController();
-        request.current = controller;
+        requestRef.current = controller;
         setProgress(0);
         setNotice(null);
 
@@ -143,7 +126,7 @@ export function Photos() {
             if (!token) throw new AdminUserError(401);
 
             const created = await uploadAdminPhoto(
-                file,
+                selection.file,
                 token,
                 (pct) => {
                     if (!controller.signal.aborted) setProgress(pct);
@@ -164,15 +147,16 @@ export function Photos() {
                     return next;
                 });
                 setNotice({ type: "success", text: t.uploadSuccess });
-                pick(null);
+                handlePick(null);
             }
         } catch (cause) {
             if (!controller.signal.aborted) {
+                console.error("Failed to upload photo:", cause);
                 setNotice({ type: "error", text: errorMessage(cause) });
             }
         } finally {
-            if (request.current === controller) {
-                request.current = null;
+            if (requestRef.current === controller) {
+                requestRef.current = null;
             }
             if (!controller.signal.aborted) {
                 setProgress(null);
@@ -200,6 +184,7 @@ export function Photos() {
                 return next;
             });
         } catch (cause) {
+            console.error(`Failed to toggle photo ${photoId}:`, cause);
             setNotice({ type: "error", text: errorMessage(cause) });
             throw cause;
         }
@@ -210,89 +195,16 @@ export function Photos() {
 
     return (
         <div className="space-y-8">
-            <section className="grid gap-6 rounded-xl border-2 border-dashed border-white/20 bg-[#0d1013] p-5 sm:grid-cols-[200px_minmax(0,1fr)] sm:p-6">
-                <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg bg-white/5 text-white/40">
-                    {preview ? (
-                        <Image
-                            src={preview}
-                            alt={t.previewAlt}
-                            fill
-                            unoptimized
-                            loading="eager"
-                            sizes="(min-width: 640px) 200px, 100vw"
-                            className="object-contain"
-                        />
-                    ) : (
-                        <ImageUp className="size-8" aria-hidden="true" />
-                    )}
-                </div>
-
-                <div className="space-y-4">
-                    <div>
-                        <h2 className="text-xl font-bold">{t.uploadTitle}</h2>
-                        <p className="mt-1 text-sm text-white/55">
-                            {t.formats(
-                                UPLOAD_LIMITS.labels,
-                                UPLOAD_LIMITS.maxBytes / 1024 / 1024
-                            )}
-                        </p>
-                    </div>
-
-                    <input
-                        ref={input}
-                        type="file"
-                        accept={UPLOAD_LIMITS.types.join(",")}
-                        disabled={uploading}
-                        onChange={(e) => pick(e.target.files?.[0] ?? null)}
-                        aria-label={t.chooseLabel}
-                        className="block w-full rounded-lg border border-white/15 bg-[#0b0f12] p-2 text-sm text-white/70 file:mr-4 file:min-h-10 file:cursor-pointer file:rounded-md file:border-0 file:bg-white/15 file:px-4 file:font-semibold file:text-white"
-                    />
-
-                    {uploading && (
-                        <div
-                            role="progressbar"
-                            aria-valuenow={progress ?? 0}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-label={t.uploading}
-                            className="h-2 overflow-hidden rounded-full bg-white/10"
-                        >
-                            <div
-                                className="h-full bg-midi-blue transition-[width]"
-                                style={{ width: `${progress}%` }}
-                            />
-                        </div>
-                    )}
-
-                    <button
-                        type="button"
-                        onClick={upload}
-                        disabled={!file || uploading}
-                        aria-busy={uploading}
-                        className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg bg-midi-blue px-5 text-sm font-semibold text-white transition-colors hover:bg-midi-blue/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        {uploading ? (
-                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                        ) : (
-                            <Upload className="size-4" aria-hidden="true" />
-                        )}
-                        {uploading ? `${t.uploading} ${progress}%` : t.uploadButton}
-                    </button>
-
-                    {notice && (
-                        <p
-                            role={notice.type === "success" ? "status" : "alert"}
-                            className={`rounded-lg border px-4 py-3 text-sm ${
-                                notice.type === "success"
-                                    ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                                    : "border-red-400/30 bg-red-400/10 text-red-200"
-                            }`}
-                        >
-                            {notice.text}
-                        </p>
-                    )}
-                </div>
-            </section>
+            <PhotoUploadSection
+                t={t}
+                inputRef={inputRef}
+                file={selection?.file ?? null}
+                preview={selection?.preview ?? null}
+                progress={progress}
+                notice={notice}
+                onPick={handlePick}
+                onUpload={() => void handleUpload()}
+            />
 
             {loading && photos.length === 0 ? (
                 <p className="text-white/55">{t.loadingPhotos}</p>
@@ -300,61 +212,23 @@ export function Photos() {
                 <p className="text-white/55">{t.emptyAll}</p>
             ) : (
                 <div className="space-y-8">
-                    <section className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-white">{t.enabledHeading}</h2>
-                            <span className="rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400">
-                                {enabledPhotos.length}
-                            </span>
-                        </div>
+                    <PhotoGridSection
+                        heading={t.enabledHeading}
+                        emptyText={t.noEnabledPhotos}
+                        photos={enabledPhotos}
+                        variant="enabled"
+                        getToken={getToken}
+                        onToggleEnabled={handleToggleEnabled}
+                    />
 
-                        {enabledPhotos.length === 0 ? (
-                            <p className="text-sm text-white/55">{t.noEnabledPhotos}</p>
-                        ) : (
-                            <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                                {enabledPhotos.map((photo) => (
-                                    <li
-                                        key={photo.id}
-                                        className="overflow-hidden rounded-xl border border-white/10 bg-[#11161a]"
-                                    >
-                                        <PhotoCard
-                                            photo={photo}
-                                            getToken={getToken}
-                                            onToggleEnabled={handleToggleEnabled}
-                                        />
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </section>
-
-                    <section className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-white">{t.disabledHeading}</h2>
-                            <span className="rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-300">
-                                {disabledPhotos.length}
-                            </span>
-                        </div>
-
-                        {disabledPhotos.length === 0 ? (
-                            <p className="text-sm text-white/55">{t.noDisabledPhotos}</p>
-                        ) : (
-                            <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                                {disabledPhotos.map((photo) => (
-                                    <li
-                                        key={photo.id}
-                                        className="overflow-hidden rounded-xl border border-white/10 bg-[#11161a]"
-                                    >
-                                        <PhotoCard
-                                            photo={photo}
-                                            getToken={getToken}
-                                            onToggleEnabled={handleToggleEnabled}
-                                        />
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </section>
+                    <PhotoGridSection
+                        heading={t.disabledHeading}
+                        emptyText={t.noDisabledPhotos}
+                        photos={disabledPhotos}
+                        variant="disabled"
+                        getToken={getToken}
+                        onToggleEnabled={handleToggleEnabled}
+                    />
                 </div>
             )}
         </div>

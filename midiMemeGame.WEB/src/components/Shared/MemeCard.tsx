@@ -15,7 +15,7 @@ export type MemeCardButton = {
 };
 
 type MemeCardProps = {
-  image: StaticImageData;
+  image: string | StaticImageData; // URL or static data
   imageAlt: string;
   caption: string;
   selected?: boolean;
@@ -51,6 +51,7 @@ export default function MemeCard({
             src={image}
             alt={imageAlt}
             fill
+            unoptimized={typeof image === "string"}
             loading="eager"
             sizes="(min-width: 1024px) 360px, (min-width: 480px) 440px, 90vw"
             className="object-cover"

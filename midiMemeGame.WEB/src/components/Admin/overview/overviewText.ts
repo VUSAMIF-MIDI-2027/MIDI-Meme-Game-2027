@@ -14,6 +14,7 @@ type OverviewText = {
     loadingMemes: string;
     noMemes: string;
     votes: string;
+    viewAll: string
 };
 
 export const overviewText: Record<Lang, OverviewText> = {
@@ -31,6 +32,7 @@ export const overviewText: Record<Lang, OverviewText> = {
         loadingMemes: "Kraunami populiariausi memai...",
         noMemes: "Nėra memų, kuriuos būtų galima parodyti.",
         votes: "balsų",
+        viewAll: "Visi memai"
     },
     en: {
         title: "Competition overview",
@@ -46,5 +48,6 @@ export const overviewText: Record<Lang, OverviewText> = {
         loadingMemes: "Loading top memes...",
         noMemes: "No memes to display.",
         votes: "votes",
+        viewAll: "View all memes"
     },
 };

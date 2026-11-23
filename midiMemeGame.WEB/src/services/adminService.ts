@@ -130,3 +130,85 @@ export async function patchAdminPhoto(
     }
     return { id: photoId, isEnabled };
 }
+
+/******************************************************************************/
+// MEMES
+/******************************************************************************/
+
+export const MEME_STATUS = {
+    pending: 1,
+    rejected: 2,
+    approved: 3,
+} as const;
+
+export type MemeStatusId = (typeof MEME_STATUS)[keyof typeof MEME_STATUS];
+
+export interface AdminMeme {
+    id: number;
+    sourcePhotoId: number;
+    caption: string;
+    statusId: MemeStatusId;
+    score: number;
+    createdAtUtc: string;
+    updatedAtUtc: string;
+    isInvalidatedBySourcePhoto: boolean;
+}
+
+export async function getAdminMemes(
+    token: string,
+    signal?: AbortSignal,
+    statusId?: MemeStatusId
+): Promise<AdminMeme[]> {
+    const query = statusId ? `?${new URLSearchParams({ statusId: String(statusId) })}` : "";
+    const response = await fetch(`${apiBaseUrl}/api/admin/memes${query}`, {
+        method: "GET",
+        headers: { Authorization: "Bearer " + token },
+        signal,
+        cache: "no-store",
+    });
+
+    if (!response.ok) {
+        throw new AdminUserError(response.status);
+    }
+
+    const memes: AdminMeme[] = await response.json();
+    return memes;
+}
+
+export async function patchAdminMemeStatus(
+    memeId: number,
+    statusId: MemeStatusId,
+    token: string,
+    signal?: AbortSignal
+): Promise<AdminMeme> {
+    const params = new URLSearchParams({ statusId: String(statusId) });
+    const response = await fetch(
+        `${apiBaseUrl}/api/admin/memes/${memeId}/status?${params.toString()}`,
+        {
+            method: "PATCH",
+            headers: { Authorization: "Bearer " + token },
+            signal,
+            cache: "no-store",
+        }
+    );
+
+    if (!response.ok) {
+        throw new AdminUserError(response.status);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+        return response.json();
+    }
+
+    return {
+        id: memeId,
+        sourcePhotoId: 0,
+        caption: "",
+        statusId,
+        score: 0,
+        createdAtUtc: "",
+        updatedAtUtc: new Date().toISOString(),
+        isInvalidatedBySourcePhoto: false,
+    };
+}

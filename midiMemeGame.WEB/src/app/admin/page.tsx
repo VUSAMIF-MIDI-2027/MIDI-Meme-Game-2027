@@ -10,15 +10,15 @@ import { adminText } from "./pageText";
 import { parseSection, SECTIONS, type Section } from "./types";
 import { AdminSidebar } from "@/components/Admin/AdminSidebar";
 import { AdminHeader } from "@/components/Admin/AdminHeader";
-import { Overview } from "@/components/Admin/Overview";
-import { MemeApproval } from "@/components/Admin/MemeApproval";
+import { Overview } from "@/components/Admin/overview/Overview";
+import { MemeApproval } from "@/components/Admin/memeApproval/MemeApproval";
 import { Photos } from "@/components/Admin/photos/Photos";
 import { Settings } from "@/components/Admin/settings/Settings";
 
 function renderSectionContent(section: Section, navigateToSection: (next: Section) => void) {
     switch (section) {
         case "overview":
-            return <Overview onReview={() => navigateToSection("meme-approval")} />;
+            return <Overview />;
         case "meme-approval":
             return <MemeApproval />;
         case "photos":
