@@ -337,18 +337,20 @@ public class MemeQueries
 
             FormattableString query = $"""
                 SELECT
-                    "Id",
-                    CAST("SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
-                    "Caption",
-                    "StatusId",
-                    "IsInvalidatedBySourcePhoto",
-                    "Score",
-                    "CreatedAtUtc",
-                    "UpdatedAtUtc"
-                FROM "Memes"
-                WHERE "IsDeleted" = 0
-                    AND ({statusFilter} IS NULL OR "StatusId" = {statusFilter})
-                ORDER BY "CreatedAtUtc" DESC, "Id" DESC
+                    m."Id",
+                    CAST(m."SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
+                    m."Caption",
+                    m."StatusId",
+                    m."IsInvalidatedBySourcePhoto",
+                    m."Score",
+                    m."CreatedAtUtc",
+                    m."UpdatedAtUtc",
+                    NULLIF(TRIM(u."FirstName" || ' ' || u."LastName"), '') AS "UserName"
+                FROM "Memes" AS m
+                LEFT JOIN "Users" AS u ON u."Id" = m."UserId"
+                WHERE m."IsDeleted" = 0
+                    AND ({statusFilter} IS NULL OR m."StatusId" = {statusFilter})
+                ORDER BY m."CreatedAtUtc" DESC, m."Id" DESC
                 """;
 
             return await _db.Database
