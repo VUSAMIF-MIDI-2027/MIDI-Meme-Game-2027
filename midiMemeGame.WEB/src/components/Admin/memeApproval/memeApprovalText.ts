@@ -9,6 +9,7 @@ type MemeApprovalText = {
     statusRejected: string;
     photoIdLabel: string;
     submittedLabel: string;
+    authorLabel: string;
     invalidatedWarning: string;
     approve: string;
     approving: string;
@@ -31,6 +32,7 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         statusRejected: "Atmestas",
         photoIdLabel: "Nuotrauka #",
         submittedLabel: "Pateikta",
+        authorLabel: "Sukūrė",
         invalidatedWarning: "Šaltinio nuotrauka išjungta",
         approve: "Patvirtinti",
         approving: "Tvirtinama…",
@@ -51,6 +53,7 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         statusRejected: "Rejected",
         photoIdLabel: "Photo #",
         submittedLabel: "Submitted",
+        authorLabel: "Created by",
         invalidatedWarning: "Source photo disabled",
         approve: "Approve",
         approving: "Approving…",

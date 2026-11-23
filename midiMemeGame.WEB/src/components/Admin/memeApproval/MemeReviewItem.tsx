@@ -70,6 +70,12 @@ export function MemeReviewItem({
                             <dd className="font-bold text-white tabular-nums">
                                 {formatSubmittedDate(meme.createdAtUtc)}
                             </dd>
+                            {meme.userName?.trim() && (
+                                <>
+                                    <dt className="pt-2 font-medium text-white/60">{t.authorLabel}</dt>
+                                    <dd className="break-words font-bold text-white">{meme.userName}</dd>
+                                </>
+                            )}
                         </dl>
 
                         {meme.isInvalidatedBySourcePhoto && (

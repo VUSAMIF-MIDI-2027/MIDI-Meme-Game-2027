@@ -172,6 +172,7 @@ export type MemeStatusId = (typeof MEME_STATUS)[keyof typeof MEME_STATUS];
 export interface AdminMeme {
     id: number;
     sourcePhotoId: number;
+    userName?: string | null;
     caption: string;
     statusId: MemeStatusId;
     score: number;
