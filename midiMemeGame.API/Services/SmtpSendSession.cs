@@ -7,9 +7,11 @@ using MailKit.Security;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
+using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services.Interfaces;
 using MimeKit;
+using MimeKit.Utils;
 
 namespace MidiMemeGame.Api.Services;
 
@@ -33,7 +35,8 @@ internal sealed class SmtpSendSession : IEmailSendSession
         string subject,
         string body,
         bool isHtml,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        EmailAttachment? attachment = null)
     {
         try
         {
@@ -55,8 +58,28 @@ internal sealed class SmtpSendSession : IEmailSendSession
                 builder.TextBody = WebUtility.HtmlDecode(Regex.Replace(body, "<[^>]+>", " ")).Trim();
             }
             else
-            {
                 builder.TextBody = body;
+
+            if (attachment != null)
+            {
+                var image = builder.LinkedResources.Add(
+                    attachment.FileName,
+                    attachment.Content,
+                    new MimeKit.ContentType("image", "jpeg"));
+
+                image.ContentId = MimeUtils.GenerateMessageId();
+
+                var html = builder.HtmlBody
+                    ?? "<p>" + WebUtility.HtmlEncode(body).ReplaceLineEndings("<br>") + "</p>";
+
+                builder.HtmlBody = html + $"""
+                    <p style="margin-top:16px;">
+                        <img src="cid:{image.ContentId}"
+                            alt="Patvirtintas memas"
+                            width="380"
+                            style="display:block;max-width:100%;height:auto;">
+                    </p>
+                    """;
             }
 
             message.Body = builder.ToMessageBody();

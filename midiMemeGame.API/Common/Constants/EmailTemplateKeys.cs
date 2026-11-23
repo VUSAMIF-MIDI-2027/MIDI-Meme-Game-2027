@@ -7,4 +7,5 @@ public static class EmailTemplateKeys
     public const string EventStarted = "EventStarted";
     public const string VotingOpened = "VotingOpened";
     public const string EventEnded = "EventEnded";
+    public const string MemeRejected = "MemeRejected";
 }

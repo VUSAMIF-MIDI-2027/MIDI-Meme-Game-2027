@@ -1,4 +1,5 @@
 using MidiMemeGame.Api.Common.Models;
+using MidiMemeGame.Api.Models;
 
 namespace MidiMemeGame.Api.Services.Interfaces;
 
@@ -25,5 +26,6 @@ public interface IEmailSendSession : IAsyncDisposable
         string subject,
         string body,
         bool isHtml,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        EmailAttachment? attachment = null);
 }

@@ -1,7 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
+using MidiMemeGame.Api.Common.Models;
+using MidiMemeGame.Api.Data;
 using MidiMemeGame.Api.Data.Queries;
+using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services.Interfaces;
 
@@ -65,6 +69,7 @@ public class EmailDeliveryWorker : BackgroundService
             return;
 
         using var scope = _scopeFactory.CreateScope();
+        var attachmentQueries = scope.ServiceProvider.GetRequiredService<EmailAttachmentQueries>();
         var deliveryQueries = scope.ServiceProvider.GetRequiredService<EmailDeliveryQueries>();
         var smtpSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
 
@@ -118,7 +123,7 @@ public class EmailDeliveryWorker : BackgroundService
 
             if (isQuotaExceeded)
                 _smtpResumeAtUtc = nextAttemptAt;
-            
+
             var batchIds = batch.Select(d => d.Id).ToList();
 
             var releaseResult = await deliveryQueries.ReleaseWithoutAttemptAsync(
@@ -152,14 +157,39 @@ public class EmailDeliveryWorker : BackgroundService
                 break;
             }
 
-            var sendResult = await smtpSession.SendAsync(
-                delivery.Id,
-                delivery.RecipientAddress,
-                toName: null,
-                delivery.Subject,
-                delivery.Body,
-                delivery.IsHtml,
-                cancellationToken);
+            EmailAttachment? attachment = null;
+            Result sendResult;
+
+            if (delivery.TemplateKey == EmailTemplateKeys.MemeApproved)
+            {
+                var attachmentResult = await attachmentQueries.GetByDeliveryIdAsync(delivery.Id, cancellationToken);
+
+                if (attachmentResult.IsError)
+                    sendResult = ErrorType.EMAIL_SMTP_TRANSIENT_FAILURE;
+                else
+                {
+                    attachmentResult.TryGetResult(out attachment);
+
+                    sendResult = await smtpSession.SendAsync(
+                        delivery.Id,
+                        delivery.RecipientAddress,
+                        toName: null,
+                        delivery.Subject,
+                        delivery.Body,
+                        delivery.IsHtml,
+                        cancellationToken,
+                        attachment);
+                }
+            }
+            else
+                sendResult = await smtpSession.SendAsync(
+                    delivery.Id,
+                    delivery.RecipientAddress,
+                    toName: null,
+                    delivery.Subject,
+                    delivery.Body,
+                    delivery.IsHtml,
+                    cancellationToken);
 
             var attemptedAt = DateTime.UtcNow;
 
