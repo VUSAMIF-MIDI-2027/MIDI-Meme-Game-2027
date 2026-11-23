@@ -6,7 +6,7 @@ using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Memes;
-using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Models.Memes;
 
 namespace MidiMemeGame.Api.Services;
 

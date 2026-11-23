@@ -164,7 +164,7 @@ namespace MidiMemeGame.Api.Migrations
                         });
                 });
 
-            modelBuilder.Entity("MidiMemeGame.Api.Models.Meme", b =>
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.Meme", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -209,6 +209,24 @@ namespace MidiMemeGame.Api.Migrations
                     b.HasIndex("SourcePhotoId", "StatusId", "IsDeleted");
 
                     b.ToTable("Memes", (string)null);
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.MemeVote", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MemeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "MemeId");
+
+                    b.HasIndex("MemeId");
+
+                    b.ToTable("MemeVotes", (string)null);
                 });
 
             modelBuilder.Entity("MidiMemeGame.Api.Models.SourcePhoto", b =>
@@ -291,6 +309,21 @@ namespace MidiMemeGame.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.MemeVote", b =>
+                {
+                    b.HasOne("MidiMemeGame.Api.Models.Memes.Meme", null)
+                        .WithMany()
+                        .HasForeignKey("MemeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MidiMemeGame.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

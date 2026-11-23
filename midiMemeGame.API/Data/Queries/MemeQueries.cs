@@ -6,6 +6,7 @@ using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Dto.Memes;
 using MidiMemeGame.Api.Enums;
 using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Models.Memes;
 using MidiMemeGame.Api.Services;
 using MidiMemeGame.Api.Services.Interfaces;
 

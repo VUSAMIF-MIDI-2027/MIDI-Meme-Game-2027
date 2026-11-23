@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Models.Memes;
 
 namespace MidiMemeGame.Api.Data;
 
@@ -16,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<EmailTemplate> EmailTemplates { get; set; }
     public DbSet<EmailDelivery> EmailDeliveries { get; set; }
     public DbSet<EmailMilestoneProgress> EmailMilestoneProgress { get; set; }
+    public DbSet<MemeVote> MemeVotes { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

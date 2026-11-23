@@ -41,4 +41,22 @@ public class EventPhaseService
 
         return Result.Ok();
     }
+    public async Task<Result> EnsureVotingOpenAsync(
+    CancellationToken cancellationToken)
+    {
+        var schedule = await _scheduleQueries.GetAsync(cancellationToken);
+
+        if (schedule.IsError)
+            return schedule.Error;
+
+        var now = DateTimeOffset.UtcNow;
+
+        if (now < schedule.Value.VotingStartsAt)
+            return ErrorType.VOTING_NOT_OPEN;
+
+        if (now >= schedule.Value.EventEndsAt)
+            return ErrorType.VOTING_CLOSED;
+
+        return Result.Ok();
+    }
 }
