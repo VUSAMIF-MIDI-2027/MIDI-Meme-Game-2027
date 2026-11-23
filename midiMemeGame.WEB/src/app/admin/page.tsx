@@ -15,6 +15,8 @@ import { MemeApproval } from "@/components/Admin/memeApproval/MemeApproval";
 import { Photos } from "@/components/Admin/photos/Photos";
 import { Settings } from "@/components/Admin/settings/Settings";
 
+import { AdminResults } from "@/components/Admin/results/AdminResults";
+
 function renderSectionContent(section: Section) {
     switch (section) {
         case "overview":
@@ -23,6 +25,8 @@ function renderSectionContent(section: Section) {
             return <MemeApproval />;
         case "photos":
             return <Photos />;
+        case "results":
+            return <AdminResults />;
         case "settings":
             return <Settings />;
     }

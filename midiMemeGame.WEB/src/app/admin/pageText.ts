@@ -10,6 +10,8 @@ type AdminPageText = {
     memeReview: string;
     team: string;
     rules: string;
+    results: string;
+    resultsDescription: string;
     settings: string;
     overviewDescription: string;
     photosDescription: string;
@@ -32,6 +34,8 @@ export const adminText: Record<Lang, AdminPageText> = {
         memeReview: "Memų moderacija",
         team: "Administratoriai",
         rules: "Taisyklės",
+        results: "Rezultatai",
+        resultsDescription: "Peržiūrėkite prizines vietas ir paskelbkite konkurso rezultatus.",
         settings: "Nustatymai",
         overviewDescription: "Peržiūrėk pagrindinę renginio statistiką ir top memus.",
         photosDescription: "Įkelk ir peržiūrėk konkurso nuotraukas.",
@@ -52,6 +56,8 @@ export const adminText: Record<Lang, AdminPageText> = {
         memeReview: "Meme moderation",
         team: "Administrators",
         rules: "Rules",
+        results: "Results",
+        resultsDescription: "Review the podium and publish the contest results.",
         settings: "Settings",
         overviewDescription: "Take a look at meme statistics and top memes.",
         photosDescription: "Upload and view competition photos.",

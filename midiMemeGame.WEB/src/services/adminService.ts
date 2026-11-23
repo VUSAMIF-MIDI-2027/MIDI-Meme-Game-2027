@@ -223,3 +223,45 @@ export async function patchAdminMemeStatus(
         isInvalidatedBySourcePhoto: false,
     };
 }
+export type ResultCandidate = {
+    id: number;
+    sourcePhotoId: number;
+    caption: string;
+    userName: string | null;
+    score: number;
+    email: string | null;
+};
+
+export type AdminResultReview = {
+    published: boolean;
+    publishedAtUtc: string | null;
+    candidates: ResultCandidate[];
+    winners: (ResultCandidate & { place: number })[];
+};
+
+export async function getResultReview(token: string, signal?: AbortSignal) {
+    const response = await send(`${apiBaseUrl}/api/admin/results`, {
+        headers: authHeaders(token), cache: "no-store", signal,
+    });
+    return readJson<AdminResultReview>(response);
+}
+
+export async function publishPodium(token: string, podiumMemeIds: number[]) {
+    await send(`${apiBaseUrl}/api/admin/results/publish`, {
+        method: "POST",
+        headers: { ...authHeaders(token), "Content-Type": "application/json" },
+        body: JSON.stringify({ podiumMemeIds }),
+    });
+}
+
+export async function unpublishResults(
+    token: string,
+    signal?: AbortSignal
+): Promise<void> {
+    await send(`${apiBaseUrl}/api/admin/results/publication`, {
+        method: "DELETE",
+        headers: authHeaders(token),
+        signal,
+        cache: "no-store",
+    });
+}
