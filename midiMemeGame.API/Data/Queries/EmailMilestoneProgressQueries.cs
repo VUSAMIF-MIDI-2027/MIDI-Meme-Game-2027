@@ -22,6 +22,8 @@ public class EmailMilestoneProgressQueries
     public async Task<Result<bool>> IsCompletedAsync(
         string eventId,
         string milestone,
+        string occurrenceKey,
+        DateTime scheduledAtUtc,
         CancellationToken ct)
     {
         try
@@ -29,7 +31,11 @@ public class EmailMilestoneProgressQueries
             FormattableString query = $"""
                 SELECT 1 AS "Value"
                 FROM "EmailMilestoneProgress"
-                WHERE "EventId" = {eventId} AND "Milestone" = {milestone}
+                WHERE "EventId" = {eventId}
+                    AND (
+                        "Milestone" = {occurrenceKey}
+                        OR ("Milestone" = {milestone} AND "QueuedAtUtc" >= {scheduledAtUtc})
+                    )
                 LIMIT 1
                 """;
 

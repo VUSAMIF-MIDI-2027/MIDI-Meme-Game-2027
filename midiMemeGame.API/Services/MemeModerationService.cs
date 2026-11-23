@@ -5,9 +5,6 @@ using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Enums;
-using MidiMemeGame.Api.Helpers;
-using MidiMemeGame.Api.Models;
-using MidiMemeGame.Api.Services.Interfaces;
 
 namespace MidiMemeGame.Api.Services;
 
@@ -15,24 +12,18 @@ public class MemeModerationService
 {
     private readonly AppDbContext _db;
     private readonly MemeQueries _memeQueries;
-    private readonly IEmailService _emailService;
-    private readonly PhotoFileService _photoFiles;
+    private readonly MemeNotificationService _notifications;
     private readonly ILogger<MemeModerationService> _logger;
-    private readonly EmailAttachmentQueries _attachmentQueries;
     public MemeModerationService(
         AppDbContext db,
         MemeQueries memeQueries,
-        IEmailService emailService,
-        PhotoFileService photoFiles,
-        ILogger<MemeModerationService> logger,
-        EmailAttachmentQueries attachmentQueries)
+        MemeNotificationService notifications,
+        ILogger<MemeModerationService> logger)
     {
         _db = db;
         _memeQueries = memeQueries;
-        _emailService = emailService;
-        _photoFiles = photoFiles;
+        _notifications = notifications;
         _logger = logger;
-        _attachmentQueries = attachmentQueries;
     }
     public async Task<Result> UpdateStatusAsync(
     int memeId,
@@ -61,7 +52,11 @@ public class MemeModerationService
             var statusChanged = meme.StatusId != (int)status;
             if (statusChanged && status is MemeStatus.Approved or MemeStatus.Rejected)
             {
-                var notification = await EnqueueNotificationAsync(memeId, meme, status, cancellationToken);
+                var templateKey = status == MemeStatus.Approved
+                    ? EmailTemplateKeys.MemeApproved
+                    : EmailTemplateKeys.MemeRejected;
+                var notification = await _notifications.EnqueueAsync(
+                    memeId, meme, templateKey, cancellationToken);
 
                 if (notification.IsError)
                     return notification.Error;
@@ -78,52 +73,5 @@ public class MemeModerationService
 
             return ErrorType.DB_EXCEPTION;
         }
-    }
-
-    private async Task<Result> EnqueueNotificationAsync(
-        int memeId,
-        ModerationDetails meme,
-        MemeStatus status,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(meme.Email))
-            return ErrorType.EMAIL_RECIPIENT_MISSING;
-
-        var templateKey = status == MemeStatus.Approved
-            ? EmailTemplateKeys.MemeApproved
-            : EmailTemplateKeys.MemeRejected;
-
-        var variables = new Dictionary<string, string>
-        {
-            ["recipientName"] = EmailTemplateHelper.BuildRecipientName(meme.FirstName),
-            ["memeTitle"] = meme.Caption
-        };
-
-        var delivery = await _emailService.EnqueueTemplatedAsync(
-            templateKey, meme.Email, variables,
-            deduplicationKey: null,
-            cancellationToken: cancellationToken);
-
-        if (delivery.IsError)
-            return delivery.Error;
-
-        if (status == MemeStatus.Rejected)
-            return Result.Ok();
-
-        if (string.IsNullOrWhiteSpace(meme.RelativeFilePath))
-            return ErrorType.NOT_FOUND;
-
-        var path = _photoFiles.ResolvePath(meme.RelativeFilePath);
-        if (path.IsError)
-            return path.Error;
-
-        var jpeg = MemePreviewRenderer.Render(path.Value, meme.Caption);
-        var fileName = $"memas-{memeId}.jpg";
-
-        return await _attachmentQueries.InsertAsync(
-            delivery.Value.Id,
-            $"memas-{memeId}.jpg",
-            jpeg,
-            cancellationToken);
     }
 }

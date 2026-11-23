@@ -160,7 +160,8 @@ public class EmailDeliveryWorker : BackgroundService
             EmailAttachment? attachment = null;
             Result sendResult;
 
-            if (delivery.TemplateKey == EmailTemplateKeys.MemeApproved)
+            if (delivery.TemplateKey is EmailTemplateKeys.MemeApproved
+                or EmailTemplateKeys.MemeRejected or EmailTemplateKeys.MemeSubmitted)
             {
                 var attachmentResult = await attachmentQueries.GetByDeliveryIdAsync(delivery.Id, cancellationToken);
 
@@ -178,7 +179,8 @@ public class EmailDeliveryWorker : BackgroundService
                         delivery.Body,
                         delivery.IsHtml,
                         cancellationToken,
-                        attachment);
+                        attachment,
+                        delivery.TemplateKey);
                 }
             }
             else
@@ -189,7 +191,8 @@ public class EmailDeliveryWorker : BackgroundService
                     delivery.Subject,
                     delivery.Body,
                     delivery.IsHtml,
-                    cancellationToken);
+                    cancellationToken,
+                    templateKey: delivery.TemplateKey);
 
             var attemptedAt = DateTime.UtcNow;
 

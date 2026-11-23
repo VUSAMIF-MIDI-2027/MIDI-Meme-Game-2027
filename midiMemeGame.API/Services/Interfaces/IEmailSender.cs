@@ -27,5 +27,6 @@ public interface IEmailSendSession : IAsyncDisposable
         string body,
         bool isHtml,
         CancellationToken cancellationToken,
-        EmailAttachment? attachment = null);
+        EmailAttachment? attachment = null,
+        string? templateKey = null);
 }

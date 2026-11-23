@@ -23,6 +23,8 @@
     <PackageReference Include="SkiaSharp" Version="4.157.0" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.157.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="11.0.1" />
+      <None Update="Assets/Email/Cats/*.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+      <None Update="Assets/Email/MIDI.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
       <None Update="Assets/Fonts/Dosis-SemiBold.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

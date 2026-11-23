@@ -116,6 +116,7 @@ public class MemeQueries
                     SELECT COUNT(*)
                     FROM "Memes"
                     WHERE "UserId" = {userId}
+                        AND "IsDeleted" = 0
                         AND "IsInvalidatedBySourcePhoto" = 0
                 ) < 3
                 RETURNING
@@ -272,7 +273,8 @@ public class MemeQueries
                     "IsInvalidatedBySourcePhoto",
                     "Score",
                     "CreatedAtUtc",
-                    "UpdatedAtUtc"
+                    "UpdatedAtUtc",
+                    NULL AS "UserName"
                 FROM "Memes"
                 WHERE "UserId" = {userId}
                     AND "IsDeleted" = 0

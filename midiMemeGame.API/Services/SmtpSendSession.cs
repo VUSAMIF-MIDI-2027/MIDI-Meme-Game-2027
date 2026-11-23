@@ -11,7 +11,6 @@ using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services.Interfaces;
 using MimeKit;
-using MimeKit.Utils;
 
 namespace MidiMemeGame.Api.Services;
 
@@ -36,7 +35,8 @@ internal sealed class SmtpSendSession : IEmailSendSession
         string body,
         bool isHtml,
         CancellationToken cancellationToken,
-        EmailAttachment? attachment = null)
+        EmailAttachment? attachment = null,
+        string? templateKey = null)
     {
         try
         {
@@ -60,26 +60,9 @@ internal sealed class SmtpSendSession : IEmailSendSession
             else
                 builder.TextBody = body;
 
-            if (attachment != null)
+            if (templateKey is not null)
             {
-                var image = builder.LinkedResources.Add(
-                    attachment.FileName,
-                    attachment.Content,
-                    new MimeKit.ContentType("image", "jpeg"));
-
-                image.ContentId = MimeUtils.GenerateMessageId();
-
-                var html = builder.HtmlBody
-                    ?? "<p>" + WebUtility.HtmlEncode(body).ReplaceLineEndings("<br>") + "</p>";
-
-                builder.HtmlBody = html + $"""
-                    <p style="margin-top:16px;">
-                        <img src="cid:{image.ContentId}"
-                            alt="Patvirtintas memas"
-                            width="380"
-                            style="display:block;max-width:100%;height:auto;">
-                    </p>
-                    """;
+                MidiEmailLayout.Apply(builder, subject, body, templateKey, attachment);
             }
 
             message.Body = builder.ToMessageBody();

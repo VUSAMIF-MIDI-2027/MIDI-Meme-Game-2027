@@ -47,6 +47,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EventPhaseService>();
         services.AddScoped<MemeService>();
         services.AddScoped<MemeModerationService>();
+        services.AddScoped<MemeNotificationService>();
 
         return services;
     }
