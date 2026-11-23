@@ -47,15 +47,17 @@ export default function MemeCard({
     >
       <figure className={`flex min-w-0 flex-1 flex-col ${sideMeta ? "sm:w-[70%] sm:flex-none" : ""}`}>
         <div className="relative aspect-[3/2]">
-          <Image
-            src={image}
-            alt={imageAlt}
-            fill
-            unoptimized={typeof image === "string"}
-            loading="eager"
-            sizes="(min-width: 1024px) 360px, (min-width: 480px) 440px, 90vw"
-            className="object-cover"
-          />
+          {image && (
+            <Image
+              src={image}
+              alt={imageAlt}
+              fill
+              unoptimized={typeof image === "string"}
+              loading="eager"
+              sizes="(min-width: 1024px) 360px, (min-width: 480px) 440px, 90vw"
+              className="object-cover"
+            />
+          )}
         </div>
         <figcaption className={`flex min-h-20 flex-1 items-center justify-center px-5 py-4 text-center text-base font-semibold leading-snug text-black ${sideMeta ? "bg-midi-gray" : "bg-white"}`}>
           {caption}

@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/react";
 import { ApiError } from "@/services/ApiError";
-import {
-    readStoredPhotos,
-    resolvePhotoUrlById,
-    syncAdminPhotosToStorage,
-} from "@/lib/admin/photoStorage";
+import { getPhotoBlob } from "@/services/userService";
 import {
     getAdminMemes,
     patchAdminMemeStatus,
@@ -18,7 +14,6 @@ type MemesError = { cause: unknown; scope: "memeList" | "review" } | null;
 export function useAdminMemes() {
     const { getToken } = useAuth();
     const requestRef = useRef<AbortController | null>(null);
-    const photoUrlsRef = useRef<Record<number, string>>({});
 
     const [memes, setMemes] = useState<AdminMeme[]>([]);
     const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
@@ -26,54 +21,14 @@ export function useAdminMemes() {
     const [busyMemeId, setBusyMemeId] = useState<number | null>(null);
     const [error, setError] = useState<MemesError>(null);
 
-    const hydratePhotoUrls = useCallback(
-        async (items: AdminMeme[], signal: AbortSignal) => {
-            const uniqueIds = Array.from(
-                new Set(items.map((m) => m.sourcePhotoId).filter((id) => id > 0))
-            );
-            if (uniqueIds.length === 0) return;
-
-            const storedIds = new Set(readStoredPhotos().map((p) => p.id));
-            if (uniqueIds.some((id) => !storedIds.has(id))) {
-                try {
-                    const token = await getToken();
-                    if (!signal.aborted && token) {
-                        await syncAdminPhotosToStorage(token, signal);
-                    }
-                } catch {
-                    // Fall back to individual lookups below
-                }
-            }
-
-            const entries = await Promise.all(
-                uniqueIds.map(async (photoId) => {
-                    const cached = photoUrlsRef.current[photoId];
-                    if (cached) return [photoId, cached] as const;
-                    const resolved = await resolvePhotoUrlById(photoId, getToken, signal);
-                    return [photoId, resolved] as const;
-                })
-            );
-
-            if (signal.aborted) return;
-
-            setPhotoUrls((prev) => {
-                const next = { ...prev };
-                for (const [photoId, url] of entries) {
-                    if (url) next[photoId] = url;
-                }
-                photoUrlsRef.current = next;
-                return next;
-            });
-        },
-        [getToken]
-    );
-
     useEffect(() => {
         const controller = new AbortController();
         requestRef.current = controller;
+        const objectUrls: string[] = [];
 
         async function fetchMemes() {
             setLoading(true);
+            setPhotoUrls({});
             setError(null);
             try {
                 const signal = AbortSignal.any([
@@ -87,7 +42,17 @@ export function useAdminMemes() {
                 const fetched = await getAdminMemes(token, signal);
                 if (!controller.signal.aborted) {
                     setMemes(fetched);
-                    void hydratePhotoUrls(fetched, signal);
+                    const photoIds = new Set(fetched.map((meme) => meme.sourcePhotoId));
+                    for (const id of photoIds) {
+                        void getPhotoBlob(id, token, signal).then((blob) => {
+                            if (signal.aborted) return;
+                            const url = URL.createObjectURL(blob);
+                            objectUrls.push(url);
+                            setPhotoUrls((prev) => ({ ...prev, [id]: url }));
+                        }).catch((error) => {
+                            if (!signal.aborted) console.error("Failed to load photo", id, error);
+                        });
+                    }
                 }
             } catch (cause) {
                 if (!controller.signal.aborted) {
@@ -105,8 +70,11 @@ export function useAdminMemes() {
 
         void fetchMemes();
 
-        return () => controller.abort();
-    }, [getToken, hydratePhotoUrls]);
+        return () => {
+            controller.abort();
+            objectUrls.forEach((url) => URL.revokeObjectURL(url));
+        };
+    }, [getToken]);
 
     const updateMemeStatus = useCallback(
         async (memeId: number, nextStatusId: MemeStatusId) => {
