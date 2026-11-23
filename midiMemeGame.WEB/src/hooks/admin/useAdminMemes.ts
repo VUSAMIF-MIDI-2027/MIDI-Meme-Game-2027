@@ -1,36 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/react";
-import { errorMessage } from "@/lib/admin/api";
+import { ApiError } from "@/services/ApiError";
 import {
     readStoredPhotos,
     resolvePhotoUrlById,
     syncAdminPhotosToStorage,
 } from "@/lib/admin/photoStorage";
 import {
-    AdminUserError,
     getAdminMemes,
     patchAdminMemeStatus,
     type AdminMeme,
     type MemeStatusId,
 } from "@/services/adminService";
 
-type UseAdminMemesMessages = {
-    loadError: string;
-    actionError: string;
-};
+type MemesError = { cause: unknown; scope: "memeList" | "review" } | null;
 
-export function useAdminMemes(messages: UseAdminMemesMessages) {
+export function useAdminMemes() {
     const { getToken } = useAuth();
     const requestRef = useRef<AbortController | null>(null);
     const photoUrlsRef = useRef<Record<number, string>>({});
-    const messagesRef = useRef(messages);
-    messagesRef.current = messages;
 
     const [memes, setMemes] = useState<AdminMeme[]>([]);
     const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
     const [loading, setLoading] = useState(true);
     const [busyMemeId, setBusyMemeId] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<MemesError>(null);
 
     const hydratePhotoUrls = useCallback(
         async (items: AdminMeme[], signal: AbortSignal) => {
@@ -88,7 +82,7 @@ export function useAdminMemes(messages: UseAdminMemesMessages) {
                 ]);
                 const token = await getToken();
                 signal.throwIfAborted();
-                if (!token) throw new AdminUserError(401);
+                if (!token) throw ApiError.unauthorized();
 
                 const fetched = await getAdminMemes(token, signal);
                 if (!controller.signal.aborted) {
@@ -97,8 +91,7 @@ export function useAdminMemes(messages: UseAdminMemesMessages) {
                 }
             } catch (cause) {
                 if (!controller.signal.aborted) {
-                    console.error("Failed to load memes:", cause);
-                    setError(messagesRef.current.loadError);
+                    setError({ cause, scope: "memeList" });
                 }
             } finally {
                 if (requestRef.current === controller) {
@@ -125,7 +118,7 @@ export function useAdminMemes(messages: UseAdminMemesMessages) {
                 const signal = AbortSignal.timeout(20_000);
                 const token = await getToken();
                 signal.throwIfAborted();
-                if (!token) throw new AdminUserError(401);
+                if (!token) throw ApiError.unauthorized();
 
                 const updated = await patchAdminMemeStatus(memeId, nextStatusId, token, signal);
 
@@ -141,8 +134,7 @@ export function useAdminMemes(messages: UseAdminMemesMessages) {
                     )
                 );
             } catch (cause) {
-                console.error("Failed to update meme status:", cause);
-                setError(errorMessage(cause) || messagesRef.current.actionError);
+                setError({ cause, scope: "review" });
             } finally {
                 setBusyMemeId(null);
             }

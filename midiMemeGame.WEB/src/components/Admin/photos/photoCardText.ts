@@ -1,7 +1,6 @@
 import type { Lang } from "@/context/LanguageContext";
 
 type PhotoCardText = {
-    failedToLoad: string;
     loadingPhoto: string;
     photoAlt: string;
     confirmEnable: string;
@@ -15,7 +14,6 @@ type PhotoCardText = {
 
 export const photoCardText: Record<Lang, PhotoCardText> = {
     lt: {
-        failedToLoad: "Nepavyko įkelti nuotraukos",
         loadingPhoto: "Kraunama nuotrauka...",
         photoAlt: "Nuotrauka",
         confirmEnable: "Padaryti nuotrauką matomą viešai?",
@@ -27,7 +25,6 @@ export const photoCardText: Record<Lang, PhotoCardText> = {
         disablePhoto: "Išjungti nuotrauką",
     },
     en: {
-        failedToLoad: "Failed to load photo",
         loadingPhoto: "Loading photo...",
         photoAlt: "Photo",
         confirmEnable: "Make photo visible to the public?",

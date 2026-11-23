@@ -1,52 +1,89 @@
 import { apiBaseUrl } from "./apiBaseUrl";
+import { ApiError } from "./ApiError";
 
-export type AdminUser = { 
+const authHeaders = (token: string): Record<string, string> => ({
+    Authorization: "Bearer " + token,
+});
+
+async function send(url: string, init: RequestInit): Promise<Response> {
+    let response: Response;
+    try {
+        response = await fetch(url, init);
+    } catch (error) {
+        if (error instanceof DOMException) throw error; // abort or timeout, handled by errorMessage
+        throw ApiError.network();
+    }
+    if (!response.ok) throw await ApiError.fromResponse(response);
+    return response;
+}
+
+async function readJson<T>(response: Response): Promise<T> {
+    try {
+        return (await response.json()) as T;
+    } catch {
+        throw ApiError.invalidResponse();
+    }
+}
+
+const isJson = (response: Response) =>
+    response.headers.get("content-type")?.includes("application/json") ?? false;
+
+/******************************************************************************/
+// USERS
+/******************************************************************************/
+
+export type AdminUser = {
     userId: number;
     firstName: string;
     lastName: string;
-    email: string
+    email: string;
 };
-export class AdminUserError extends Error {
-    constructor(public status: number) { super(`Admin user request failed: ${status}`); }
-}
+
 export async function lookupAdminUser(email: string, token: string, signal: AbortSignal): Promise<AdminUser> {
-    const response = await fetch(apiBaseUrl + "/api/admin/users/lookup?" + new URLSearchParams({ email: email.trim() }), {
-        headers: { Authorization: "Bearer " + token }, signal, cache: "no-store",
+    const query = new URLSearchParams({ email: email.trim() });
+    const response = await send(`${apiBaseUrl}/api/admin/users/lookup?${query}`, {
+        headers: authHeaders(token),
+        signal,
+        cache: "no-store",
     });
-    if (!response.ok) throw new AdminUserError(response.status);
-    const user = await response.json();
-    if (!Number.isInteger(user?.userId) || user.userId <= 0 ||
-        ![user.firstName, user.lastName, user.email].every(value => typeof value === "string")) {
-        throw new Error("Invalid user lookup response.");
+
+    const user = await readJson<AdminUser>(response);
+    if (
+        !Number.isInteger(user?.userId) || user.userId <= 0 ||
+        ![user.firstName, user.lastName, user.email].every(value => typeof value === "string")
+    ) {
+        throw ApiError.invalidResponse();
     }
     return user;
 }
 
 export async function grantAdminRole(userId: number, token: string, signal: AbortSignal): Promise<void> {
-    const response = await fetch(apiBaseUrl + `/api/admin/users/${userId}/grant-admin`, {
-        method: "POST", headers: { Authorization: "Bearer " + token }, signal, cache: "no-store",
-    });
-    if (!response.ok) throw new AdminUserError(response.status);
-}
-
-export interface AdminPhoto {id: number;isEnabled: boolean;}
-export class AdminPhotoError extends Error {
-    constructor(public status: number) { super(`Admin photo (GET) request failed: ${status}`); }
-}
-export async function getAdminPhotos(token: string, signal: AbortSignal): Promise<AdminPhoto[]> {
-    const response = await fetch(`${apiBaseUrl}/api/admin/photos`, {
-        method: "GET",
-        headers: { Authorization: "Bearer " + token },
+    await send(`${apiBaseUrl}/api/admin/users/${userId}/grant-admin`, {
+        method: "POST",
+        headers: authHeaders(token),
         signal,
         cache: "no-store",
     });
-    if (!response.ok) throw new AdminUserError(response.status);
-
-    const photos: AdminPhoto[] = await response.json();
-    return photos;
 }
 
-export interface UploadedPhoto { id: number; isEnabled?: boolean; }
+/******************************************************************************/
+// PHOTOS
+/******************************************************************************/
+
+export interface AdminPhoto { id: number; isEnabled: boolean }
+
+export async function getAdminPhotos(token: string, signal: AbortSignal): Promise<AdminPhoto[]> {
+    const response = await send(`${apiBaseUrl}/api/admin/photos`, {
+        method: "GET",
+        headers: authHeaders(token),
+        signal,
+        cache: "no-store",
+    });
+    return readJson<AdminPhoto[]>(response);
+}
+
+export interface UploadedPhoto { id: number; isEnabled?: boolean }
+
 export function uploadAdminPhoto(
     file: File,
     token: string,
@@ -54,8 +91,10 @@ export function uploadAdminPhoto(
     signal?: AbortSignal
 ): Promise<UploadedPhoto> {
     return new Promise((resolve, reject) => {
+        const abortReason = () => signal?.reason ?? new DOMException("Aborted", "AbortError");
+
         if (signal?.aborted) {
-            reject(signal.reason ?? new DOMException("Aborted", "AbortError"));
+            reject(abortReason());
             return;
         }
 
@@ -64,20 +103,17 @@ export function uploadAdminPhoto(
         xhr.responseType = "json";
         xhr.setRequestHeader("Authorization", "Bearer " + token);
 
+        const cleanup = () => signal?.removeEventListener("abort", onAbort);
         const onAbort = () => {
+            cleanup();
             xhr.abort();
-            reject(signal?.reason ?? new DOMException("Aborted", "AbortError"));
+            reject(abortReason());
         };
         signal?.addEventListener("abort", onAbort, { once: true });
 
-        const cleanup = () => {
-            signal?.removeEventListener("abort", onAbort);
-        };
-
         xhr.upload.onprogress = (event) => {
             if (event.lengthComputable && onProgress) {
-                const percent = Math.round((event.loaded / event.total) * 100);
-                onProgress(percent);
+                onProgress(Math.round((event.loaded / event.total) * 100));
             }
         };
 
@@ -85,19 +121,16 @@ export function uploadAdminPhoto(
             cleanup();
             if (xhr.status >= 200 && xhr.status < 300) {
                 const body = xhr.response as UploadedPhoto | null;
-                if (body && typeof body.id === "number") {
-                    resolve(body);
-                } else {
-                    reject(new Error("Upload succeeded but response was missing photo id"));
-                }
+                if (body && typeof body.id === "number") resolve(body);
+                else reject(ApiError.invalidResponse());
             } else {
-                reject(new AdminUserError(xhr.status));
+                reject(ApiError.fromParts(xhr.status, xhr.response));
             }
         };
 
         xhr.onerror = () => {
             cleanup();
-            reject(new Error("Network error while uploading photo"));
+            reject(ApiError.network());
         };
 
         const formData = new FormData();
@@ -112,23 +145,16 @@ export async function patchAdminPhoto(
     token: string,
     signal?: AbortSignal
 ): Promise<AdminPhoto> {
-    const response = await fetch(`${apiBaseUrl}/api/admin/photos/${photoId}/availability`, {
+    const response = await send(`${apiBaseUrl}/api/admin/photos/${photoId}/availability`, {
         method: "PATCH",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token,
-        },
+        headers: { "Content-Type": "application/json", ...authHeaders(token) },
         body: JSON.stringify({ isEnabled }),
         signal,
+        cache: "no-store",
     });
-    if (!response.ok) throw new AdminUserError(response.status);
 
-    // Handle both 200 JSON body and 204 No Content responses safely
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-        return response.json();
-    }
-    return { id: photoId, isEnabled };
+    // 200 with JSON body or 204 No Content.
+    return isJson(response) ? readJson<AdminPhoto>(response) : { id: photoId, isEnabled };
 }
 
 /******************************************************************************/
@@ -160,19 +186,13 @@ export async function getAdminMemes(
     statusId?: MemeStatusId
 ): Promise<AdminMeme[]> {
     const query = statusId ? `?${new URLSearchParams({ statusId: String(statusId) })}` : "";
-    const response = await fetch(`${apiBaseUrl}/api/admin/memes${query}`, {
+    const response = await send(`${apiBaseUrl}/api/admin/memes${query}`, {
         method: "GET",
-        headers: { Authorization: "Bearer " + token },
+        headers: authHeaders(token),
         signal,
         cache: "no-store",
     });
-
-    if (!response.ok) {
-        throw new AdminUserError(response.status);
-    }
-
-    const memes: AdminMeme[] = await response.json();
-    return memes;
+    return readJson<AdminMeme[]>(response);
 }
 
 export async function patchAdminMemeStatus(
@@ -182,24 +202,14 @@ export async function patchAdminMemeStatus(
     signal?: AbortSignal
 ): Promise<AdminMeme> {
     const params = new URLSearchParams({ statusId: String(statusId) });
-    const response = await fetch(
-        `${apiBaseUrl}/api/admin/memes/${memeId}/status?${params.toString()}`,
-        {
-            method: "PATCH",
-            headers: { Authorization: "Bearer " + token },
-            signal,
-            cache: "no-store",
-        }
-    );
+    const response = await send(`${apiBaseUrl}/api/admin/memes/${memeId}/status?${params}`, {
+        method: "PATCH",
+        headers: authHeaders(token),
+        signal,
+        cache: "no-store",
+    });
 
-    if (!response.ok) {
-        throw new AdminUserError(response.status);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-        return response.json();
-    }
+    if (isJson(response)) return readJson<AdminMeme>(response);
 
     return {
         id: memeId,

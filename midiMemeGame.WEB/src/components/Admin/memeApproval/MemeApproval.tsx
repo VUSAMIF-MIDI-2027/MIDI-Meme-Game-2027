@@ -7,17 +7,14 @@ import { MemeFilterTabs, type MemeFilterTab } from "./MemeFilterTabs";
 import { MemeReviewItem } from "./MemeReviewItem";
 import { memeApprovalText } from "./memeApprovalText";
 import { useAdminMemes } from "@/hooks/admin/useAdminMemes";
+import { ErrorNotice } from "@/components/ErrorNotice";
 
 export function MemeApproval() {
     const { lang } = useLanguage();
     const t = memeApprovalText[lang];
 
     const [activeFilter, setActiveFilter] = useState<MemeStatusId>(MEME_STATUS.pending);
-    const { memes, photoUrls, loading, busyMemeId, error, updateMemeStatus } =
-        useAdminMemes({
-            loadError: t.loadError,
-            actionError: t.actionError,
-        });
+    const { memes, photoUrls, loading, busyMemeId, error, updateMemeStatus } = useAdminMemes();
 
     const tabs: MemeFilterTab[] = [
         {
@@ -47,14 +44,7 @@ export function MemeApproval() {
 
     return (
         <div className="space-y-6">
-            {error && (
-                <div
-                    role="alert"
-                    className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-300"
-                >
-                    {error}
-                </div>
-            )}
+            <ErrorNotice error={error?.cause} scope={error?.scope} />
 
             <MemeFilterTabs
                 tabs={tabs}

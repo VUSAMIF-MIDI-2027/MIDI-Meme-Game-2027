@@ -18,8 +18,6 @@ type MemeApprovalText = {
     emptyPending: string;
     emptyApproved: string;
     emptyRejected: string;
-    loadError: string;
-    actionError: string;
     photoFallbackAlt: string;
 };
 
@@ -42,8 +40,6 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         emptyPending: "Šiuo metu nėra memų, laukiančių patvirtinimo.",
         emptyApproved: "Kol kas nėra patvirtintų memų.",
         emptyRejected: "Kol kas nėra atmestų memų.",
-        loadError: "Nepavyko įkelti memų sąrašo.",
-        actionError: "Nepavyko atnaujinti memo būsenos. Bandyk dar kartą.",
         photoFallbackAlt: "Konkurso nuotrauka memui",
     },
     en: {
@@ -64,8 +60,6 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         emptyPending: "There are no memes pending approval.",
         emptyApproved: "No approved memes yet.",
         emptyRejected: "No rejected memes yet.",
-        loadError: "Failed to load memes.",
-        actionError: "Failed to update meme status. Please try again.",
         photoFallbackAlt: "Competition meme photo",
     },
 };

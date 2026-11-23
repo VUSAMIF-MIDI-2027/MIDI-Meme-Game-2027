@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/react";
-import { errorMessage, UPLOAD_LIMITS } from "@/lib/admin/api";
+import { UPLOAD_LIMITS } from "@/lib/admin/api";
+import { ApiError } from "@/services/ApiError";
 import {
     readStoredPhotos,
     syncAdminPhotosToStorage,
@@ -10,16 +11,13 @@ import {
 } from "@/lib/admin/photoStorage";
 import { useLanguage } from "@/context/LanguageContext";
 import {
-    AdminUserError,
     uploadAdminPhoto,
     patchAdminPhoto,
     type AdminPhoto,
 } from "@/services/adminService";
 import { PhotoGridSection } from "./PhotoGridSection";
-import { PhotoUploadSection } from "./PhotoUploadSection";
+import { PhotoUploadSection, type NoticeState } from "./PhotoUploadSection";
 import { photosText } from "./photosText";
-
-type NoticeState = { type: "success" | "error"; text: string } | null;
 
 export function Photos() {
     const { getToken } = useAuth();
@@ -57,7 +55,7 @@ export function Photos() {
                 ]);
                 const token = await getToken();
                 signal.throwIfAborted();
-                if (!token) throw new AdminUserError(401);
+                if (!token) throw ApiError.unauthorized();
 
                 const fetched = await syncAdminPhotosToStorage(token, signal);
                 if (!controller.signal.aborted) {
@@ -65,7 +63,7 @@ export function Photos() {
                 }
             } catch (cause) {
                 if (!controller.signal.aborted) {
-                    setNotice({ type: "error", text: errorMessage(cause) });
+                    setNotice({ type: "apiError", error: cause, scope: "photoList" });
                 }
             } finally {
                 if (requestRef.current === controller) {
@@ -123,7 +121,7 @@ export function Photos() {
             ]);
             const token = await getToken();
             signal.throwIfAborted();
-            if (!token) throw new AdminUserError(401);
+            if (!token) throw ApiError.unauthorized();
 
             const created = await uploadAdminPhoto(
                 selection.file,
@@ -151,8 +149,7 @@ export function Photos() {
             }
         } catch (cause) {
             if (!controller.signal.aborted) {
-                console.error("Failed to upload photo:", cause);
-                setNotice({ type: "error", text: errorMessage(cause) });
+                setNotice({ type: "apiError", error: cause, scope: "upload" });
             }
         } finally {
             if (requestRef.current === controller) {
@@ -170,7 +167,7 @@ export function Photos() {
             const signal = AbortSignal.timeout(20_000);
             const token = await getToken();
             signal.throwIfAborted();
-            if (!token) throw new AdminUserError(401);
+            if (!token) throw ApiError.unauthorized();
 
             const updated = await patchAdminPhoto(photoId, nextEnabled, token, signal);
 
@@ -184,8 +181,7 @@ export function Photos() {
                 return next;
             });
         } catch (cause) {
-            console.error(`Failed to toggle photo ${photoId}:`, cause);
-            setNotice({ type: "error", text: errorMessage(cause) });
+            setNotice({ type: "apiError", error: cause, scope: "photo" });
             throw cause;
         }
     }

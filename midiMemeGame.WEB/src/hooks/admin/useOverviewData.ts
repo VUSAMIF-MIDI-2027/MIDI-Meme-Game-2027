@@ -5,8 +5,9 @@ import {
     resolvePhotoUrlById,
     syncAdminPhotosToStorage,
 } from "@/lib/admin/photoStorage";
-import { AdminUserError, getAdminMemes, type AdminMeme } from "@/services/adminService";
+import { getAdminMemes, type AdminMeme } from "@/services/adminService";
 import { apiBaseUrl } from "@/services/apiBaseUrl";
+import { ApiError } from "@/services/ApiError";
 import { getEventSchedule, type EventSchedule } from "@/services/eventScheduleService";
 
 export function useOverviewData() {
@@ -98,7 +99,7 @@ export function useOverviewData() {
                 ]);
                 const token = await getToken();
                 signal.throwIfAborted();
-                if (!token) throw new AdminUserError(401);
+                if (!token) throw ApiError.unauthorized();
 
                 const [fetchedMemes, fetchedSchedule] = await Promise.all([
                     getAdminMemes(token, signal),

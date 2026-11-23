@@ -4,11 +4,15 @@ import type { RefObject } from "react";
 import Image from "next/image";
 import { ImageUp, Loader2, Upload } from "lucide-react";
 import { UPLOAD_LIMITS } from "@/lib/admin/api";
+import { ErrorNotice, type ErrorScope } from "@/components/ErrorNotice";
 import type { photosText } from "./photosText";
 
 type PhotosStrings = (typeof photosText)["en"];
 
-type NoticeState = { type: "success" | "error"; text: string } | null;
+export type NoticeState =
+    | { type: "success" | "error"; text: string } // local messages (upload success, file validation)
+    | { type: "apiError"; error: unknown; scope: ErrorScope }
+    | null;
 
 type PhotoUploadSectionProps = {
     t: PhotosStrings;
@@ -103,7 +107,9 @@ export function PhotoUploadSection({
                     {uploading ? `${t.uploading} ${progress}%` : t.uploadButton}
                 </button>
 
-                {notice && (
+                {notice?.type === "apiError" ? (
+                    <ErrorNotice error={notice.error} scope={notice.scope} />
+                ) : notice && (
                     <p
                         role={notice.type === "success" ? "status" : "alert"}
                         className={`rounded-lg border px-4 py-3 text-sm ${

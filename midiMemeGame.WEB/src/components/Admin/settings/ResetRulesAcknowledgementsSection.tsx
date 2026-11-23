@@ -5,6 +5,8 @@ import { useAuth } from "@clerk/react";
 import { RotateCcw } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { resetRulesAcknowledgements } from "@/services/userService";
+import { ApiError } from "@/services/ApiError";
+import { ErrorNotice } from "@/components/ErrorNotice";
 import { settingsText } from "./settingsText";
 
 export function ResetRulesAcknowledgementsSection() {
@@ -16,7 +18,7 @@ export function ResetRulesAcknowledgementsSection() {
     const request = useRef<AbortController | null>(null);
 
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<"denied" | "error" | null>(null);
+    const [error, setError] = useState<unknown>(null);
     const [updated, setUpdated] = useState<number | null>(null);
 
     useEffect(() => () => {
@@ -36,10 +38,7 @@ export function ResetRulesAcknowledgementsSection() {
             const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000)]);
             const token = await getToken();
             signal.throwIfAborted();
-            if (!token) {
-                setError("denied");
-                return;
-            }
+            if (!token) throw ApiError.unauthorized();
             const count = await resetRulesAcknowledgements(token, signal);
             if (!controller.signal.aborted) {
                 setUpdated(count);
@@ -47,7 +46,8 @@ export function ResetRulesAcknowledgementsSection() {
             }
         } catch (cause) {
             if (!controller.signal.aborted) {
-                setError(cause instanceof Error && cause.message === "ACCESS_DENIED" ? "denied" : "error");
+                // resetRulesAcknowledgements doesn't throw ApiError yet: keep its access-denied case
+                setError(cause instanceof Error && cause.message === "ACCESS_DENIED" ? new ApiError(403) : cause);
             }
         } finally {
             if (request.current === controller) request.current = null;
@@ -97,11 +97,7 @@ export function ResetRulesAcknowledgementsSection() {
                 <p id="reset-confirm-description" className="mt-4 text-sm leading-relaxed text-white/75">
                     {t.warning}
                 </p>
-                {error && (
-                    <p role="alert" className="mt-4 text-sm font-medium text-rose-400">
-                        {t[error]}
-                    </p>
-                )}
+                <ErrorNotice error={error} scope="resetRules" className="mt-4" />
                 <div className="mt-6 flex flex-wrap justify-end gap-3">
                     <button
                         type="button"

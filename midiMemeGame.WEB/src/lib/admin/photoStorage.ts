@@ -1,9 +1,9 @@
 import {
     getAdminPhotos,
-    AdminUserError,
     type AdminPhoto,
 } from "@/services/adminService";
 import { apiBaseUrl } from "@/services/apiBaseUrl";
+import { ApiError } from "@/services/ApiError";
 
 export const PHOTOS_STORAGE_DIR = "midi_admin/photos";
 export const PHOTOS_STORAGE_KEY = `${PHOTOS_STORAGE_DIR}/items`;
@@ -52,7 +52,7 @@ export async function resolvePhotoUrlById(
     if (!matched) {
         const token = await getToken();
         if (signal?.aborted) return null;
-        if (!token) throw new AdminUserError(401);
+        if (!token) throw ApiError.unauthorized();
         stored = await syncAdminPhotosToStorage(
             token,
             signal ?? AbortSignal.timeout(20_000)
