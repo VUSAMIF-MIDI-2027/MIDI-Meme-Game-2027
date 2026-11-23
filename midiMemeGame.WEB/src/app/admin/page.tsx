@@ -15,7 +15,7 @@ import { MemeApproval } from "@/components/Admin/memeApproval/MemeApproval";
 import { Photos } from "@/components/Admin/photos/Photos";
 import { Settings } from "@/components/Admin/settings/Settings";
 
-function renderSectionContent(section: Section, navigateToSection: (next: Section) => void) {
+function renderSectionContent(section: Section) {
     switch (section) {
         case "overview":
             return <Overview />;
@@ -46,7 +46,7 @@ function AdminPageContent() {
         else if (!isAdmin) router.replace("/dashboard");
     }, [isLoaded, isSignedIn, isAdmin, router]);
 
-    if (!isLoaded || !isSignedIn || !isAdmin) return <LoadingScreen />;
+    if (!isLoaded || !isSignedIn || !isAdmin) return <div className="relative flex-1"><LoadingScreen overlay="section" /></div>;
 
     function navigateToSection(nextSection: Section) {
         const params = new URLSearchParams(searchParams.toString());
@@ -56,7 +56,7 @@ function AdminPageContent() {
     }
 
     return (
-        <div className="flex min-h-[calc(100svh-4.25rem)] flex-1 flex-col bg-[#080a0c] text-white lg:grid lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[270px_minmax(0,1fr)]">
+        <div className="admin-content relative isolate flex min-h-[calc(100svh-4.25rem)] flex-1 flex-col bg-[#080a0c] text-white lg:grid lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[270px_minmax(0,1fr)]">
             <AdminSidebar t={t} section={section} onSelect={navigateToSection} />
 
             <div className="min-w-0 px-5 py-8 sm:px-8 lg:px-12 lg:py-12 xl:px-16">
@@ -67,7 +67,7 @@ function AdminPageContent() {
                         description={currentConfig.getDescription(t)}
                     />
 
-                    {renderSectionContent(section, navigateToSection)}
+                    {renderSectionContent(section)}
 
                     <p className="mt-8 hidden items-center gap-2 text-xs text-white/35 lg:flex">
                         <ShieldCheck className="size-3.5" aria-hidden="true" />
@@ -81,7 +81,7 @@ function AdminPageContent() {
 
 export default function AdminPage() {
     return (
-        <Suspense fallback={<LoadingScreen />}>
+        <Suspense fallback={<div className="relative flex-1"><LoadingScreen overlay="section" /></div>}>
             <AdminPageContent />
         </Suspense>
     );

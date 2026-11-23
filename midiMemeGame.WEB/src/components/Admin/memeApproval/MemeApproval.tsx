@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingScreen } from "@/components/Loading/LoadingScreen";
+
 import { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { MEME_STATUS, type MemeStatusId } from "@/services/adminService";
@@ -42,6 +44,8 @@ export function MemeApproval() {
 
     const filteredMemes = memes.filter((m) => m.statusId === activeFilter);
 
+    if (loading) return <LoadingScreen overlay="section" />;
+
     return (
         <div className="space-y-6">
             <ErrorNotice error={error?.cause} scope={error?.scope} />
@@ -53,11 +57,7 @@ export function MemeApproval() {
                 onSelect={setActiveFilter}
             />
 
-            {loading && memes.length === 0 ? (
-                <div className="rounded-xl border border-white/15 bg-[#0d1013] p-6 text-sm text-white/60">
-                    {t.loading}
-                </div>
-            ) : filteredMemes.length === 0 ? (
+            {filteredMemes.length === 0 ? (
                 <div className="rounded-xl border border-white/15 bg-[#0d1013] p-6 text-sm text-white/60">
                     {emptyMessages[activeFilter]}
                 </div>

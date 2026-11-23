@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingScreen } from "@/components/Loading/LoadingScreen";
+
 import { useMemo, useState, type ComponentProps } from "react";
 import MemeCard from "@/components/Shared/MemeCard";
 import { useLanguage } from "@/context/LanguageContext";
@@ -84,6 +86,8 @@ export function Overview() {
           ? "Žiūrėti visus memus"
           : "View all memes";
 
+    if (loading) return <LoadingScreen overlay="section" />;
+
     return (
         <div className="space-y-6">
             <OverviewMetrics ariaLabel={t.metricsLabel} metrics={metrics} />
@@ -103,9 +107,7 @@ export function Overview() {
                     )}
                 </div>
 
-                {loading && displayedMemes.length === 0 ? (
-                    <p className="text-sm text-white/55">{t.loadingMemes}</p>
-                ) : displayedMemes.length === 0 ? (
+                {displayedMemes.length === 0 ? (
                     <p className="text-sm text-white/55">{t.noMemes}</p>
                 ) : (
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

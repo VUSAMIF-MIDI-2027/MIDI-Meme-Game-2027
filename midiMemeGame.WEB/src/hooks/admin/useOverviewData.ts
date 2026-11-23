@@ -43,16 +43,21 @@ export function useOverviewData() {
                     setMemes(fetchedMemes);
                     setSchedule(fetchedSchedule);
                     const photoIds = new Set(fetchedMemes.map((meme) => meme.sourcePhotoId));
-                    for (const id of photoIds) {
-                        void getPhotoBlob(id, token, signal).then((blob) => {
+                    await Promise.all(Array.from(photoIds, async (id) => {
+                        try {
+                            const blob = await getPhotoBlob(id, token, signal);
                             if (signal.aborted) return;
                             const url = URL.createObjectURL(blob);
                             objectUrls.push(url);
+                            const preview = new Image();
+                            preview.src = url;
+                            await preview.decode();
+                            if (controller.signal.aborted) return;
                             setPhotoUrls((prev) => ({ ...prev, [id]: url }));
-                        }).catch((error) => {
+                        } catch (error) {
                             if (!signal.aborted) console.error("Failed to load photo", id, error);
-                        });
-                    }
+                        }
+                    }));
                 }
             } catch (cause) {
                 if (!controller.signal.aborted) {
