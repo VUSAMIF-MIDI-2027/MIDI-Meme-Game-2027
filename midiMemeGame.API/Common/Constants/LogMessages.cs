@@ -48,6 +48,7 @@ public static class LogMessages
         public const string SCHEDULED_RECIPIENT_SKIPPED = "Skipping recipient {UserId} for milestone {MilestoneKey} in event {EventId} ({Error}).";
         public const string CLAIM_BATCH_FAILED_ERROR = "Failed to claim pending email deliveries ({Error}).";
     }
+
     public static class EventSchedule
     {
         public const string MEME_SUBMISSIONS_NOT_OPEN = "Meme submission rejected at {AttemptedAtUtc}. Submissions open at {EventStartsAtUtc}.";

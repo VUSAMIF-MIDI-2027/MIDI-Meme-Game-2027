@@ -16,7 +16,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { LangToggle } from "../LangToggle";
 import { links, participantLinks, text } from "@/components/Header/HeaderText";
 import { isCurrentPath } from "./isCurrentPath";
-import { useVotingOpen } from "@/hooks/useVotingOpen";
+import { useEventPhase } from "@/hooks/useEventPhase";
+import { useEventSchedule } from "@/hooks/useEventSchedule";
 
 export function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -25,8 +26,13 @@ export function Header() {
     const { isLoaded, isSignedIn, sessionClaims } = useAuth();
     const pathname = usePathname();
     const isAdmin = sessionClaims?.role === "admin";
-    const votingOpen = useVotingOpen();
-    const navLinks = participantLinks.map(link => link.href === "/dashboard/gallery" ? { ...link, disabled: !votingOpen } : link);
+    const { state: scheduleState } = useEventSchedule({ enabled: isSignedIn === true });
+    const { phase } = useEventPhase(scheduleState.status === "ready" ? scheduleState.schedule : undefined);
+    const navLinks = participantLinks.map(link => {
+        if (link.href === "/dashboard/create") return { ...link, disabled: phase !== "submissions" };
+        if (link.href === "/dashboard/gallery") return { ...link, disabled: phase !== "voting" };
+        return link;
+    });
     const mobileLinks = isAdmin
         ? [...navLinks, { href: "/admin", label: { lt: "Administravimas", en: "Administration" }, disabled: false }]
         : navLinks;

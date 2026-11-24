@@ -91,6 +91,9 @@ namespace MidiMemeGame.Api.Controllers
 
             var result = await _memeService.DeleteAsync(id, clerkId, cancellationToken);
 
+            if (result.Error == ErrorType.NOT_FOUND)
+                return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
+
             if (result.IsError)
                 return MapMemeMutationError(result.Error);
 

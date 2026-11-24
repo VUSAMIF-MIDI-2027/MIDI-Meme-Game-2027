@@ -5,15 +5,17 @@ import { getEventSchedule, type EventSchedule } from "@/services/eventScheduleSe
 
 const REQUEST_TIMEOUT_MS = 20_000;
 
-type ScheduleState =
+export type EventScheduleState =
     | { status: "loading" | "missing" | "error" }
     | { status: "ready"; schedule: EventSchedule };
 
-export function useEventSchedule() {
-    const [state, setState] = useState<ScheduleState>({ status: "loading" });
+export function useEventSchedule({ enabled = true }: { enabled?: boolean } = {}) {
+    const [state, setState] = useState<EventScheduleState>({ status: "loading" });
     const [attempt, setAttempt] = useState(0);
 
     useEffect(() => {
+        if (!enabled) return;
+
         let activeRequest: AbortController | null = null;
 
         async function refresh() {
@@ -50,7 +52,7 @@ export function useEventSchedule() {
             window.removeEventListener("focus", refreshWhenVisible);
             document.removeEventListener("visibilitychange", refreshWhenVisible);
         };
-    }, [attempt]);
+    }, [attempt, enabled]);
 
     function retry() {
         setState({ status: "loading" });
