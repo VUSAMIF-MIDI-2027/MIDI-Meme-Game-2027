@@ -10,7 +10,7 @@ namespace MidiMemeGame.Api.Controllers
 {
     [Route("api/memes")]
     [ApiController]
-    // [Authorize]
+    [Authorize]
     public class MemesController : ControllerBase
     {
         private readonly MemeService _memeService;
@@ -24,8 +24,7 @@ namespace MidiMemeGame.Api.Controllers
             CancellationToken cancellationToken
         )
         {
-            // var clerkId = User.FindFirst("sub")?.Value;
-            var clerkId = "user_3MD54abREPxo8vFXCmXaDYvUuHT";
+            var clerkId = User.FindFirst("sub")?.Value;
 
             if (string.IsNullOrWhiteSpace(clerkId))
                 return Unauthorized(ErrorResponse.Create(ErrorType.USER_ACCESS_DENIED));
@@ -85,8 +84,7 @@ namespace MidiMemeGame.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
         {
-            // var clerkId = User.FindFirst("sub")?.Value;
-            var clerkId = "user_3MD54abREPxo8vFXCmXaDYvUuHT";
+            var clerkId = User.FindFirst("sub")?.Value;
 
             if (string.IsNullOrWhiteSpace(clerkId))
                 return Unauthorized();
@@ -101,8 +99,7 @@ namespace MidiMemeGame.Api.Controllers
         [HttpGet("mine")]
         public async Task<IActionResult> GetMyMemes(CancellationToken cancellationToken)
         {
-            // var clerkId = User.FindFirst("sub")?.Value;
-            var clerkId = "user_3MD54abREPxo8vFXCmXaDYvUuHT";
+            var clerkId = User.FindFirst("sub")?.Value;
 
             if (string.IsNullOrWhiteSpace(clerkId))
                 return Unauthorized();

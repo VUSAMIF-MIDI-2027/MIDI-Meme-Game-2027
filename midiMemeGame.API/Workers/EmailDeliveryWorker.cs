@@ -161,7 +161,8 @@ public class EmailDeliveryWorker : BackgroundService
             Result sendResult;
 
             if (delivery.TemplateKey is EmailTemplateKeys.MemeApproved
-                or EmailTemplateKeys.MemeRejected or EmailTemplateKeys.MemeSubmitted)
+                or EmailTemplateKeys.MemeRejected or EmailTemplateKeys.MemeSubmitted
+                or EmailTemplateKeys.WinnerNotification)
             {
                 var attachmentResult = await attachmentQueries.GetByDeliveryIdAsync(delivery.Id, cancellationToken);
 

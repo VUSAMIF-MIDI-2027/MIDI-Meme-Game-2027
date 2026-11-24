@@ -33,6 +33,7 @@ public class EmailAttachmentQueries
                     ("DeliveryId", "FileName", "Content")
                 VALUES
                     ({deliveryId}, {fileName}, {content})
+                ON CONFLICT ("DeliveryId") DO NOTHING
                 """;
 
             await _db.Database.ExecuteSqlInterpolatedAsync(

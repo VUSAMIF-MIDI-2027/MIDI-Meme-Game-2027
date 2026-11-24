@@ -13,9 +13,13 @@ type MemesError = { cause: unknown; scope: "memeList" | "review" } | null;
 
 export function useAdminMemes() {
     const { getToken } = useAuth();
-    const requestRef = useRef<AbortController | null>(null);
+    const refreshRef = useRef<(() => void) | null>(null);
+    const moderating = useRef(false);
+    const mutationVersion = useRef(0);
+    const [refreshing, setRefreshing] = useState(false);
 
     const [memes, setMemes] = useState<AdminMeme[]>([]);
+    const [revision, setRevision] = useState(0);
     const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
     const [loading, setLoading] = useState(true);
     const [busyMemeId, setBusyMemeId] = useState<number | null>(null);
@@ -23,13 +27,15 @@ export function useAdminMemes() {
 
     useEffect(() => {
         const controller = new AbortController();
-        requestRef.current = controller;
-        const objectUrls: string[] = [];
+        const objectUrls = new Map<number, string>();
+        let fetching = false;
 
         async function fetchMemes() {
-            setLoading(true);
-            setPhotoUrls({});
-            setError(null);
+            if (fetching || moderating.current) return;
+            fetching = true;
+            const version = mutationVersion.current;
+            setRefreshing(true);
+            setError(previous => previous?.scope === "review" ? previous : null);
             try {
                 const signal = AbortSignal.any([
                     controller.signal,
@@ -40,21 +46,32 @@ export function useAdminMemes() {
                 if (!token) throw ApiError.unauthorized();
 
                 const fetched = await getAdminMemes(token, signal);
-                if (!controller.signal.aborted) {
+                if (!controller.signal.aborted && version === mutationVersion.current) {
                     setMemes(fetched);
                     const photoIds = new Set(fetched.map((meme) => meme.sourcePhotoId));
+                    for (const [id, url] of objectUrls) {
+                        if (!photoIds.has(id)) {
+                            URL.revokeObjectURL(url);
+                            objectUrls.delete(id);
+                        }
+                    }
+                    setPhotoUrls(Object.fromEntries(objectUrls));
                     await Promise.all(Array.from(photoIds, async (id) => {
+                        if (objectUrls.has(id)) return;
                         try {
                             const blob = await getPhotoBlob(id, token, signal);
                             if (signal.aborted) return;
                             const url = URL.createObjectURL(blob);
-                            objectUrls.push(url);
+                            objectUrls.set(id, url);
                             const preview = new Image();
                             preview.src = url;
                             await preview.decode();
                             if (controller.signal.aborted) return;
                             setPhotoUrls((prev) => ({ ...prev, [id]: url }));
                         } catch (error) {
+                            const failedUrl = objectUrls.get(id);
+                            if (failedUrl) URL.revokeObjectURL(failedUrl);
+                            objectUrls.delete(id);
                             if (!signal.aborted) console.error("Failed to load photo", id, error);
                         }
                     }));
@@ -64,26 +81,37 @@ export function useAdminMemes() {
                     setError({ cause, scope: "memeList" });
                 }
             } finally {
-                if (requestRef.current === controller) {
-                    requestRef.current = null;
-                }
+                fetching = false;
                 if (!controller.signal.aborted) {
+                    setRefreshing(false);
                     setLoading(false);
                 }
             }
         }
 
+        refreshRef.current = fetchMemes;
         void fetchMemes();
+        function refreshVisible() {
+            if (document.visibilityState === "visible") void fetchMemes();
+        }
+        const timer = window.setInterval(refreshVisible, 60_000);
+        document.addEventListener("visibilitychange", refreshVisible);
 
         return () => {
+            refreshRef.current = null;
+            window.clearInterval(timer);
+            document.removeEventListener("visibilitychange", refreshVisible);
             controller.abort();
             objectUrls.forEach((url) => URL.revokeObjectURL(url));
         };
-    }, [getToken]);
+    }, [getToken, revision]);
 
     const updateMemeStatus = useCallback(
         async (memeId: number, nextStatusId: MemeStatusId) => {
-            if (busyMemeId !== null) return;
+            const meme = memes.find(item => item.id === memeId);
+            if (!meme || moderating.current) return;
+            moderating.current = true;
+            mutationVersion.current++;
             setBusyMemeId(memeId);
             setError(null);
 
@@ -93,26 +121,29 @@ export function useAdminMemes() {
                 signal.throwIfAborted();
                 if (!token) throw ApiError.unauthorized();
 
-                const updated = await patchAdminMemeStatus(memeId, nextStatusId, token, signal);
+                const updated = await patchAdminMemeStatus(memeId, nextStatusId, meme.updatedAtUtc, token, signal);
 
                 setMemes((prev) =>
                     prev.map((item) =>
                         item.id === memeId
                             ? {
                                   ...item,
-                                  statusId: updated.statusId ?? nextStatusId,
-                                  updatedAtUtc: updated.updatedAtUtc || new Date().toISOString(),
+                                  statusId: updated.statusId,
+                                  updatedAtUtc: updated.updatedAtUtc,
                               }
                             : item
                     )
                 );
             } catch (cause) {
                 setError({ cause, scope: "review" });
+                if (cause instanceof ApiError && cause.status === 409)
+                    setRevision(previous => previous + 1);
             } finally {
+                moderating.current = false;
                 setBusyMemeId(null);
             }
         },
-        [busyMemeId, getToken]
+        [getToken, memes]
     );
 
     return {
@@ -120,6 +151,8 @@ export function useAdminMemes() {
         photoUrls,
         loading,
         busyMemeId,
+        refreshing,
+        refresh: () => refreshRef.current?.(),
         error,
         updateMemeStatus,
     };
