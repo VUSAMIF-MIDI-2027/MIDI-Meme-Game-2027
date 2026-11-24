@@ -4,3 +4,11 @@ GET {{MidiMemeGame.Api_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+# Active (not deactivated) memes for the admin presentation. Admin Clerk JWT required.
+# statusId is optional (3 = approved).
+GET {{MidiMemeGame.Api_HostAddress}}/api/admin/memes/active?statusId=3
+Authorization: Bearer {{AdminToken}}
+Accept: application/json
+
+###

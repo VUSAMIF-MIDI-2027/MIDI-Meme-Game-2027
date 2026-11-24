@@ -381,6 +381,56 @@ public class MemeQueries
         }
     }
 
+    // "Active" matches the voting definition: not deleted, not invalidated
+    // and backed by an enabled source photo.
+    public async Task<Result<List<AdminMemeResponseDto>>> GetActiveAdminMemesAsync(
+        MemeStatus? statusId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            int? statusFilter = (int?)statusId;
+
+            FormattableString query = $"""
+                SELECT
+                    m."Id",
+                    CAST(m."SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
+                    m."Caption",
+                    m."StatusId",
+                    m."IsDeleted",
+                    m."IsInvalidatedBySourcePhoto",
+                    m."Score",
+                    m."CreatedAtUtc",
+                    m."UpdatedAtUtc",
+                    NULLIF(TRIM(u."FirstName" || ' ' || u."LastName"), '') AS "UserName",
+                    CASE WHEN u."IsDeleted" = 0 THEN u."Email" END AS "AuthorEmail"
+                FROM "Memes" AS m
+                INNER JOIN "SourcePhotos" AS p
+                    ON p."Id" = CAST(m."SourcePhotoId" AS INTEGER)
+                LEFT JOIN "Users" AS u ON u."Id" = m."UserId"
+                WHERE m."IsDeleted" = 0
+                    AND m."IsInvalidatedBySourcePhoto" = 0
+                    AND p."IsEnabled" = 1
+                    AND ({statusFilter} IS NULL OR m."StatusId" = {statusFilter})
+                ORDER BY m."CreatedAtUtc" ASC, m."Id" ASC
+                """;
+
+            return await _db.Database
+                .SqlQuery<AdminMemeResponseDto>(query)
+                .ToListAsync(cancellationToken);
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
     public async Task<Result<ModerationDetails>> GetModerationDetailsAsync(
         int memeId,
         CancellationToken cancellationToken)

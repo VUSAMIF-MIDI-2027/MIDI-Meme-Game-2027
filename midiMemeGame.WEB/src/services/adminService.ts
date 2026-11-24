@@ -198,6 +198,21 @@ export async function getAdminMemes(
     return readJson<AdminMeme[]>(response);
 }
 
+export async function getActiveAdminMemes(
+    token: string,
+    signal?: AbortSignal,
+    statusId?: MemeStatusId
+): Promise<AdminMeme[]> {
+    const query = statusId ? `?${new URLSearchParams({ statusId: String(statusId) })}` : "";
+    const response = await send(`${apiBaseUrl}/api/admin/memes/active${query}`, {
+        method: "GET",
+        headers: authHeaders(token),
+        signal,
+        cache: "no-store",
+    });
+    return readJson<AdminMeme[]>(response);
+}
+
 export async function patchAdminMemeStatus(
     memeId: number,
     statusId: MemeStatusId,
