@@ -1,0 +1,20 @@
+.cat {
+  --sprite-size: var(--dio-cat-size, 200px);
+  display: block;
+  width: var(--sprite-size);
+  height: var(--sprite-size);
+  flex-shrink: 0;
+  background: url("/cats/diocat-sprite.png") 0 0 / calc(var(--sprite-size) * 48) var(--sprite-size) no-repeat;
+  animation: dio-crouch 3.2s steps(48) infinite;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes dio-crouch {
+  to { background-position-x: calc(var(--sprite-size) * -48); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat { animation: none; }
+}
