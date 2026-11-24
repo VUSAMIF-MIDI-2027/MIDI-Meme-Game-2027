@@ -227,6 +227,25 @@ public class AdminController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpGet("memes/active")]
+    public async Task<IActionResult> GetActiveMemes(
+        [FromQuery] MemeStatus? statusId,
+        CancellationToken cancellationToken)
+    {
+        if (statusId.HasValue && !Enum.IsDefined(statusId.Value))
+            return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
+
+        var result = await _memeQueries.GetActiveAdminMemesAsync(
+            statusId, cancellationToken);
+
+        if (result.IsError)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ErrorResponse.Create(result.Error));
+
+        return Ok(result.Value);
+    }
+
     [HttpPatch("memes/{id:int}/status")]
     public async Task<IActionResult> UpdateMemeStatus(
         int id,
