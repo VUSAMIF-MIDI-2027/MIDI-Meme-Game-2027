@@ -232,6 +232,31 @@ jobs:
 
           gzip -dc images.tar.gz | docker load
 
+            "${compose[@]}" run --rm --no-deps -T --entrypoint /bin/sh api -ec '
+            dir=/app/App_Data
+            id
+            ls -ldn "$dir"
+            df -h "$dir"
+
+            probe=$(mktemp "$dir/.sqlite-write-test.XXXXXX") || {
+              echo "API negali sukurti failo kataloge $dir" >&2
+              exit 1
+            }
+            rm -- "$probe"
+
+            for file in "$dir/Sqlite.db" "$dir/Sqlite.db-wal" \
+                        "$dir/Sqlite.db-shm" "$dir/Sqlite.db-journal"; do
+              [ -e "$file" ] || continue
+              ls -ln "$file"
+              if [ ! -r "$file" ] || [ ! -w "$file" ]; then
+                echo "API trūksta skaitymo arba rašymo teisių į $file" >&2
+                exit 1
+              fi
+            done
+
+            echo "SQLite katalogo ir failų teisių patikra praėjo"
+          '
+
           "${compose[@]}" up \
               --detach \
               --no-build \

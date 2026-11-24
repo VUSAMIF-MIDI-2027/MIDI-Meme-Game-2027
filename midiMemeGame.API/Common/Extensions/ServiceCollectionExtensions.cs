@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
                 );
         });
 
+        services.AddScoped<AccountDeletionService>();
         services.AddScoped<UserQueries>();
         services.AddScoped<SourcePhotoQueries>();
         services.AddScoped<MemeQueries>();
@@ -117,7 +118,7 @@ public static class ServiceCollectionExtensions
 
                 options.Events = new JwtBearerEvents
                 {
-                    OnTokenValidated = context =>
+                    OnTokenValidated = async context =>
                     {
                         var userId = context.Principal?.FindFirst("sub")?.Value;
                         var sessionId = context.Principal?.FindFirst("sid")?.Value;
@@ -127,7 +128,7 @@ public static class ServiceCollectionExtensions
                         {
                             context.Fail("Clerk session identity is missing.");
 
-                            return Task.CompletedTask;
+                            return;
                         }
 
                         if (authorizedParty == null || !settings.AuthorizedParties.Contains(
@@ -136,9 +137,12 @@ public static class ServiceCollectionExtensions
                             ))
                         {
                             context.Fail("Clerk authorized party is invalid.");
+                            return;
                         }
 
-                        return Task.CompletedTask;
+                        var users = context.HttpContext.RequestServices.GetRequiredService<UserQueries>();
+                        if (await users.IsDeletedClerkIdAsync(userId, context.HttpContext.RequestAborted))
+                            context.Fail("Clerk account has been deleted.");
                     }
                 };
             });
