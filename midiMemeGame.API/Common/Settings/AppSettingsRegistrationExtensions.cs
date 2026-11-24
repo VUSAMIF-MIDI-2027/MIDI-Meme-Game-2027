@@ -65,6 +65,30 @@ public static class AppSettingsRegistrationExtensions
                     upload.Value.MaxRequestSizeBytes;
             });
 
+        services.AddOptions<SmtpSettings>()
+            .Bind(configuration.GetSection("Smtp"))
+            .Validate(s => !string.IsNullOrWhiteSpace(s.Host), "Smtp:Host is required")
+            .Validate(s => s.Port == 587, "Smtp:Port is invalid")
+            .Validate(s => string.Equals(s.Security, "StartTls", StringComparison.OrdinalIgnoreCase), "Smtp:Security must be StartTls")
+            .Validate(s => !string.IsNullOrWhiteSpace(s.Username), "Smtp:Username is required")
+            .Validate(s => !string.IsNullOrWhiteSpace(s.Password), "Smtp:Password is missing")
+            .Validate(s => System.Net.Mail.MailAddress.TryCreate(s.FromAddress, out _), "Smtp:FromAddress is invalid")
+            .Validate(s => !string.IsNullOrWhiteSpace(s.FromName), "Smtp:FromName is required")
+            .Validate(s => s.MaxAttempts > 0 && s.PollIntervalSeconds > 0, "Smtp retry settings are invalid")
+            .ValidateOnStart();
+
+        services.AddOptions<EmailSettings>()
+            .Bind(configuration.GetSection(EmailSettings.SectionName))
+            .Validate(s => s.MaxSubjectLength > 0
+                        && s.MaxBodyLength > 0
+                        && s.DeliveryBatchSize > 0
+                        && s.ScheduledPollIntervalSeconds > 0
+                        && s.MaxMilestoneAgeHours > 0
+                        && s.StaleLeaseMinutes > 0
+                        && !string.IsNullOrWhiteSpace(s.DefaultEventId),
+                "Email settings must contain positive numeric values and a non-empty DefaultEventId.")
+            .ValidateOnStart();
+
         return services;
     }
 }

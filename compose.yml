@@ -10,7 +10,7 @@ services:
       - path: ./api.env
         required: false
 
-    image: midi-meme-api:latest
+    image: ${API_IMAGE:-midi-meme-api:latest}
     restart: unless-stopped
 
     environment:
@@ -21,7 +21,7 @@ services:
       ConnectionStrings__DefaultConnection: "Data Source=/app/App_Data/Sqlite.db"
 
     ports:
-      - "127.0.0.1:5001:8080"
+      - "127.0.0.1:${API_PORT:-5001}:8080"
 
     volumes:
       - /home/midi/web/naktis.midi.lt/private/data:/app/App_Data
@@ -41,7 +41,7 @@ services:
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?Missing Clerk publishable key}"
         NEXT_PUBLIC_API_BASE_URL: "${NEXT_PUBLIC_API_BASE_URL:-https://naktis.midi.lt}"
 
-    image: midi-meme-web:latest
+    image: ${WEB_IMAGE:-midi-meme-web:latest}
     restart: unless-stopped
 
     environment:
@@ -50,7 +50,7 @@ services:
       PORT: "4000"
 
     ports:
-      - "127.0.0.1:4000:4000"
+      - "127.0.0.1:${WEB_PORT:-4000}:4000"
 
     depends_on:
       - api

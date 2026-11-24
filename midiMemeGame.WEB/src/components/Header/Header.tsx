@@ -16,6 +16,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { LangToggle } from "../LangToggle";
 import { links, participantLinks, text } from "@/components/Header/HeaderText";
 import { isCurrentPath } from "./isCurrentPath";
+import { useEventPhase } from "@/hooks/useEventPhase";
+import { useEventSchedule } from "@/hooks/useEventSchedule";
 
 export function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -24,9 +26,16 @@ export function Header() {
     const { isLoaded, isSignedIn, sessionClaims } = useAuth();
     const pathname = usePathname();
     const isAdmin = sessionClaims?.role === "admin";
+    const { state: scheduleState } = useEventSchedule({ enabled: isSignedIn === true });
+    const { phase } = useEventPhase(scheduleState.status === "ready" ? scheduleState.schedule : undefined);
+    const navLinks = participantLinks.map(link => {
+        if (link.href === "/dashboard/create") return { ...link, disabled: phase !== "submissions" };
+        if (link.href === "/dashboard/gallery") return { ...link, disabled: phase !== "voting" };
+        return link;
+    });
     const mobileLinks = isAdmin
-        ? [...participantLinks, { href: "/admin", label: { lt: "Administravimas", en: "Administration" }, disabled: false }]
-        : participantLinks;
+        ? [...navLinks, { href: "/admin", label: { lt: "Administravimas", en: "Administration" }, disabled: false }]
+        : navLinks;
     const showPublicNavigation = !isSignedIn && !pathname.startsWith("/dashboard");
 
     return (
@@ -59,10 +68,10 @@ export function Header() {
             {isLoaded && isSignedIn && (
                 <div className="flex items-center gap-2 sm:gap-3">
                     <nav aria-label={lang === "lt" ? "Dalyvio navigacija" : "Participant navigation"} className="hidden items-center gap-4 min-[1100px]:flex">
-                        {participantLinks.map(({ href, label, disabled }) => {
-                            const active = !disabled && isCurrentPath(pathname, href);
-                            const className = href === "/photos"
-                                ? "rounded bg-midi-blue px-4 py-3 text-sm font-bold text-white"
+                        {navLinks.map(({ href, label, disabled, primary, exact }) => {
+                            const active = !disabled && isCurrentPath(pathname, href, exact);
+                            const className = primary
+                                ? ("rounded bg-midi-blue px-4 py-3 text-sm font-bold text-white" + (active ? " ring-2 ring-[#70cfff] ring-offset-2 ring-offset-midi-black" : ""))
                                 : `border-b-2 py-3 text-sm font-semibold transition-colors ${active ? "border-midi-blue text-[#70cfff]" : "border-transparent text-white/85 hover:text-white"}`;
 
                             return disabled ? (

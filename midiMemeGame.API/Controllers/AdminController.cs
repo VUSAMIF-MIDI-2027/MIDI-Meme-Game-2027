@@ -5,6 +5,7 @@ using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Photos;
 using MidiMemeGame.Api.Dto.Users;
+using MidiMemeGame.Api.Enums;
 using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Services;
 
@@ -12,24 +13,30 @@ namespace MidiMemeGame.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-// [Authorize(Roles = "admin")]
+[Authorize(Roles = "admin")]
 public class AdminController : ControllerBase
 {
     private readonly SourcePhotoQueries _sourcePhotoQueries;
     private readonly PhotoFileService _photoFiles;
     private readonly UserQueries _userQueries;
     private readonly ClerkUserService _clerkUserService;
+    private readonly MemeQueries _memeQueries;
+    private readonly MemeModerationService _memeModerationService;
 
     public AdminController(
         SourcePhotoQueries sourcePhotoQueries,
         PhotoFileService photoFiles,
         UserQueries userQueries,
-        ClerkUserService clerkUserService)
+        ClerkUserService clerkUserService,
+        MemeQueries memeQueries,
+        MemeModerationService memeModerationService)
     {
         _sourcePhotoQueries = sourcePhotoQueries;
         _photoFiles = photoFiles;
         _userQueries = userQueries;
         _clerkUserService = clerkUserService;
+        _memeQueries = memeQueries;
+        _memeModerationService = memeModerationService;
     }
 
     [HttpPost("photos")]
@@ -78,7 +85,7 @@ public class AdminController : ControllerBase
 
         var createdPhoto = photoResult.Value;
 
-        return Ok(new AdminPhotoResponse
+        return StatusCode(StatusCodes.Status201Created, new AdminPhotoResponse
         {
             Id = createdPhoto.Id,
             IsEnabled = createdPhoto.IsEnabled
@@ -106,7 +113,7 @@ public class AdminController : ControllerBase
         }));
     }
 
-    [HttpPatch("photos/{id:int}")]
+    [HttpPatch("photos/{id:int}/availability")]
     public async Task<IActionResult> UpdatePhotoEnabled(
         int id,
         [FromBody] UpdatePhotoEnabledRequest request,
@@ -120,15 +127,13 @@ public class AdminController : ControllerBase
             request.IsEnabled.Value,
             cancellationToken);
 
-        if (result.IsError)
-        {
-            if (result.Error == ErrorType.NOT_FOUND)
-                return NotFound(ErrorResponse.Create(result.Error));
+        if (result.Error == ErrorType.NOT_FOUND)
+            return NotFound(ErrorResponse.Create(result.Error));
 
+        if (result.IsError)
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 ErrorResponse.Create(result.Error));
-        }
 
         return Ok(new AdminPhotoResponse
         {
@@ -202,5 +207,51 @@ public class AdminController : ControllerBase
                 ErrorResponse.Create(result.Error));
 
         return NoContent();
+    }
+    [HttpGet("memes")]
+    public async Task<IActionResult> GetMemes(
+        [FromQuery] MemeStatus? statusId,
+        CancellationToken cancellationToken)
+    {
+        if (statusId.HasValue && !Enum.IsDefined(statusId.Value))
+            return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
+
+        var result = await _memeQueries.GetAdminMemesAsync(
+            statusId, cancellationToken);
+
+        if (result.IsError)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ErrorResponse.Create(result.Error));
+
+        return Ok(result.Value);
+    }
+
+    [HttpPatch("memes/{id:int}/status")]
+    public async Task<IActionResult> UpdateMemeStatus(
+        int id,
+        [FromQuery] MemeStatus statusId,
+        [FromQuery] DateTime? expectedUpdatedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.IsDefined(typeof(MemeStatus), statusId))
+            return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
+
+        if (expectedUpdatedAtUtc is null)
+            return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
+
+        var result = await _memeModerationService.UpdateStatusAsync(id, statusId, expectedUpdatedAtUtc.Value, cancellationToken);
+        if (result.Error == ErrorType.MEME_ALREADY_MODERATED)
+            return Conflict(ErrorResponse.Create(result.Error));
+
+        if (result.Error == ErrorType.NOT_FOUND)
+            return NotFound(ErrorResponse.Create(result.Error));
+
+        if (result.IsError)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                ErrorResponse.Create(result.Error));
+
+        return Ok(new { id, statusId = (int)statusId, updatedAtUtc = result.Value });
     }
 }

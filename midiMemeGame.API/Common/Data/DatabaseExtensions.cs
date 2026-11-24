@@ -23,6 +23,14 @@ public static class DatabaseExtensions
 
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        if (!string.IsNullOrEmpty(app.Configuration["Deployment:Slot"]))
+        {
+            // A parallel candidate must never migrate the database underneath the live API.
+            if (db.Database.GetPendingMigrations().Any())
+                throw new InvalidOperationException("Apply compatible database migrations before deployment.");
+            return;
+        }
+
         db.Database.Migrate();
     }
 }

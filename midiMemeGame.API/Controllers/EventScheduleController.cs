@@ -25,24 +25,6 @@ public class EventScheduleController : ControllerBase
     public Task<IActionResult> GetSchedule(CancellationToken cancellationToken) =>
         GetAsync(ToScheduleResponse, cancellationToken);
 
-    [HttpGet("event-start")]
-    public Task<IActionResult> GetEventStart(CancellationToken cancellationToken) =>
-        GetAsync(
-            schedule => new EventStartResponse { EventStartsAt = schedule.EventStartsAt },
-            cancellationToken);
-
-    [HttpGet("voting-start")]
-    public Task<IActionResult> GetVotingStart(CancellationToken cancellationToken) =>
-        GetAsync(
-            schedule => new VotingStartResponse { VotingStartsAt = schedule.VotingStartsAt },
-            cancellationToken);
-
-    [HttpGet("event-end")]
-    public Task<IActionResult> GetEventEnd(CancellationToken cancellationToken) =>
-        GetAsync(
-            schedule => new EventEndResponse { EventEndsAt = schedule.EventEndsAt },
-            cancellationToken);
-
     [HttpPut]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> PutSchedule(
@@ -64,38 +46,6 @@ public class EventScheduleController : ControllerBase
         return await SaveAsync(schedule, ToScheduleResponse, cancellationToken);
     }
 
-    [HttpPut("event-start")]
-    [Authorize(Roles = "admin")]
-    public Task<IActionResult> PutEventStart(
-        [FromBody] EventStartRequest request,
-        CancellationToken cancellationToken) =>
-        UpdateSingleAsync(
-            request.EventStartsAt,
-            (schedule, value) => schedule.EventStartsAt = value,
-            schedule => new EventStartResponse { EventStartsAt = schedule.EventStartsAt },
-            cancellationToken);
-
-    [HttpPut("voting-start")]
-    [Authorize(Roles = "admin")]
-    public Task<IActionResult> PutVotingStart(
-        [FromBody] VotingStartRequest request,
-        CancellationToken cancellationToken) =>
-        UpdateSingleAsync(
-            request.VotingStartsAt,
-            (schedule, value) => schedule.VotingStartsAt = value,
-            schedule => new VotingStartResponse { VotingStartsAt = schedule.VotingStartsAt },
-            cancellationToken);
-
-    [HttpPut("event-end")]
-    [Authorize(Roles = "admin")]
-    public Task<IActionResult> PutEventEnd(
-        [FromBody] EventEndRequest request,
-        CancellationToken cancellationToken) =>
-        UpdateSingleAsync(
-            request.EventEndsAt,
-            (schedule, value) => schedule.EventEndsAt = value,
-            schedule => new EventEndResponse { EventEndsAt = schedule.EventEndsAt },
-            cancellationToken);
 
     private async Task<IActionResult> GetAsync(
         Func<EventSchedule, object> toResponse,
@@ -115,31 +65,6 @@ public class EventScheduleController : ControllerBase
     }
 
     // Applies one new timestamp to the stored schedule, then validates it against the other two.
-    private async Task<IActionResult> UpdateSingleAsync(
-        DateTimeOffset? value,
-        Action<EventSchedule, DateTimeOffset> apply,
-        Func<EventSchedule, object> toResponse,
-        CancellationToken cancellationToken)
-    {
-        if (value == null)
-            return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
-
-        var currentResult = await _eventScheduleQueries.GetAsync(cancellationToken);
-
-        if (currentResult.Error == ErrorType.EVENT_SCHEDULE_NOT_FOUND)
-            return NotFound(ErrorResponse.Create(currentResult.Error));
-
-        if (currentResult.IsError)
-            return StatusCode(
-                StatusCodes.Status500InternalServerError,
-                ErrorResponse.Create(currentResult.Error));
-
-        var schedule = currentResult.Value;
-        apply(schedule, value.Value);
-
-        return await SaveAsync(schedule, toResponse, cancellationToken);
-    }
-
     private async Task<IActionResult> SaveAsync(
         EventSchedule schedule,
         Func<EventSchedule, object> toResponse,

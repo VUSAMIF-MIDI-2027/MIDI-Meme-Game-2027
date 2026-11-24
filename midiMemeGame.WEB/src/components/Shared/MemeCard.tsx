@@ -1,3 +1,6 @@
+"use client";
+
+import { useLanguage } from "@/context/LanguageContext";
 import Image, { type StaticImageData } from "next/image";
 import type { ReactNode } from "react";
 
@@ -15,14 +18,16 @@ export type MemeCardButton = {
 };
 
 type MemeCardProps = {
-  image: StaticImageData;
+  image: string | StaticImageData;
   imageAlt: string;
   caption: string;
   selected?: boolean;
+  muted?: boolean;
   status?: MemeCardStatus;
   metaLabel?: string;
   button?: MemeCardButton;
-  layout?: "stacked" | "side-meta";
+  footer?: ReactNode;
+  layout?: "stacked" | "meta-footer";
 };
 
 export default function MemeCard({
@@ -30,12 +35,15 @@ export default function MemeCard({
   imageAlt,
   caption,
   selected = false,
+  muted = false,
   status,
   metaLabel,
   button,
+  footer,
   layout = "stacked",
 }: MemeCardProps) {
-  const sideMeta = layout === "side-meta";
+  const { lang } = useLanguage();
+  const metaFooter = layout === "meta-footer";
   const borderStyle = selected ? "border-midi-blue" : "border-white/15";
   const buttonStyle = button?.pressed
     ? "border-midi-blue bg-midi-blue text-white"
@@ -43,27 +51,41 @@ export default function MemeCard({
 
   return (
     <article
-      className={`flex min-w-0 overflow-hidden rounded-xl border transition-colors ${sideMeta ? "flex-col bg-[#1d1d1d] sm:flex-row" : "flex-col bg-[#0a0a0a]"} ${borderStyle}`}
+      className={`flex min-w-0 flex-col overflow-hidden rounded-xl border transition-colors ${metaFooter ? "bg-[#1d1d1d]" : "bg-[#0a0a0a]"} ${borderStyle} ${muted ? "grayscale opacity-75" : ""}`}
     >
-      <figure className={`flex min-w-0 flex-1 flex-col ${sideMeta ? "sm:w-[70%] sm:flex-none" : ""}`}>
+      <figure className="flex min-w-0 flex-1 flex-col">
         <div className="relative aspect-[3/2]">
-          <Image
-            src={image}
-            alt={imageAlt}
-            fill
-            loading="eager"
-            sizes="(min-width: 1024px) 360px, (min-width: 480px) 440px, 90vw"
-            className="object-cover"
-          />
+          {image ? (
+            <Image
+              src={image}
+              alt={imageAlt}
+              fill
+              unoptimized={typeof image === "string"}
+              loading="eager"
+              decoding={typeof image === "string" && image.startsWith("blob:") ? "sync" : "async"}
+              sizes="(min-width: 1024px) 360px, (min-width: 480px) 440px, 90vw"
+              className="object-cover"
+            />
+          ) : (
+            <span className="absolute inset-0 grid place-items-center px-4 text-center text-sm text-white/70">
+              {lang === "lt" ? "Nepavyko įkelti nuotraukos" : "Photo could not be loaded"}
+            </span>
+          )}
         </div>
-        <figcaption className={`flex min-h-20 flex-1 items-center justify-center px-5 py-4 text-center text-base font-semibold leading-snug text-black ${sideMeta ? "bg-midi-gray" : "bg-white"}`}>
+        <figcaption
+          className={`flex min-h-20 flex-1 items-center justify-center px-5 py-4 text-center text-base font-semibold leading-snug text-black ${metaFooter ? "bg-midi-gray" : "bg-white"}`}
+        >
           {caption}
         </figcaption>
       </figure>
-      {(status || metaLabel || button) && (
-        <div className={`flex flex-col gap-2 p-3 ${sideMeta ? "justify-center sm:w-[30%] sm:p-5" : ""}`}>
+      {(status || metaLabel || button || footer) && (
+        <div
+          className={`flex flex-col gap-2 p-3 ${metaFooter ? "sm:p-4" : ""}`}
+        >
           {(status || metaLabel) && (
-            <p className={`flex gap-3 text-xs ${sideMeta ? "flex-col leading-relaxed" : "items-center justify-between font-semibold uppercase tracking-widest"}`}>
+            <p
+              className={`flex gap-3 text-xs ${metaFooter ? "flex-row flex-wrap items-center justify-between" : "items-center justify-between font-semibold uppercase tracking-widest"}`}
+            >
               {metaLabel && (
                 <span className="text-text-muted">{metaLabel}</span>
               )}
@@ -86,6 +108,7 @@ export default function MemeCard({
               {button.label}
             </button>
           )}
+          {footer}
         </div>
       )}
     </article>
