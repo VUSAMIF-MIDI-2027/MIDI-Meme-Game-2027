@@ -108,7 +108,6 @@ public class MemeQueries
                     WHERE "Id" = CAST({sourcePhotoId} AS INTEGER)
                         AND "IsEnabled" = 1
                 )
-                AND EXISTS (SELECT 1 FROM "Users" WHERE "Id" = {userId} AND "IsDeleted" = 0)
                 AND (
                     SELECT COUNT(*)
                     FROM "Memes"
@@ -224,16 +223,6 @@ public class MemeQueries
             return ErrorType.DB_EXCEPTION;
         }
     }
-    public Task<int> MarkAuthorMemesDeletedAsync(string clerkId, CancellationToken cancellationToken)
-    {
-        return _db.Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE "Memes" SET "IsDeleted" = 1, "UpdatedAtUtc" = {DateTime.UtcNow}
-            WHERE "IsDeleted" = 0 AND "UserId" IN (
-                SELECT CAST("Id" AS TEXT) FROM "Users" WHERE "ClerkId" = {clerkId}
-            )
-            """, cancellationToken);
-    }
-
     public async Task<Result> DeleteAsync(int memeId, string userId, CancellationToken cancellationToken)
     {
         try
