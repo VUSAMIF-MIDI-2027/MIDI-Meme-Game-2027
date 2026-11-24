@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Photos;
@@ -51,6 +52,8 @@ namespace MidiMemeGame.Api.Controllers
             int id,
             CancellationToken cancellationToken)
         {
+            Response.Headers.CacheControl = "no-store";
+
             if (User.Identity?.IsAuthenticated != true)
             {
                 var eventResult = await _eventScheduleService.EnsureEventEndedAsync(cancellationToken);
@@ -82,9 +85,13 @@ namespace MidiMemeGame.Api.Controllers
             if (!System.IO.File.Exists(pathResult.Value))
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
+            // Revalidate access on every request before reusing the cached photo.
+            Response.Headers.CacheControl = "private, no-cache";
             return PhysicalFile(
                 pathResult.Value,
-                photo.ContentType);
+                photo.ContentType,
+                lastModified: null,
+                entityTag: new EntityTagHeaderValue($"\"{photo.FileId}\""));
         }
     }
 }

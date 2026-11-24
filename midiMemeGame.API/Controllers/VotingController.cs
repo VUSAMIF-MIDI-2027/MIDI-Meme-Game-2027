@@ -8,7 +8,7 @@ using MidiMemeGame.Api.Services;
 
 namespace MidiMemeGame.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/voting")]
     [ApiController]
     [Authorize]
     public class VotingController : ControllerBase
