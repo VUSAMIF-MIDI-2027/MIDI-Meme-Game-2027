@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Constants;
@@ -36,17 +37,24 @@ public class ResultPublicationService
         _publicationQueries = publicationQueries;
         _logger = logger;
     }
-    public async Task<Result<List<PublishedResultDto>>> GetPublicAsync(CancellationToken cancellationToken)
+    public async Task<Result<PublishedResultsPageDto>> GetPublicAsync(
+        int afterPlace,
+        int? limit,
+        CancellationToken cancellationToken)
     {
         try
         {
+            var take = limit.HasValue ? limit.Value + 1 : int.MaxValue;
             var publication = await _db.ResultPublications
                 .AsNoTracking()
                 .Where(x => x.EventScheduleId == EventSchedule.SingletonId)
                 .Select(x => new
                 {
+                    x.PublishedAtUtc,
                     Rows = x.Results
+                        .Where(r => r.Place > afterPlace)
                         .OrderBy(r => r.Place)
+                        .Take(take)
                         .Select(r => new PublishedResultDto
                         {
                             Id = r.MemeId,
@@ -66,7 +74,18 @@ public class ResultPublicationService
             if (publication is null)
                 return ErrorType.RESULTS_NOT_PUBLISHED;
 
-            return publication.Rows;
+            var rows = publication.Rows;
+            int? nextAfterPlace = null;
+            if (limit is int pageSize && rows.Count > pageSize)
+            {
+                rows.RemoveAt(pageSize);
+                nextAfterPlace = rows[^1].Place;
+            }
+
+            return new PublishedResultsPageDto(
+                rows,
+                nextAfterPlace,
+                publication.PublishedAtUtc.Ticks.ToString(CultureInfo.InvariantCulture));
         }
         catch (SqliteException ex)
         {
