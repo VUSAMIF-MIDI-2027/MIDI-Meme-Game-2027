@@ -10,10 +10,8 @@ type GalleryCardProps = {
 };
 
 export function GalleryCard({ meme, imageAlt, fallbackLabel }: GalleryCardProps) {
-    const name = `${meme.firstName} ${meme.lastName}`.trim();
-
     return (
-        <article className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-white/15 bg-[#0a0a0a]">
+        <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/15 bg-[#0a0a0a]">
             <figure className="flex flex-1 flex-col">
                 <div className="relative aspect-[3/2]">
                     <ResultImage
@@ -27,7 +25,7 @@ export function GalleryCard({ meme, imageAlt, fallbackLabel }: GalleryCardProps)
                     {meme.caption}
                 </figcaption>
             </figure>
-            {name && <p className="p-3 text-xs font-semibold uppercase tracking-widest text-text-muted">{name}</p>}
+            {meme.userName && <p className="p-3 text-xs font-semibold uppercase tracking-widest text-text-muted">{meme.userName}</p>}
         </article>
     );
 }

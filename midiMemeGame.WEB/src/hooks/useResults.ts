@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { ApiError } from "@/services/ApiError";
 import {
-    getResultMemes,
+    EVENT_SCHEDULE_NOT_FOUND,
+    RESULTS_NOT_AVAILABLE,
+    RESULTS_NOT_PUBLISHED,
     getResults,
     type ResultMeme,
     type Winner,
@@ -12,89 +15,77 @@ const REQUEST_TIMEOUT_MS = 20_000;
 export const GALLERY_PAGE_SIZE = 9;
 
 type ResultsState =
-    | { status: "loading" | "unpublished" | "error" }
-    | { status: "ready"; winners: Winner[] };
+    | { status: "loading" | "ongoing" | "unpublished" | "error" }
+    | { status: "ready"; winners: Winner[]; others: ResultMeme[] };
 
-type GalleryState = {
-    status: "loading" | "ready" | "error";
-    items: ResultMeme[];
-    page: number;
-    hasMore: boolean;
-};
-
-const initialGallery: GalleryState = { status: "loading", items: [], page: 0, hasMore: false };
-
-const timeoutSignal = (signal?: AbortSignal) =>
-    AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
+function failureState(error: unknown): ResultsState {
+    if (error instanceof ApiError) {
+        if (error.code === RESULTS_NOT_AVAILABLE || error.code === EVENT_SCHEDULE_NOT_FOUND) {
+            return { status: "ongoing" };
+        }
+        if (error.code === RESULTS_NOT_PUBLISHED) return { status: "unpublished" };
+    }
+    return { status: "error" };
+}
 
 export function useResults() {
-    const [results, setResults] = useState<ResultsState>({ status: "loading" });
-    const [gallery, setGallery] = useState<GalleryState>(initialGallery);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+    const [state, setState] = useState<ResultsState>({ status: "loading" });
+    const [visibleCount, setVisibleCount] = useState(GALLERY_PAGE_SIZE);
     const [attempt, setAttempt] = useState(0);
-    const loadingMoreRef = useRef(false);
 
     useEffect(() => {
         const request = new AbortController();
+        const signal = AbortSignal.any([request.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
 
         async function load() {
-            const signal = timeoutSignal(request.signal);
-            const [winners, firstPage] = await Promise.allSettled([
-                getResults(signal),
-                getResultMemes(1, GALLERY_PAGE_SIZE, signal),
-            ]);
-            if (request.signal.aborted) return;
+            try {
+                const { winners, others } = await getResults(signal);
+                if (request.signal.aborted) return;
 
-            if (winners.status === "rejected") {
-                setResults({ status: "error" });
-            } else if (!winners.value?.length) {
-                setResults({ status: "unpublished" });
-            } else {
-                setResults({ status: "ready", winners: winners.value });
+                setState(winners.length ? { status: "ready", winners, others } : { status: "unpublished" });
+            } catch (error) {
+                if (!request.signal.aborted) setState(failureState(error));
             }
-
-            setGallery(firstPage.status === "fulfilled"
-                ? { status: "ready", items: firstPage.value.items, page: 1, hasMore: firstPage.value.hasMore }
-                : { ...initialGallery, status: "error" });
         }
 
         void load();
         return () => request.abort();
     }, [attempt]);
 
-    async function loadMore() {
-        if (loadingMoreRef.current || !gallery.hasMore) return;
+    // While the results are not out yet, check again when the person returns to the tab.
+    const waiting = state.status === "ongoing" || state.status === "unpublished";
+    useEffect(() => {
+        if (!waiting) return;
 
-        loadingMoreRef.current = true;
-        setLoadingMore(true);
-        setLoadMoreFailed(false);
-
-        try {
-            const next = await getResultMemes(gallery.page + 1, GALLERY_PAGE_SIZE, timeoutSignal());
-            setGallery(current => {
-                const known = new Set(current.items.map(meme => meme.id));
-                return {
-                    status: "ready",
-                    items: [...current.items, ...next.items.filter(meme => !known.has(meme.id))],
-                    page: next.page,
-                    hasMore: next.hasMore,
-                };
-            });
-        } catch {
-            setLoadMoreFailed(true);
-        } finally {
-            loadingMoreRef.current = false;
-            setLoadingMore(false);
+        function refreshWhenVisible() {
+            if (document.visibilityState === "visible") setAttempt(value => value + 1);
         }
-    }
+
+        window.addEventListener("focus", refreshWhenVisible);
+        document.addEventListener("visibilitychange", refreshWhenVisible);
+        return () => {
+            window.removeEventListener("focus", refreshWhenVisible);
+            document.removeEventListener("visibilitychange", refreshWhenVisible);
+        };
+    }, [waiting]);
 
     function retry() {
-        setResults({ status: "loading" });
-        setGallery(initialGallery);
-        setLoadMoreFailed(false);
+        setState({ status: "loading" });
         setAttempt(value => value + 1);
     }
 
-    return { results, gallery, loadingMore, loadMoreFailed, loadMore, retry };
+    function loadMore() {
+        setVisibleCount(count => count + GALLERY_PAGE_SIZE);
+    }
+
+    const others = state.status === "ready" ? state.others : [];
+
+    return {
+        state,
+        winners: state.status === "ready" ? state.winners : [],
+        visibleOthers: others.slice(0, visibleCount),
+        hasMore: others.length > visibleCount,
+        loadMore,
+        retry,
+    };
 }

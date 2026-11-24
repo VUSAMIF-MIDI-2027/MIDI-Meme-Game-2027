@@ -1,118 +1,70 @@
 import { apiBaseUrl } from "./apiBaseUrl";
+import { ApiError } from "./ApiError";
+
+// Backend ErrorType codes returned by GET /api/results.
+export const EVENT_SCHEDULE_NOT_FOUND = 2400;
+export const RESULTS_NOT_AVAILABLE = 2407; // the event has not ended yet
+export const RESULTS_NOT_PUBLISHED = 2408; // the event ended, results are not published yet
+
+export type PodiumPlace = 1 | 2 | 3;
 
 export type ResultMeme = {
-    id: string;
-    firstName: string;
-    lastName: string;
+    id: number;
+    place: number;
+    userName: string;
     caption: string;
     imageUrl: string;
 };
 
-export type Winner = ResultMeme & { place: 1 | 2 | 3 };
+export type Winner = ResultMeme & { place: PodiumPlace };
 
-export type ResultMemesPage = {
-    items: ResultMeme[];
-    page: number;
-    hasMore: boolean;
+// One item of the GET /api/results array. The API also sends the score, status and
+// timestamps; they are left out on purpose so they can never end up on the page.
+type ResultResponse = {
+    id: number;
+    place: number;
+    sourcePhotoId: number;
+    caption: string;
+    userName: string | null;
 };
 
-export class ResultsError extends Error {
-    constructor(public status: number) {
-        super(`Results request failed: HTTP ${status}`);
+async function readJson<T>(response: Response): Promise<T> {
+    try {
+        return (await response.json()) as T;
+    } catch {
+        throw ApiError.invalidResponse();
     }
 }
 
-type Raw = Record<string, unknown>;
+const isPodiumPlace = (place: number): place is PodiumPlace => place >= 1 && place <= 3;
 
-const resultsUrl = apiBaseUrl + "/api/results";
-const memesUrl = apiBaseUrl + "/api/results/memes";
+const toResultMeme = (result: ResultResponse): ResultMeme => ({
+    id: result.id,
+    place: result.place,
+    userName: result.userName?.trim() ?? "",
+    caption: result.caption.trim(),
+    imageUrl: `${apiBaseUrl}/api/photos/${result.sourcePhotoId}/file`,
+});
 
-const isRecord = (value: unknown): value is Raw =>
-    typeof value === "object" && value !== null && !Array.isArray(value);
-
-const toText = (value: unknown) =>
-    typeof value === "string" ? value.trim()
-        : typeof value === "number" ? String(value)
-            : "";
-
-function listFrom(payload: unknown, keys: string[]): unknown[] {
-    if (Array.isArray(payload)) return payload;
-    if (isRecord(payload)) {
-        for (const key of keys) {
-            if (Array.isArray(payload[key])) return payload[key] as unknown[];
-        }
+// The API returns every ranked meme, already ordered by place.
+export async function getResults(signal: AbortSignal): Promise<{ winners: Winner[]; others: ResultMeme[] }> {
+    let response: Response;
+    try {
+        response = await fetch(`${apiBaseUrl}/api/results`, {
+            headers: { Accept: "application/json" },
+            signal,
+            cache: "no-store",
+        });
+    } catch (error) {
+        if (error instanceof DOMException) throw error; // abort or timeout
+        throw ApiError.network();
     }
-    return [];
-}
+    if (!response.ok) throw await ApiError.fromResponse(response);
 
-function resolveImageUrl(raw: Raw) {
-    const url = toText(raw.imageUrl) || toText(raw.photoUrl);
-    if (url) return /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(url) ? url : apiBaseUrl + (url.startsWith("/") ? url : `/${url}`);
-
-    const photoId = toText(raw.sourcePhotoId) || toText(raw.photoId);
-    return photoId ? `${apiBaseUrl}/api/photos/${encodeURIComponent(photoId)}/file` : "";
-}
-
-// Only the fields shown on the public page are copied. Scores, decisions,
-// emails and any other extra fields in the response are dropped here.
-function toMeme(value: unknown): ResultMeme | null {
-    if (!isRecord(value)) return null;
-    if (value.isPublished === false || value.published === false) return null;
-
-    const meme = {
-        id: toText(value.id),
-        firstName: toText(value.firstName),
-        lastName: toText(value.lastName),
-        caption: toText(value.caption),
-        imageUrl: resolveImageUrl(value),
-    };
-
-    return meme.id || meme.imageUrl || meme.caption ? meme : null;
-}
-
-async function readJson(response: Response): Promise<unknown> {
-    if (!response.ok) throw new ResultsError(response.status);
-    return response.json();
-}
-
-/** Returns null while the results have not been published yet. */
-export async function getResults(signal: AbortSignal): Promise<Winner[] | null> {
-    const response = await fetch(resultsUrl, { signal, cache: "no-store", headers: { Accept: "application/json" } });
-    if (response.status === 404) return null;
-
-    const payload = await readJson(response);
-    const listed = listFrom(payload, ["winners", "items"]);
-    const winners: Winner[] = [];
-
-    listed.forEach((entry, index) => {
-        const meme = toMeme(entry);
-        const place = Number(isRecord(entry) ? entry.place : undefined) || index + 1;
-        if (meme && (place === 1 || place === 2 || place === 3)) winners.push({ ...meme, place });
-    });
-
-    return winners
-        .sort((a, b) => a.place - b.place)
-        .filter((winner, index, all) => all.findIndex(other => other.place === winner.place) === index);
-}
-
-export async function getResultMemes(page: number, pageSize: number, signal: AbortSignal): Promise<ResultMemesPage> {
-    const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    const response = await fetch(`${memesUrl}?${query}`, { signal, cache: "no-store", headers: { Accept: "application/json" } });
-    if (response.status === 404) return { items: [], page, hasMore: false };
-
-    const payload = await readJson(response);
-    const entries = listFrom(payload, ["items", "memes"]);
-    const meta = isRecord(payload) ? payload : {};
-
-    const hasMore = typeof meta.hasMore === "boolean" ? meta.hasMore
-        : typeof meta.hasNextPage === "boolean" ? meta.hasNextPage
-            : typeof meta.totalPages === "number" ? page < meta.totalPages
-                : typeof meta.totalCount === "number" ? page * pageSize < meta.totalCount
-                    : entries.length >= pageSize;
+    const results = (await readJson<ResultResponse[]>(response)).map(toResultMeme);
 
     return {
-        items: entries.map(toMeme).filter((meme): meme is ResultMeme => meme !== null),
-        page,
-        hasMore,
+        winners: results.filter((meme): meme is Winner => isPodiumPlace(meme.place)),
+        others: results.filter(meme => !isPodiumPlace(meme.place)),
     };
 }

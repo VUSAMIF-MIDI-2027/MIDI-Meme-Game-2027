@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { podiumPosition, trophies } from "./podium";
+import { PODIUM_POSITION, TROPHIES, TROPHY_SIZE } from "./podium";
 
 type EmptyWinnerCardProps = {
     place: 1 | 2 | 3;
@@ -10,13 +10,13 @@ export function EmptyWinnerCard({ place, placeLabel }: EmptyWinnerCardProps) {
     return (
         <article
             aria-label={placeLabel}
-            className={`flex min-w-0 flex-col overflow-hidden rounded-xl border border-dashed bg-[#050505] ${place === 1 ? "border-midi-blue/60" : "border-white/20"} ${podiumPosition[place]}`}
+            className={`flex min-w-0 flex-col overflow-hidden rounded-xl border border-dashed bg-[#050505] ${place === 1 ? "border-midi-blue/60" : "border-white/20"} ${PODIUM_POSITION[place]}`}
         >
             <header className="flex items-center gap-4 px-5 py-4">
                 <Image
-                    src={trophies[place]}
-                    width={56}
-                    height={56}
+                    src={TROPHIES[place]}
+                    width={TROPHY_SIZE}
+                    height={TROPHY_SIZE}
                     alt=""
                     className="size-14 shrink-0 select-none object-contain [image-rendering:pixelated]"
                 />

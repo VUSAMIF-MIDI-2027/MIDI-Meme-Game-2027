@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { ResultImage } from "./ResultImage";
-import { podiumPosition, trophies } from "./podium";
+import { PODIUM_POSITION, TROPHIES, TROPHY_SIZE } from "./podium";
 import type { Winner } from "@/services/resultsService";
 
 type WinnerCardProps = {
@@ -13,15 +13,13 @@ type WinnerCardProps = {
 };
 
 export function WinnerCard({ winner, placeLabel, imageAlt, fallbackLabel }: WinnerCardProps) {
-    const name = `${winner.firstName} ${winner.lastName}`.trim();
-
     return (
-        <article className={`flex min-w-0 flex-col overflow-hidden rounded-xl border bg-[#0a0a0a] ${winner.place === 1 ? "border-midi-blue" : "border-white/15"} ${podiumPosition[winner.place]}`}>
+        <article className={`flex min-w-0 flex-col overflow-hidden rounded-xl border bg-[#0a0a0a] ${winner.place === 1 ? "border-midi-blue" : "border-white/15"} ${PODIUM_POSITION[winner.place]}`}>
             <header className="flex items-center gap-4 px-5 py-4">
                 <Image
-                    src={trophies[winner.place]}
-                    width={56}
-                    height={56}
+                    src={TROPHIES[winner.place]}
+                    width={TROPHY_SIZE}
+                    height={TROPHY_SIZE}
                     alt=""
                     className="size-14 shrink-0 select-none object-contain [image-rendering:pixelated]"
                 />
@@ -44,7 +42,7 @@ export function WinnerCard({ winner, placeLabel, imageAlt, fallbackLabel }: Winn
                     {winner.caption}
                 </figcaption>
             </figure>
-            {name && <p className="px-5 py-4 text-xl font-bold text-midi-gray">{name}</p>}
+            {winner.userName && <p className="px-5 py-4 text-xl font-bold text-midi-gray">{winner.userName}</p>}
         </article>
     );
 }
