@@ -56,9 +56,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    outputs:
-      api: ${{ steps.transfer.outputs.api }}
-      web: ${{ steps.transfer.outputs.web }}
     runs-on: ubuntu-latest
     timeout-minutes: 50
 
@@ -273,17 +270,7 @@ jobs:
           bash -n stage/promote.sh
           SLOT=blue ROUTING_DIR=/tmp/midi-routing docker compose -f compose.yml -f stage/compose.production.yml config --quiet
 
-      - name: Share validated promotion scripts
-        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
-        uses: actions/upload-artifact@v4
-        with:
-          name: promotion-${{ github.run_id }}-${{ github.run_attempt }}
-          path: stage/
-          retention-days: 1
-          if-no-files-found: error
-
       - name: Publish temporary CI images by digest
-        id: transfer
         if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -291,14 +278,23 @@ jobs:
           set -euo pipefail
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           for service in api web; do
-            repo="ghcr.io/${GITHUB_REPOSITORY,,}/ci-$service"
-            ref="$repo:transfer-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            repo="ghcr.io/${GITHUB_REPOSITORY,,}/ci-$service-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            ref="$repo:transfer"
             docker tag "midi-meme-$service:latest" "$ref"
             docker push "$ref"
             digest=$(docker image inspect "$ref" --format '{{range .RepoDigests}}{{println .}}{{end}}' | awk -v prefix="$repo@" 'index($0,prefix)==1 {print $0; exit}')
             [[ ${digest#*@} =~ ^sha256:[0-9a-f]{64}$ && $digest == "$repo@"* ]]
-            echo "$service=$digest" >> "$GITHUB_OUTPUT"
+            printf '%s\n' "${digest#*@}" > "stage/$service.digest"
           done
+
+      - name: Share promotion scripts and image digests
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: stage/
+          retention-days: 1
+          if-no-files-found: error
 
   deploy:
     needs: [lint, build]
@@ -325,15 +321,16 @@ jobs:
       - name: Fetch exact images built in CI
         env:
           GH_TOKEN: ${{ github.token }}
-          API_REF: ${{ needs.build.outputs.api }}
-          WEB_REF: ${{ needs.build.outputs.web }}
         run: |
           set -euo pipefail
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker pull "$API_REF"
-          docker pull "$WEB_REF"
-          docker tag "$API_REF" midi-meme-api:latest
-          docker tag "$WEB_REF" midi-meme-web:latest
+          for service in api web; do
+            digest=$(cat "stage/$service.digest")
+            [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Invalid $service digest in promotion artifact" >&2; exit 1; }
+            ref="ghcr.io/${GITHUB_REPOSITORY,,}/ci-$service-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT@$digest"
+            docker pull "$ref"
+            docker tag "$ref" "midi-meme-$service:latest"
+          done
 
       - name: Stage configuration
         run: |
@@ -449,7 +446,7 @@ jobs:
     permissions:
       packages: write
     steps:
-      - name: Remove this run's temporary GHCR versions
+      - name: Remove this attempt's dedicated transfer packages
         env:
           GH_TOKEN: ${{ github.token }}
           OWNER_TYPE: ${{ github.event.repository.owner.type }}
@@ -458,13 +455,10 @@ jobs:
           scope="user"
           if [[ $OWNER_TYPE == Organization ]]; then scope="orgs/$GITHUB_REPOSITORY_OWNER"; fi
           name=${GITHUB_REPOSITORY#*/}
-          tag="transfer-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           for service in api web; do
-            endpoint="/$scope/packages/container/${name,,}%2Fci-$service/versions"
-            if ! gh api --paginate "$endpoint?per_page=100" > versions.json 2> api-error; then
+            endpoint="/$scope/packages/container/${name,,}%2Fci-$service-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            if ! gh api --method DELETE "$endpoint" 2> api-error; then
               if grep -q 'HTTP 404' api-error; then continue; fi
               cat api-error >&2; exit 1
             fi
-            jq -r --arg tag "$tag" '.[] | select(.metadata.container.tags == [$tag]) | .id' versions.json > ids
-            while read -r id; do gh api --method DELETE "$endpoint/$id"; done < ids
           done
