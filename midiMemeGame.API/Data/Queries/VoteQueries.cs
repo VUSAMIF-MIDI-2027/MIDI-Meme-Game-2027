@@ -26,6 +26,9 @@ public class VoteQueries
 
     public async Task<Result<List<VotableMemeDto>>> GetVotableMemesAsync(
         int userId,
+        int afterId,
+        int limit,
+        bool onlyVoted,
         CancellationToken cancellationToken)
     {
         try
@@ -37,21 +40,21 @@ public class VoteQueries
                     CAST(m."SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
                     m."Caption",
                     m."CreatedAtUtc",
-                    EXISTS (
-                        SELECT 1
-                        FROM "MemeVotes" AS v
-                        WHERE v."UserId" = {userId}
-                            AND v."MemeId" = m."Id"
-                    ) AS "HasVoted",
+                    (v."MemeId" IS NOT NULL) AS "HasVoted",
                     (m."UserId" = {ownerId}) AS "IsOwnMeme"
                 FROM "Memes" AS m
                 INNER JOIN "SourcePhotos" AS p
                     ON p."Id" = CAST(m."SourcePhotoId" AS INTEGER)
+                LEFT JOIN "MemeVotes" AS v
+                    ON v."UserId" = {userId} AND v."MemeId" = m."Id"
                 WHERE m."StatusId" = {(int)MemeStatus.Approved}
+                    AND ({onlyVoted} = 0 OR v."MemeId" IS NOT NULL)
                     AND m."IsDeleted" = 0
                     AND m."IsInvalidatedBySourcePhoto" = 0
                     AND p."IsEnabled" = 1
-                ORDER BY m."CreatedAtUtc" ASC, m."Id" ASC
+                    AND m."Id" > {afterId}
+                ORDER BY m."Id" ASC
+                LIMIT {limit}
                 """;
 
             return await _db.Database.SqlQuery<VotableMemeDto>(query)

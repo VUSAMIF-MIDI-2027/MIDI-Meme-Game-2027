@@ -28,8 +28,15 @@ namespace MidiMemeGame.Api.Controllers
         }
 
         [HttpGet("memes")]
-        public async Task<IActionResult> GetMemes(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetMemes(
+            CancellationToken cancellationToken,
+            [FromQuery] int afterId = 0,
+            [FromQuery] int limit = 12,
+            [FromQuery] bool onlyVoted = false)
         {
+            if (afterId < 0 || limit is < 1 or > 48)
+                return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
+
             var voter = await GetVoterAsync(cancellationToken);
             if (voter.IsError)
                 return VoteError(voter.Error);
@@ -39,12 +46,18 @@ namespace MidiMemeGame.Api.Controllers
                 return VoteError(phase.Error);
 
             var result = await _voteQueries.GetVotableMemesAsync(
-                voter.Value, cancellationToken);
+                voter.Value, afterId, limit + 1, onlyVoted, cancellationToken);
 
             if (result.IsError)
                 return VoteError(result.Error);
 
-            return Ok(result.Value);
+            var memes = result.Value;
+            var hasMore = memes.Count > limit;
+            return Ok(new
+            {
+                Items = memes.Take(limit),
+                NextAfterId = hasMore ? (int?)memes[limit - 1].Id : null
+            });
         }
 
         [HttpGet("me")]
