@@ -1,3 +1,12 @@
+# One-time bootstrap on the existing host (keep current services running):
+# Create DEPLOY_PATH/routing with mode 0755. Render the route.sh block below with
+# argument legacy to routing/upstreams.conf (0644). Include that exact file in
+# nginx http {}, and in the existing site use proxy_pass http://midi_game_api
+# and proxy_pass http://midi_game_web, preserving URI and forwarded headers.
+# Validate and reload nginx; localhost:19591/{slot,api/health} and / must respond.
+# Reserve all loopback ports below. Permit the SSH user a lingering systemd user
+# manager, Docker Compose v2 and noninteractive nginx -t / systemctl reload nginx.
+# DEPLOY_PATH is a private, canonical path owned by this deployment account.
 name: Deploy
 
 on:
@@ -53,10 +62,13 @@ jobs:
         run: npx tsc --noEmit --incremental false
 
   build:
+    needs: lint
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
 
     env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://naktis.midi.lt' }}
 
@@ -74,52 +86,237 @@ jobs:
       - name: Build API and website
         run: docker compose build --pull
 
-      - name: Prepare deployment bundle
+      - name: Prepare and validate server promotion
+        shell: bash
         run: |
-          mkdir -p bundle
+          set -euo pipefail
+          umask 077
+          mkdir stage
+          cat > stage/compose.production.yml <<'FILE'
+          services:
+            api:
+              environment:
+                Deployment__Slot: ${SLOT:?Missing deployment slot}
+                ConnectionStrings__DefaultConnection: "Data Source=/app/App_Data/Sqlite.db;Mode=ReadWrite"
+              volumes:
+                - type: bind
+                  source: ${ROUTING_DIR:?Missing routing directory}
+                  target: /run/midi-routing
+                  read_only: true
+                  bind:
+                    create_host_path: false
+          FILE
+          cat > stage/route.sh <<'FILE'
+          #!/usr/bin/env bash
+          # Render an http-context include. The site's existing proxy locations use these upstreams.
+          set -eu
+          case "$1" in
+            legacy) api=5001; web=4000 ;;
+            blue) api=15001; web=14000 ;;
+            green) api=15002; web=14001 ;;
+            *) exit 2 ;;
+          esac
+          cat <<EOF
+          # midi-slot $1
+          upstream midi_game_api { server 127.0.0.1:$api; }
+          upstream midi_game_web { server 127.0.0.1:$web; }
+          server {
+              listen 127.0.0.1:19591;
+              location = /slot { return 200 '$1'; }
+              location = /api/health { proxy_pass http://midi_game_api; }
+              location = / { proxy_pass http://midi_game_web; }
+          }
+          EOF
+          FILE
+          cat > stage/promote.sh <<'FILE'
+          #!/usr/bin/env bash
+          # Runs as an independent systemd user service. Never stop the active slot on entry.
+          set -Eeuo pipefail
+          umask 077
+          root=$1 project=$2 tag=$3
+          [[ $root =~ ^/[-a-zA-Z0-9_./]+$ && $root != / && $(realpath "$root") == "$root" ]]
+          [[ $project =~ ^[a-z0-9][a-z0-9_-]*$ && $tag =~ ^[0-9a-f]{40}-[0-9]+-[0-9]+$ ]]
+          cd "$root"
+          exec 9>.deploy.lock
+          flock -n 9 || exit 1
+          routing=$root/routing/upstreams.conf
+          incoming=$root/.incoming
+          base="127.0.0.1:19590/$project"
+          probe=http://127.0.0.1:19591
 
-          docker compose config --images | sort -u > bundle/images.txt
+          healthy() {
+              local status
+              status=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 "$1") && [[ $status == 2?? ]]
+          }
+          routed() {
+              [[ $(curl -fsS --max-time 3 "$probe/slot") == "$1" ]] &&
+                  healthy "$probe/api/health" && healthy "$probe/"
+          }
+          wait_route() {
+              local i
+              for i in {1..20}; do routed "$1" && return 0; sleep 1; done
+              return 1
+          }
+          write_route() {
+              bash "$incoming/route.sh" "$1" > "$routing.next" &&
+              chmod 644 "$routing.next" &&
+              mv -fT "$routing.next" "$routing"
+          }
+          reload_nginx() {
+              sudo -n nginx -t && sudo -n systemctl reload nginx
+          }
+          # Restrict removal to this deployment's two Compose services; keep all mounts.
+          remove_services() {
+              local owner=$1 service ids
+              for service in api web; do
+                  ids=$(docker ps -aq --filter "label=com.docker.compose.project=$owner" \
+                      --filter "label=com.docker.compose.service=$service")
+                  if [[ -n $ids ]]; then
+                      mapfile -t containers <<< "$ids"
+                      docker stop -t 40 "${containers[@]}" >/dev/null
+                      docker rm "${containers[@]}" >/dev/null
+                  fi
+              done
+          }
+          clear_config() {
+              rm -f -- "$1/compose.yml" "$1/compose.production.yml" "$1/api.env" "$1/public.env"
+          }
+          clean_tags() {
+              local keep=$1 image ref
+              for image in api web; do
+                  while read -r ref; do
+                      [[ $ref == "$base/$image:"* && $ref != "$base/$image:$keep" ]] || continue
+                      docker image rm "$ref" >/dev/null || return 1
+                  done < <(docker image ls "$base/$image" --format '{{.Repository}}:{{.Tag}}')
+              done
+          }
+          read -r marker < "$routing"
+          old=${marker#\# midi-slot }
+          case "$old" in
+              legacy|green) slot=blue; api_port=15001; web_port=14000 ;;
+              blue) slot=green; api_port=15002; web_port=14001 ;;
+              *) echo "Bootstrap the Nginx routing include first" >&2; exit 1 ;;
+          esac
+          # Verify both the durable pointer and the running proxy before reclaiming any slot.
+          cmp "$routing" <(bash "$incoming/route.sh" "$old")
+          if ! routed "$old"; then reload_nginx && wait_route "$old" || exit 1; fi
+          owner="${project}_${slot}"
+          dir="$root/$slot"
+          old_owner=$project
+          [[ $old == legacy ]] || old_owner="${project}_${old}"
+          if pgrep -f '^nginx: worker process is shutting down' >/dev/null; then
+              echo "Previous Nginx generation still draining; retry later" >&2; exit 1
+          fi
+          remove_services "$owner"
+          mkdir -p "$dir"
+          switched=0
+          committed=0
+          finish() {
+              local rc=$?
+              trap - EXIT
+              set +e
+              if (( rc && !committed )); then
+                  if (( switched )); then
+                      # Keep both slots if the proxy cannot confirm rollback.
+                      write_route "$old" && reload_nginx && wait_route "$old" || exit "$rc"
+                  fi
+                  remove_services "$owner" && clear_config "$dir"
+                  for image in api web; do docker image rm "$base/$image:$tag" >/dev/null 2>&1; done
+              fi
+              clear_config "$incoming"
+              rm -f "$incoming/promote.sh" "$incoming/route.sh"
+              rmdir "$incoming" 2>/dev/null
+              exit "$rc"
+          }
+          trap finish EXIT
+          trap 'exit 143' TERM HUP INT
+          for file in compose.yml compose.production.yml public.env api.env; do install -m 600 "$incoming/$file" "$dir/$file"; done
+          cat >>"$dir/public.env" <<EOF
+          API_IMAGE=$base/api:$tag
+          WEB_IMAGE=$base/web:$tag
+          API_PORT=$api_port
+          WEB_PORT=$web_port
+          ROUTING_DIR=$root/routing
+          SLOT=$slot
+          EOF
+          compose=(docker compose --project-name "$owner" --env-file "$dir/public.env" -f "$dir/compose.yml" -f "$dir/compose.production.yml")
+          "${compose[@]}" config --quiet
+          "${compose[@]}" pull
+          # UID/GID and mounts must allow the same SQLite and upload access as the old API.
+          "${compose[@]}" run --rm --no-deps -T --entrypoint sh api -ec '
+              test -s /app/App_Data/Sqlite.db
+              test -r /run/midi-routing/upstreams.conf
+              for file in /app/App_Data/Sqlite.db*; do test -r "$file" && test -w "$file"; done
+              probe=$(mktemp /app/App_Data/.write-check.XXXXXX) && rm "$probe"
+          '
+          "${compose[@]}" up -d --no-build --pull never
+          ready=0
+          for attempt in {1..40}; do
+              if healthy "http://127.0.0.1:$api_port/api/health" && healthy "http://127.0.0.1:$web_port/"; then
+                  ready=1; break
+              fi
+              sleep 2
+          done
+          (( ready )) || { echo "Candidate failed HTTP readiness" >&2; exit 1; }
+          for service in api web; do
+              id=$("${compose[@]}" ps -q "$service")
+              [[ $(docker inspect -f '{{.State.Running}}:{{.RestartCount}}' "$id") == true:0 ]]
+          done
+          switched=1
+          write_route "$slot"
+          reload_nginx
+          wait_route "$slot"
+          # Existing Nginx connections may still be served by the previous workers.
+          for attempt in {1..120}; do
+              pgrep -f '^nginx: worker process is shutting down' >/dev/null || break
+              sleep 1
+          done
+          if pgrep -f '^nginx: worker process is shutting down' >/dev/null; then
+              committed=1
+              echo "Drain timed out; keeping old containers" >&2; exit 1
+          fi
+          wait_route "$slot"
+          committed=1
+          # Remember exact legacy image IDs before removing the corresponding containers.
+          legacy_images=()
+          for svc in api web; do
+                  for id in $(docker ps -aq --filter "label=com.docker.compose.project=$project" --filter "label=com.docker.compose.service=$svc"); do
+                      if [[ $(docker inspect -f '{{.Config.Image}}' "$id") == "midi-meme-$svc:latest" ]]; then
+                          legacy_images+=("$svc:$(docker inspect -f '{{.Image}}' "$id")")
+                      fi
+                  done
+          done
+          remove_services "$old_owner"
+          if [[ $old_owner != "$project" ]]; then remove_services "$project"; fi
+          if [[ $old != legacy ]]; then clear_config "$root/$old"; rmdir "$root/$old"; fi
+          for item in "${legacy_images[@]}"; do
+              ref="midi-meme-${item%%:*}:latest"
+              if [[ $(docker image inspect -f '{{.Id}}' "$ref" 2>/dev/null || :) == "${item#*:}" ]]; then docker image rm "$ref"; fi
+          done
+          clean_tags "$tag"
+          # Migrate only the known files produced by the former workflow.
+          [[ ! -L $root/releases ]] || exit 1
+          for release in "$root"/releases/*; do
+              [[ -d $release && ! -L $release && ${release##*/} =~ ^[0-9a-f]{40}$ ]] || continue
+              rm -f -- "$release/images.tar.gz" "$release/compose.yml" "$release/api.env" "$release/public.env"
+              rmdir --ignore-fail-on-non-empty "$release"
+          done
+          if [[ -d $root/releases ]]; then rmdir --ignore-fail-on-non-empty "$root/releases"; fi
+          FILE
+          bash -n stage/route.sh
+          bash -n stage/promote.sh
+          SLOT=blue ROUTING_DIR=/tmp/midi-routing docker compose -f compose.yml -f stage/compose.production.yml config --quiet
 
-          mapfile -t images < bundle/images.txt
-
-          docker save "${images[@]}" | gzip > bundle/images.tar.gz
-
-          cp compose.yml bundle/compose.yml
-
+      - name: Stage configuration
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+        run: |
+          umask 077
+          cp compose.yml stage/
           printf 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=%s\nNEXT_PUBLIC_API_BASE_URL=%s\n' \
-            "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" \
-            "$NEXT_PUBLIC_API_BASE_URL" \
-            > bundle/public.env
-
-      - name: Upload deployment bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-bundle
-          path: bundle/
-          if-no-files-found: error
-          retention-days: 3
-
-  deploy:
-    needs: [lint, build]
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    env:
-      SSH_HOST: ${{ secrets.SSH_HOST }}
-      SSH_USER: ${{ secrets.SSH_USER }}
-
-    steps:
-      - name: Download deployment bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: deployment-bundle
-          path: bundle/
+            "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" "$NEXT_PUBLIC_API_BASE_URL" > stage/public.env
 
       - name: Prepare API runtime configuration
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
@@ -156,13 +353,14 @@ jobs:
                   raise SystemExit(source + " must be a production HTTPS origin without a trailing slash")
               values[target] = value
 
-          target = Path("bundle/api.env")
+          target = Path("stage/api.env")
           target.touch(mode=0o600)
           target.chmod(0o600)
           target.write_text("".join(key + "=" + value + "\n" for key, value in values.items()))
           PY
 
       - name: Configure SSH
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
@@ -190,148 +388,32 @@ jobs:
 
           chmod 600 ~/.ssh/config
 
-      - name: Upload deployment bundle
+      - name: Stream images through a temporary registry and promote
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
         run: |
           set -euo pipefail
-
-          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9_./-]+$ ]]
+          [[ "$DEPLOY_PATH" =~ ^/[-a-zA-Z0-9_./]+$ && "$DEPLOY_PATH" != / ]]
           [[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]]
-
-          release="$DEPLOY_PATH/releases/$GITHUB_SHA"
-
-          ssh "$SSH_USER@$SSH_HOST" bash -s -- \
-            "$DEPLOY_PATH" "$GITHUB_SHA" "$COMPOSE_PROJECT_NAME" <<'REMOTE'
-          set -euo pipefail
-          umask 077
-
-          releases="$1/releases"
-          release="$releases/$2"
-          project_name="$3"
-          project_label="com.docker.compose.project=$project_name"
-
-          containers=$(docker ps -aq --filter "label=$project_label")
-          active_releases=""
-          if [[ -n "$containers" ]]; then
-            mapfile -t container_ids <<< "$containers"
-            active_releases=$(docker inspect --format \
-              '{{with index .Config.Labels "com.docker.compose.project.working_dir"}}{{.}}{{else}}unknown{{end}}' \
-              "${container_ids[@]}")
-          fi
-
-          for old_release in "$releases"/*; do
-            [[ -d "$old_release" && ! -L "$old_release" ]] || continue
-            [[ ${old_release##*/} =~ ^[0-9a-f]{40}$ ]] || continue
-
-            rm -fv -- "$old_release/images.tar.gz"
-            [[ "$old_release" != "$release" ]] || continue
-            if grep -Fxq -e unknown -e "$old_release" <<< "$active_releases"; then
-              continue
-            fi
-
-            rm -fv -- "$old_release/compose.yml" "$old_release/public.env" "$old_release/api.env"
-            rmdir --ignore-fail-on-non-empty -- "$old_release"
+          tag="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          registry=127.0.0.1:19590
+          docker run --detach --rm --name ci-registry --tmpfs /var/lib/registry \
+            --publish "$registry:5000" registry:2
+          trap 'docker stop ci-registry >/dev/null' EXIT
+          curl --retry 10 --retry-all-errors --fail "http://$registry/v2/"
+          for service in api web; do
+            ref="$registry/$COMPOSE_PROJECT_NAME/$service:$tag"
+            docker tag "midi-meme-$service:latest" "$ref"
+            docker push "$ref"
           done
-
-          docker image prune --force --filter "label=$project_label"
-
-          df -h /var/lib/containerd
-          df -i /var/lib/containerd
-          mkdir -p -- "$release"
-          chmod 700 -- "$release"
-          REMOTE
-
-          scp bundle/compose.yml bundle/public.env bundle/api.env \
-            "$SSH_USER@$SSH_HOST:$release/"
-
-          if ! load_output=$(ssh -T "$SSH_USER@$SSH_HOST" docker image load < bundle/images.tar.gz 2>&1); then
-            printf '%s\n' "$load_output" >&2
-            exit 1
-          fi
-          printf '%s\n' "$load_output"
-          if grep -Fq 'Error unpacking image' <<< "$load_output"; then
-            exit 1
-          fi
-
-      - name: Deploy containers
-        run: |
-          ssh "$SSH_USER@$SSH_HOST" bash -s -- \
-            "$DEPLOY_PATH" "$GITHUB_SHA" "$COMPOSE_PROJECT_NAME" <<'REMOTE'
-          set -Eeuo pipefail
-
-          deploy_path="$1"
-          commit_sha="$2"
-          project_name="$3"
-
-          release="$deploy_path/releases/$commit_sha"
-          cd "$release"
-          test -s api.env
-          chmod 600 api.env
-
-          compose=(
-              docker compose
-              --env-file public.env
-              --project-name "$project_name"
-              --file compose.yml
-          )
-
-          trap '"${compose[@]}" ps -a; "${compose[@]}" logs --no-color --tail=80' ERR
-
-          "${compose[@]}" config --quiet
-
-            "${compose[@]}" run --rm --no-deps -T --entrypoint /bin/sh api -ec '
-            dir=/app/App_Data
-            id
-            ls -ldn "$dir"
-            df -h "$dir"
-
-            probe=$(mktemp "$dir/.sqlite-write-test.XXXXXX") || {
-              echo "API negali sukurti failo kataloge $dir" >&2
-              exit 1
-            }
-            rm -- "$probe"
-
-            for file in "$dir/Sqlite.db" "$dir/Sqlite.db-wal" \
-                        "$dir/Sqlite.db-shm" "$dir/Sqlite.db-journal"; do
-              [ -e "$file" ] || continue
-              ls -ln "$file"
-              if [ ! -r "$file" ] || [ ! -w "$file" ]; then
-                echo "API trūksta skaitymo arba rašymo teisių į $file" >&2
-                exit 1
-              fi
-            done
-
-            echo "SQLite katalogo ir failų teisių patikra praėjo"
-          '
-
-          "${compose[@]}" up \
-              --detach \
-              --no-build \
-              --wait \
-              --wait-timeout 120
-
-          "${compose[@]}" ps -a
-
-          wait_for_http() {
-              local url="$1"
-              local attempt
-              local status
-
-              for attempt in {1..30}; do
-                  if status=$(curl --silent --show-error --output /dev/null \
-                      --write-out '%{http_code}' --connect-timeout 2 --max-time 5 "$url") \
-                      && [[ "$status" == 2* ]]; then
-                      echo "Ready: $url (HTTP $status)"
-                      return 0
-                  fi
-
-                  echo "Waiting for $url ($attempt/30)"
-                  sleep 2
-              done
-
-              echo "Application did not become ready: $url" >&2
-              return 1
-          }
-
-          wait_for_http http://127.0.0.1:5001/api/health
-          wait_for_http http://127.0.0.1:4000/
-          REMOTE
+          target="$SSH_USER@$SSH_HOST"
+          # Only configuration travels on stdin. Docker pulls image layers over the SSH tunnel.
+          tar -C stage -cf - compose.yml compose.production.yml public.env api.env route.sh promote.sh |
+            ssh -T -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 \
+              -R "127.0.0.1:19590:127.0.0.1:19590" "$target" \
+              "bash -c 'set -eu; umask 077; cd \"\$1\"; exec 8>.upload.lock; flock -n 8; \
+              unit=midi-deploy-\$2; \
+              if systemctl --user is-active --quiet \"\$unit\"; then exit 1; fi; \
+              mkdir -p .incoming; tar -xf - -C .incoming; \
+              systemd-run --user --wait --collect --unit=\"\$unit\" \
+              /bin/bash \"\$1/.incoming/promote.sh\" \"\$1\" \"\$2\" \"\$3\"' \
+              bash '$DEPLOY_PATH' '$COMPOSE_PROJECT_NAME' '$tag'"
