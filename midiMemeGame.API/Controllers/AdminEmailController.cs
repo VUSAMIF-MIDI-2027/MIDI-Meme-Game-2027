@@ -29,23 +29,19 @@ public class AdminEmailController : ControllerBase
         _userQueries = userQueries;
     }
 
-    [HttpGet("email-templates")]
-    public async Task<IActionResult> GetTemplates(CancellationToken cancellationToken)
-    {
-        var result = await _templateQueries.GetAllAsync(cancellationToken);
+  [HttpGet("email-templates")]
+public async Task<IActionResult> GetTemplates(CancellationToken cancellationToken)
+{
+    var result = await _templateQueries.GetAllAsync(cancellationToken);
 
-        if (result.IsError)
-            return StatusCode(
-                StatusCodes.Status500InternalServerError,
-                ErrorResponse.Create(result.Error));
+    if (result.IsError)
+        return StatusCode(
+            StatusCodes.Status500InternalServerError,
+            ErrorResponse.Create(result.Error));
 
-        return Ok(result.Value.Select(t => new EmailTemplateListItemResponse
-        {
-            Key = t.Key,
-            Subject = t.Subject,
-            UpdatedAtUtc = t.UpdatedAtUtc
-        }));
-    }
+
+    return Ok(result.Value.Select(t => ToDetailResponse(t)));
+}
 
     [HttpGet("email-templates/{key}")]
     public async Task<IActionResult> GetTemplateByKey(
