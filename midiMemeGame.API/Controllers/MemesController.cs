@@ -31,13 +31,16 @@ namespace MidiMemeGame.Api.Controllers
 
             var result = await _memeService.CreateAsync(clerkId, request, cancellationToken);
 
-            if (!result.TryGetResult(out var meme))
+            if (result.Error == ErrorType.NOT_FOUND)
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
             if (result.IsError)
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
                     ErrorResponse.Create(result.Error));
+
+            if (!result.TryGetResult(out var meme))
+                return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
             return Ok(new MemeResponseDto
             {
@@ -65,13 +68,16 @@ namespace MidiMemeGame.Api.Controllers
 
             var result = await _memeService.UpdateAsync(id, clerkId, request.Caption, cancellationToken);
 
-            if (!result.TryGetResult(out var meme))
+            if (result.Error == ErrorType.NOT_FOUND)
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
             if (result.IsError)
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
                     ErrorResponse.Create(result.Error));
+
+            if (!result.TryGetResult(out var meme))
+                return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
             return Ok(new MemeResponseDto
             {
@@ -94,6 +100,9 @@ namespace MidiMemeGame.Api.Controllers
                 return Unauthorized();
 
             var result = await _memeService.DeleteAsync(id, clerkId, cancellationToken);
+
+            if (result.Error == ErrorType.NOT_FOUND)
+                return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
             if (result.IsError)
                 return StatusCode(
