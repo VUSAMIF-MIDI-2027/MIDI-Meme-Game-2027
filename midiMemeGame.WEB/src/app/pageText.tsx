@@ -49,6 +49,7 @@ type CountdownCopy = {
   timeZone: string;
   shortDays: string;
   timeRemaining: string;
+  viewResults: string;
 };
 
 export const eventCountdownText: Record<Lang, CountdownCopy> = {
@@ -75,7 +76,7 @@ export const eventCountdownText: Record<Lang, CountdownCopy> = {
       ended: {
         heading: "Renginys baigėsi",
         dateLabel: "Renginio pabaiga",
-        description: "Ačiū, kad dalyvavai!",
+        description: "Pasimatysime kitais metais!",
       },
     },
     schedule: "Renginio tvarkaraštis",
@@ -86,6 +87,7 @@ export const eventCountdownText: Record<Lang, CountdownCopy> = {
     timeZone: "Vilniaus laiku",
     shortDays: "d.",
     timeRemaining: "Liko",
+    viewResults: "Peržiūrėti rezultatus",
   },
   en: {
     phases: {
@@ -110,7 +112,7 @@ export const eventCountdownText: Record<Lang, CountdownCopy> = {
       ended: {
         heading: "The event has ended",
         dateLabel: "Event ended",
-        description: "Thanks for taking part!",
+        description: "See you next year!",
       },
     },
     schedule: "Event schedule",
@@ -121,5 +123,6 @@ export const eventCountdownText: Record<Lang, CountdownCopy> = {
     timeZone: "Vilnius time",
     shortDays: "d",
     timeRemaining: "Time left",
+    viewResults: "View results",
   },
 };

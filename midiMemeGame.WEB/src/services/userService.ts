@@ -68,7 +68,6 @@ export async function getPhotoBlob(photoId: number, token: string, signal?: Abor
             method: "GET",
             headers: { Authorization: "Bearer " + token },
             signal,
-            cache: "no-store",
         });
     } catch (error) {
         if (error instanceof DOMException) throw error; // abort or timeout

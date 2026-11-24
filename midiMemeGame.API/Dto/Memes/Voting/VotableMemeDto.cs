@@ -9,4 +9,5 @@ public class VotableMemeDto
     public required string Caption { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public bool HasVoted { get; set; }
+    public bool IsOwnMeme { get; set; }
 }

@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
-using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Services;
 
 namespace MidiMemeGame.Api.Controllers
