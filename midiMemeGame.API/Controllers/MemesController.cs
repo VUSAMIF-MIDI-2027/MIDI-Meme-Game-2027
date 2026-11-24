@@ -25,7 +25,7 @@ namespace MidiMemeGame.Api.Controllers
         )
         {
             // var clerkId = User.FindFirst("sub")?.Value;
-            var clerkId = "user_3MD54abREPxo8vFXCmXaDYvUuHT";
+            var clerkId = "user_3MQT8XmCfVo5O5aWJNLLyrjv10L";
 
             if (string.IsNullOrWhiteSpace(clerkId))
                 return Unauthorized(ErrorResponse.Create(ErrorType.USER_ACCESS_DENIED));

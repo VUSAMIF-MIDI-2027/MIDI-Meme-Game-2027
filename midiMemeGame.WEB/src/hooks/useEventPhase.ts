@@ -25,5 +25,5 @@ export function useEventPhase(schedule: EventSchedule) {
         };
     }, [phase, dateTime]);
 
-    return { phase, dateTime, remainingSeconds, remainingMilliseconds };
+    return { phase, dateTime, remainingSeconds, remainingMilliseconds, now };
 }
