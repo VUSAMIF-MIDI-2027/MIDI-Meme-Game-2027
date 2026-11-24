@@ -335,7 +335,7 @@ public class MemeQueries
             return ErrorType.DB_EXCEPTION;
         }
     }
-    public async Task<Result<List<MemeResponseDto>>> GetAdminMemesAsync(
+    public async Task<Result<List<AdminMemeResponseDto>>> GetAdminMemesAsync(
         MemeStatus? statusId,
         CancellationToken cancellationToken)
     {
@@ -349,11 +349,13 @@ public class MemeQueries
                     CAST(m."SourcePhotoId" AS INTEGER) AS "SourcePhotoId",
                     m."Caption",
                     m."StatusId",
+                    m."IsDeleted",
                     m."IsInvalidatedBySourcePhoto",
                     m."Score",
                     m."CreatedAtUtc",
                     m."UpdatedAtUtc",
-                    NULLIF(TRIM(u."FirstName" || ' ' || u."LastName"), '') AS "UserName"
+                    NULLIF(TRIM(u."FirstName" || ' ' || u."LastName"), '') AS "UserName",
+                    CASE WHEN u."IsDeleted" = 0 THEN u."Email" END AS "AuthorEmail"
                 FROM "Memes" AS m
                 LEFT JOIN "Users" AS u ON u."Id" = m."UserId"
                 WHERE (m."IsDeleted" = 0 OR m."StatusId" = {(int)MemeStatus.Approved})
@@ -362,7 +364,7 @@ public class MemeQueries
                 """;
 
             return await _db.Database
-                .SqlQuery<MemeResponseDto>(query)
+                .SqlQuery<AdminMemeResponseDto>(query)
                 .ToListAsync(cancellationToken);
         }
         catch (SqliteException ex)

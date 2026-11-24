@@ -173,12 +173,14 @@ export interface AdminMeme {
     id: number;
     sourcePhotoId: number;
     userName?: string | null;
+    authorEmail?: string | null;
     caption: string;
     statusId: MemeStatusId;
     score: number;
     createdAtUtc: string;
     updatedAtUtc: string;
     isInvalidatedBySourcePhoto: boolean;
+    isDeleted: boolean;
 }
 
 export async function getAdminMemes(
@@ -221,6 +223,7 @@ export async function patchAdminMemeStatus(
         createdAtUtc: "",
         updatedAtUtc: new Date().toISOString(),
         isInvalidatedBySourcePhoto: false,
+        isDeleted: false,
     };
 }
 export type ResultCandidate = {

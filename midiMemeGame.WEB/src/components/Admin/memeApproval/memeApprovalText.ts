@@ -7,9 +7,13 @@ type MemeApprovalText = {
     statusPending: string;
     statusApproved: string;
     statusRejected: string;
+    deletedByAuthor: string;
+    showDeletedPreview: string;
+    hideDeletedPreview: string;
     photoIdLabel: string;
     submittedLabel: string;
     authorLabel: string;
+    authorEmailLabel: string;
     invalidatedWarning: string;
     approve: string;
     approving: string;
@@ -30,9 +34,13 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         statusPending: "Laukia peržiūros",
         statusApproved: "Patvirtintas",
         statusRejected: "Atmestas",
+        deletedByAuthor: "Autorius ištrynė",
+        showDeletedPreview: "Rodyti memą",
+        hideDeletedPreview: "Slėpti memą",
         photoIdLabel: "Nuotrauka #",
         submittedLabel: "Pateikta",
         authorLabel: "Sukūrė",
+        authorEmailLabel: "El. paštas",
         invalidatedWarning: "Šaltinio nuotrauka išjungta",
         approve: "Patvirtinti",
         approving: "Tvirtinama…",
@@ -51,9 +59,13 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         statusPending: "Pending review",
         statusApproved: "Approved",
         statusRejected: "Rejected",
+        deletedByAuthor: "Deleted by author",
+        showDeletedPreview: "Show meme",
+        hideDeletedPreview: "Hide meme",
         photoIdLabel: "Photo #",
         submittedLabel: "Submitted",
         authorLabel: "Created by",
+        authorEmailLabel: "Email",
         invalidatedWarning: "Source photo disabled",
         approve: "Approve",
         approving: "Approving…",

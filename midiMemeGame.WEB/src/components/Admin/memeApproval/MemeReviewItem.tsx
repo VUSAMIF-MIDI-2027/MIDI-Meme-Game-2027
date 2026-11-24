@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
+import { useId, useState } from "react";
 import MemeCard from "@/components/Shared/MemeCard";
 import { MEME_STATUS, type AdminMeme, type MemeStatusId } from "@/services/adminService";
 import type { memeApprovalText } from "./memeApprovalText";
@@ -36,6 +37,10 @@ export function MemeReviewItem({
     t,
     onDecision,
 }: MemeReviewItemProps) {
+    const previewId = useId();
+    const [showDeletedPreview, setShowDeletedPreview] = useState(false);
+    const previewHidden = meme.isDeleted && !showDeletedPreview;
+    const reviewDisabled = isBusy || meme.isDeleted;
     const statusLabel =
         meme.statusId === MEME_STATUS.approved
             ? t.statusApproved
@@ -46,22 +51,52 @@ export function MemeReviewItem({
     return (
         <article className="flex flex-col rounded-xl border border-white/15 bg-[#0d1013] p-4 sm:p-5">
             <div className="grid flex-1 gap-5 sm:grid-cols-[minmax(0,1fr)_210px] sm:items-stretch">
-                <div className="min-w-0">
-                    <MemeCard
-                        image={imageSrc}
-                        imageAlt={`${t.photoFallbackAlt} #${meme.sourcePhotoId}`}
-                        caption={meme.caption}
-                        layout="stacked"
-                    />
+                <div className="relative min-w-0 overflow-hidden rounded-xl">
+                    <div
+                        id={previewId}
+                        aria-hidden={previewHidden || undefined}
+                        className={previewHidden ? "select-none opacity-50 blur-xl" : undefined}
+                    >
+                        <MemeCard
+                            image={imageSrc}
+                            imageAlt={`${t.photoFallbackAlt} #${meme.sourcePhotoId}`}
+                            caption={meme.caption}
+                            layout="stacked"
+                        />
+                    </div>
+                    {previewHidden && (
+                        <div className="absolute inset-0 grid place-items-center bg-black/40 p-3 text-center">
+                            <span className="rounded-md bg-[#0d1013] px-3 py-1.5 text-sm font-semibold text-white">
+                                {t.deletedByAuthor}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-col justify-between gap-5">
                     <div>
-                        <span
-                            className={`inline-block rounded-md px-3 py-1 text-xs font-semibold ${STATUS_BADGE_STYLES[meme.statusId]}`}
-                        >
-                            {statusLabel}
-                        </span>
+                        {meme.isDeleted ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                                {showDeletedPreview && (
+                                    <span className="text-xs font-semibold text-white/70">{t.deletedByAuthor}</span>
+                                )}
+                                <button
+                                    type="button"
+                                    aria-controls={previewId}
+                                    aria-expanded={showDeletedPreview}
+                                    onClick={() => setShowDeletedPreview(!showDeletedPreview)}
+                                    className="cursor-pointer rounded-md border border-white/25 px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-midi-blue"
+                                >
+                                    {showDeletedPreview ? t.hideDeletedPreview : t.showDeletedPreview}
+                                </button>
+                            </div>
+                        ) : (
+                            <span
+                                className={`inline-block rounded-md px-3 py-1 text-xs font-semibold ${STATUS_BADGE_STYLES[meme.statusId]}`}
+                            >
+                                {statusLabel}
+                            </span>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -73,7 +108,20 @@ export function MemeReviewItem({
                             {meme.userName?.trim() && (
                                 <>
                                     <dt className="pt-2 font-medium text-white/60">{t.authorLabel}</dt>
-                                    <dd className="break-words font-bold text-white">{meme.userName}</dd>
+                                    <dd className="wrap-break-words font-bold text-white">{meme.userName}</dd>
+                                </>
+                            )}
+                            {meme.authorEmail && (
+                                <>
+                                    <dt className="pt-2 font-medium text-white/60">{t.authorEmailLabel}</dt>
+                                    <dd className="wrap-break-words">
+                                        <a
+                                            className="text-sky-300 underline hover:text-sky-200"
+                                            href={`mailto:${meme.authorEmail}`}
+                                        >
+                                            {meme.authorEmail}
+                                        </a>
+                                    </dd>
                                 </>
                             )}
                         </dl>
@@ -88,7 +136,7 @@ export function MemeReviewItem({
                     <div className="grid grid-cols-2 gap-2.5">
                         <button
                             type="button"
-                            disabled={isBusy || meme.statusId === MEME_STATUS.rejected}
+                            disabled={reviewDisabled || meme.statusId === MEME_STATUS.rejected}
                             onClick={() => onDecision(meme.id, MEME_STATUS.rejected)}
                             className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-white/25 bg-[#0b0f12] px-3 py-2 text-sm font-semibold text-white transition-colors hover:border-rose-400/50 hover:bg-rose-500/10 hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue"
                         >
@@ -100,7 +148,7 @@ export function MemeReviewItem({
 
                         <button
                             type="button"
-                            disabled={isBusy || meme.statusId === MEME_STATUS.approved}
+                            disabled={reviewDisabled || meme.statusId === MEME_STATUS.approved}
                             onClick={() => onDecision(meme.id, MEME_STATUS.approved)}
                             className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-midi-blue px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue"
                         >
