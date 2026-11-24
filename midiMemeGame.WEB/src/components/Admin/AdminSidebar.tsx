@@ -6,6 +6,7 @@ import {
     Camera,
     Image as ImageIcon,
     LayoutDashboard,
+    MonitorPlay,
     Settings as SettingsIcon,
     ShieldCheck,
     Trophy,
@@ -76,6 +77,16 @@ export function AdminSidebar({ t, section, onSelect }: AdminSidebarProps) {
                     );
                 })}
             </nav>
+
+            <Link
+                href="/admin/presentation"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 mb-3 flex min-h-11 items-center justify-center gap-2 rounded-lg border border-midi-blue/60 px-4 text-sm font-semibold text-[#70cfff] transition-colors hover:bg-midi-blue hover:text-white focus-visible:outline-2 focus-visible:outline-midi-blue lg:mb-0"
+            >
+                <MonitorPlay className="size-4 shrink-0" aria-hidden="true" />
+                {t.presentationMode}
+            </Link>
 
             <Link
                 href="/dashboard"

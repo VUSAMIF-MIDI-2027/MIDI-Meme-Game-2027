@@ -21,6 +21,7 @@ type AdminPageText = {
     settingsDescription: string;
     access: string;
     tools: string;
+    presentationMode: string;
 };
 
 export const adminText: Record<Lang, AdminPageText> = {
@@ -45,6 +46,7 @@ export const adminText: Record<Lang, AdminPageText> = {
         settingsDescription: "Tvarkyk renginio ir balsavimo tvarkaraštį bei nustatymus.",
         access: "Organizatorių erdvė",
         tools: "Konkurso valdymas",
+        presentationMode: "Prezentacijos režimas",
     },
     en: {
         back: "Participant home",
@@ -67,5 +69,6 @@ export const adminText: Record<Lang, AdminPageText> = {
         settingsDescription: "Configure the event and voting schedule as well as settings.",
         access: "Organiser workspace",
         tools: "Competition management",
+        presentationMode: "Presentation mode",
     },
 };
