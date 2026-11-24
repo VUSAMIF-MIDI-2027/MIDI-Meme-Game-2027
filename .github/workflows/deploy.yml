@@ -108,13 +108,28 @@ jobs:
           incoming=$root/.incoming
           base="127.0.0.1:19590/$project"
           http_ok() {
-              local code
-              code=$(curl -sS --max-time 4 -o /dev/null -w '%{http_code}' "$1") && [[ $code == 2?? ]]
+              local phase=$1 attempt=$2 service=$3 url=$4 metrics rc=0
+              metrics=$(curl -sS --connect-timeout 2 --max-time 4 -o /dev/null \
+                  -w '%{http_code} time=%{time_total}s' "$url") || rc=$?
+              printf '[%s] %s %02d/30 %s GET %s -> HTTP %s curl=%d\n' \
+                  "$(date -u +%T)" "$phase" "$attempt" "$service" "$url" "$metrics" "$rc"
+              [[ $rc == 0 && ${metrics%% *} == 2?? ]]
           }
           ready() {
+              local phase=$1 api_port=$2 web_port=$3 owner=$4 attempt failed svc id
+              echo "Starting HTTP checks: $phase"
               for attempt in {1..30}; do
-                  if http_ok "http://127.0.0.1:$1/api/health" && http_ok "http://127.0.0.1:$2/"; then return 0; fi
-                  sleep 1
+                  failed=0
+                  http_ok "$phase" "$attempt" API "http://127.0.0.1:$api_port/api/health" || failed=1
+                  http_ok "$phase" "$attempt" WEB "http://127.0.0.1:$web_port/" || failed=1
+                  if (( !failed )); then echo "PASS: $phase API and WEB"; return 0; fi
+                  if (( attempt < 30 )); then sleep 1; fi
+              done
+              echo "FAIL: $phase readiness timed out for Compose project $owner" >&2
+              for svc in api web; do
+                  for id in $(docker ps -aq --filter "label=com.docker.compose.project=$owner" --filter "label=com.docker.compose.service=$svc"); do
+                      docker inspect -f '{{.Name}} state={{.State.Status}} exit={{.State.ExitCode}} restarts={{.RestartCount}} oom={{.State.OOMKilled}}' "$id" >&2 || :
+                  done
               done
               return 1
           }
@@ -136,7 +151,7 @@ jobs:
           old_web=$(live_container web 4000 4000)
           old_owner=$(owner_of "$old_api")
           [[ $(owner_of "$old_web") == "$old_owner" ]]
-          ready 5001 4000
+          ready preflight 5001 4000 "$old_owner"
           case "$old_owner" in
               "$project") old=legacy; slot=blue ;;
               "${project}_blue") old=blue; slot=green ;;
@@ -189,14 +204,14 @@ jobs:
           }
           trap finish EXIT
           trap 'exit 143' TERM INT HUP
-          candidate pull
+          candidate pull --quiet
           candidate run --rm --no-deps -T --entrypoint sh api -ec '
               test -s /app/App_Data/Sqlite.db && test -r /run/midi-routing/active
               for file in /app/App_Data/Sqlite.db*; do test -r "$file" && test -w "$file"; done
               probe=$(mktemp /app/App_Data/.write-check.XXXXXX) && rm "$probe"
           '
           candidate up -d --no-build --pull never
-          ready 15001 14000
+          ready candidate 15001 14000 "${project}_check"
           for svc in api web; do
               [[ $(docker inspect -f '{{.State.Running}}:{{.RestartCount}}' "$(candidate ps -q "$svc")") == true:0 ]]
           done
@@ -229,13 +244,13 @@ jobs:
               done
               activate "$old"
               docker start "$old_api" "$old_web" >/dev/null
-              ready 5001 4000
+              ready rollback 5001 4000 "$old_owner"
               docker update --restart=unless-stopped "$old_api" "$old_web" >/dev/null
           ) &
           guard=$!
           docker stop -t 30 "$old_api" "$old_web" >/dev/null
           docker start "$new_api" "$new_web" >/dev/null
-          ready 5001 4000
+          ready production 5001 4000 "${project}_$slot"
           for id in "$new_api" "$new_web"; do
               [[ $(docker inspect -f '{{.State.Running}}:{{.RestartCount}}' "$id") == true:0 ]]
           done
@@ -243,6 +258,7 @@ jobs:
           activate "$slot"
           touch "$dir/.committed"
           committed=1
+          echo "Promotion complete: API and website passed readiness on ports 5001 and 4000."
           exec 9>&-
           wait "$guard"
           guard=
@@ -264,8 +280,14 @@ jobs:
               rmdir --ignore-fail-on-non-empty "$release"
           done
           if [[ -d $root/releases ]]; then rmdir --ignore-fail-on-non-empty "$root/releases"; fi
-          for file in compose.yml compose.production.yml public.env api.env promote.sh; do rm -f "$incoming/$file"; done
-          rmdir "$incoming"
+          # Older workflows also staged one of the routing helpers here.
+          for file in compose.yml compose.production.yml public.env api.env promote.sh route.sh backends.py; do
+              rm -f -- "$incoming/$file"
+          done
+          rmdir --ignore-fail-on-non-empty -- "$incoming"
+          if [[ -d $incoming ]]; then
+              echo "Deployment staging contains unrecognized files; leaving them in place." >&2
+          fi
           FILE
           bash -n stage/promote.sh
           SLOT=blue ROUTING_DIR=/tmp/midi-routing docker compose -f compose.yml -f stage/compose.production.yml config --quiet
@@ -433,9 +455,10 @@ jobs:
               -R "127.0.0.1:19590:127.0.0.1:19590" "$target" \
               "bash -c 'set -eu; umask 077; cd \"\$1\"; exec 8>.upload.lock; flock -n 8; \
               mkdir -p .incoming; tar -xf - -C .incoming; \
-              nohup setsid --wait /bin/bash \"\$1/.incoming/promote.sh\" \"\$1\" \"\$2\" \"\$3\" \
-                </dev/null >.promotion.log 2>&1 & pid=\$!; \
-              rc=0; wait \"\$pid\" || rc=\$?; tail -n 80 .promotion.log; exit \"\$rc\"' \
+              : >.promotion.log; nohup setsid --wait /bin/bash \"\$1/.incoming/promote.sh\" \"\$1\" \"\$2\" \"\$3\" \
+                </dev/null >>.promotion.log 2>&1 & pid=\$!; \
+              tail --pid=\"\$pid\" -n +1 -f .promotion.log; \
+              rc=0; wait \"\$pid\" || rc=\$?; exit \"\$rc\"' \
               bash '$DEPLOY_PATH' '$COMPOSE_PROJECT_NAME' '$tag'"
 
   cleanup:
