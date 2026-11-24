@@ -69,6 +69,7 @@ function YourMemeItem({
   const t = yourMemesText[lang];
   const ct = memeCreationText[lang];
   const [draft, setDraft] = useState(meme.caption);
+  const [editOpen, setEditOpen] = useState(false);
   const [busy, setBusy] = useState<"save" | "delete" | null>(null);
   const [failed, setFailed] = useState(false);
   const editDialog = useRef<HTMLDialogElement>(null);
@@ -86,6 +87,7 @@ function YourMemeItem({
     setDraft(meme.caption);
     setFailed(false);
     editDialog.current?.showModal();
+    setEditOpen(true);
   }
 
   async function handleSave() {
@@ -179,59 +181,78 @@ function YourMemeItem({
       <dialog
         ref={editDialog}
         aria-labelledby={`${captionId}-title`}
+        onClose={() => setEditOpen(false)}
         onCancel={(event) => {
           if (busy !== null) event.preventDefault();
         }}
-        className="fixed inset-0 m-auto max-h-[85svh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-white/15 bg-[#0d1013] p-6 text-white backdrop:bg-black/80 sm:p-8"
+        className="fixed inset-0 m-auto max-h-[90svh] w-[calc(100%-2rem)] max-w-6xl overflow-y-auto rounded-xl border border-white/15 bg-[#0d1013] p-5 text-white backdrop:bg-black/80 sm:p-8"
       >
-        <h2 id={`${captionId}-title`} className="text-lg font-bold text-white">
+        <h2 id={`${captionId}-title`} className="text-xl font-bold text-white">
           {t.editTitle}
         </h2>
-        <label
-          htmlFor={captionId}
-          className="mt-4 block text-sm font-semibold text-white"
-        >
-          {t.captionLabel}
-        </label>
-        <textarea
-          id={captionId}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          rows={4}
-          disabled={busy !== null}
-          className="mt-2 w-full resize-y rounded-lg border border-white/15 bg-[#0b0f12] px-3.5 py-2.5 text-sm text-white focus-visible:outline-2 focus-visible:outline-midi-blue disabled:opacity-60"
-        />
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
-          <span className={wordsOver ? "text-rose-400" : "text-white/60"}>
-            {ct.wordsLabel}: {words}/{CAPTION_MAX_WORDS}
-          </span>
-          <span className={charsOver ? "text-rose-400" : "text-white/60"}>
-            {ct.charsLabel}: {trimmed.length}/{CAPTION_MAX_CHARS}
-          </span>
-        </div>
-        {failed && (
-          <p role="alert" className="mt-3 text-sm text-rose-400">
-            {t.actionFailed}
-          </p>
-        )}
-        <div className="mt-5 flex flex-wrap justify-end gap-3">
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => editDialog.current?.close()}
-            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t.cancel}
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={busy !== null || !draftValid || !draftChanged}
-            aria-busy={busy === "save"}
-            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-midi-blue px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy === "save" ? t.saving : t.save}
-          </button>
+        <div className="mt-4 grid items-stretch gap-6 sm:grid-cols-2">
+          {editOpen && (
+            <div className="min-w-0 wrap-anywhere">
+              <MemeCard
+                image={meme.image}
+                imageAlt={imageAlt}
+                caption={trimmed || ct.captionPlaceholderCard}
+              />
+            </div>
+          )}
+          <div className="flex min-w-0 flex-col justify-between gap-4">
+            <div>
+              <label
+                htmlFor={captionId}
+                className="block text-sm font-semibold text-white"
+              >
+                {t.captionLabel}
+              </label>
+              <textarea
+                id={captionId}
+                aria-describedby={`${captionId}-limits`}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder={ct.captionPlaceholder}
+                rows={4}
+                disabled={busy !== null}
+                className="mt-2 w-full resize-y rounded-lg border border-white/15 bg-[#0b0f12] px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus-visible:outline-2 focus-visible:outline-midi-blue disabled:opacity-60"
+              />
+              <div id={`${captionId}-limits`} className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
+                <span className={wordsOver ? "text-rose-400" : "text-white/60"}>
+                  {ct.wordsLabel}: {words}/{CAPTION_MAX_WORDS}
+                </span>
+                <span className={charsOver ? "text-rose-400" : "text-white/60"}>
+                  {ct.charsLabel}: {trimmed.length}/{CAPTION_MAX_CHARS}
+                </span>
+                <span className="text-white/60">{ct.captionLimits}</span>
+              </div>
+              {failed && (
+                <p role="alert" className="mt-3 text-sm text-rose-400">
+                  {t.actionFailed}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={busy !== null || !draftValid || !draftChanged}
+                aria-busy={busy === "save"}
+                className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-midi-blue px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {busy === "save" ? t.saving : t.save}
+              </button>
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => editDialog.current?.close()}
+                className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t.cancel}
+              </button>
+            </div>
+          </div>
         </div>
       </dialog>
       <dialog

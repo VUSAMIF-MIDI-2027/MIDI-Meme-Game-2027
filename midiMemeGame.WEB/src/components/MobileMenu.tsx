@@ -64,7 +64,7 @@ export function MobileMenu({
                 }
 
                 if (primary) {
-                    const className = "flex min-h-13 w-full items-center bg-midi-blue px-12 py-4 text-left text-base font-bold text-white";
+                    const className = "flex min-h-13 w-full items-center border-l-4 bg-midi-blue px-12 py-4 text-left text-base font-bold text-white" + (active ? " border-l-[#b8ecff] underline underline-offset-4" : " border-l-transparent");
                     return (
                         <div key={href} className="border-b border-white/10">
                             {disabled ? (

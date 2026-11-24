@@ -30,8 +30,8 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
     lt: {
         eyebrow: "Tavo darbai",
         title: "Mano memai",
-        emptyTitle: "Jakubas laukia tavo prikolo.",
-        emptyEndedTitle: "Jakubas nedasilaukė tavo prikolų.",
+        emptyTitle: "Jakubas laukia tavo memo.",
+        emptyEndedTitle: "Jakubas nedasilaukė tavo memo.",
         emptyEndedNotice: "Pateikimų laikotarpis pasibaigė.",
         emptyEndedCaption: "Labai labai piktas.",
         rulesLink: "Konkurso taisyklės",
