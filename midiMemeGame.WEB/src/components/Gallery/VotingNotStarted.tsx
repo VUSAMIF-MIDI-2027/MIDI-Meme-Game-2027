@@ -1,7 +1,7 @@
 "use client";
 
 import { eventCountdownText } from "@/app/pageText";
-import { galleryText } from "@/app/gallery/galleryText";
+import { galleryText } from "@/app/dashboard/gallery/galleryText";
 import { SleepingCat } from "@/components/Home/Countdown/SleepingCat";
 import { useLanguage } from "@/context/LanguageContext";
 import { formatEventDateTime, getCountdownParts } from "@/utils/eventPhase";

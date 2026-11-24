@@ -26,7 +26,7 @@ export function Header() {
     const pathname = usePathname();
     const isAdmin = sessionClaims?.role === "admin";
     const votingOpen = useVotingOpen();
-    const navLinks = participantLinks.map(link => link.href === "/gallery" ? { ...link, disabled: !votingOpen } : link);
+    const navLinks = participantLinks.map(link => link.href === "/dashboard/gallery" ? { ...link, disabled: !votingOpen } : link);
     const mobileLinks = isAdmin
         ? [...navLinks, { href: "/admin", label: { lt: "Administravimas", en: "Administration" }, disabled: false }]
         : navLinks;

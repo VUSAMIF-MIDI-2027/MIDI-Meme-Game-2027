@@ -11,6 +11,8 @@ export class EventScheduleError extends Error {
 }
 
 const scheduleUrl = apiBaseUrl + "/api/event-schedule";
+const REQUEST_TIMEOUT_MS = 20_000;
+let scheduleRequest: Promise<EventSchedule | null> | null = null;
 
 
 async function readSchedule(response: Response): Promise<EventSchedule> {
@@ -32,14 +34,49 @@ async function readSchedule(response: Response): Promise<EventSchedule> {
 }
 
 export async function getEventSchedule(signal: AbortSignal): Promise<EventSchedule | null> {
-    try {
-        return await readSchedule(await fetch(scheduleUrl, { signal, cache: "no-store" }));
-    } catch (error) {
-        if (error instanceof EventScheduleError && error.status === 404 && error.code === 2400) {
-            return null;
-        }
-        throw error;
+    if (!scheduleRequest) {
+        scheduleRequest = fetch(scheduleUrl, {
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+            cache: "no-store",
+        })
+            .then(readSchedule)
+            .catch((error: unknown) => {
+                if (error instanceof EventScheduleError && error.status === 404 && error.code === 2400) {
+                    return null;
+                }
+                throw error;
+            })
+            .finally(() => {
+                scheduleRequest = null;
+            });
     }
+
+    const request = scheduleRequest;
+    return new Promise((resolve, reject) => {
+        let settled = false;
+
+        function finish(callback: () => void) {
+            if (settled) return;
+            settled = true;
+            signal.removeEventListener("abort", abort);
+            callback();
+        }
+
+        function abort() {
+            finish(() => reject(signal.reason));
+        }
+
+        signal.addEventListener("abort", abort, { once: true });
+        if (signal.aborted) {
+            abort();
+            return;
+        }
+
+        request.then(
+            schedule => finish(() => resolve(schedule)),
+            error => finish(() => reject(error)),
+        );
+    });
 }
 
 export async function saveEventSchedule(

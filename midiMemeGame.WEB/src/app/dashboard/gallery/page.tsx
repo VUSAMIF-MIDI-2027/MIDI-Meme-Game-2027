@@ -16,14 +16,14 @@ import type { EventSchedule } from "@/services/eventScheduleService";
 function ScheduledGallery({ schedule }: { schedule: EventSchedule }) {
     const router = useRouter();
     const { phase } = useEventPhase(schedule);
-    const votingOpen = phase === "voting" || phase === "ended";
+    const votingOpen = phase === "voting";
 
     useEffect(() => {
         if (!votingOpen) router.replace("/");
     }, [votingOpen, router]);
 
     if (!votingOpen) return null;
-    return <MemeGallery votingEnded={phase === "ended"} />;
+    return <MemeGallery />;
 }
 
 export default function GalleryPage() {
@@ -37,13 +37,7 @@ export default function GalleryPage() {
         if (isLoaded && !isSignedIn) router.replace("/login");
     }, [isLoaded, isSignedIn, router]);
 
-    const votingNotOpen = schedule.status === "missing";
-
-    useEffect(() => {
-        if (isLoaded && isSignedIn && votingNotOpen) router.replace("/");
-    }, [isLoaded, isSignedIn, votingNotOpen, router]);
-
-    if (!isLoaded || !isSignedIn || votingNotOpen) return <LoadingScreen />;
+    if (!isLoaded || !isSignedIn) return <LoadingScreen />;
 
     return (
         <div className="flex flex-1 flex-col text-midi-gray">

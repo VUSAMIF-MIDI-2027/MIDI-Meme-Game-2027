@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/react";
 import {
     getGalleryMemes,
@@ -32,6 +32,8 @@ export function useGalleryMemes() {
     const [attempt, setAttempt] = useState(0);
     const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(new Set());
     const [voteFailed, setVoteFailed] = useState(false);
+    const [votePending, setVotePending] = useState(false);
+    const voteInFlight = useRef(false);
 
     useEffect(() => {
         const request = new AbortController();
@@ -57,7 +59,10 @@ export function useGalleryMemes() {
     }, [attempt, getToken]);
 
     const toggleVote = useCallback(async (memeId: number, voted: boolean) => {
+        if (voteInFlight.current) return;
+        voteInFlight.current = true;
         setVoteFailed(false);
+        setVotePending(true);
         setPendingIds(current => new Set(current).add(memeId));
         try {
             const token = await getToken();
@@ -68,6 +73,8 @@ export function useGalleryMemes() {
         } catch {
             setVoteFailed(true);
         } finally {
+            voteInFlight.current = false;
+            setVotePending(false);
             setPendingIds(current => {
                 const next = new Set(current);
                 next.delete(memeId);
@@ -81,5 +88,5 @@ export function useGalleryMemes() {
         setAttempt(value => value + 1);
     }, []);
 
-    return { state, retry, toggleVote, pendingIds, voteFailed };
+    return { state, retry, toggleVote, pendingIds, voteFailed, votePending };
 }

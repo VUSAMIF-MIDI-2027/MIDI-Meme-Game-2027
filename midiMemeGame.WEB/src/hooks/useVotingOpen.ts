@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useEventSchedule } from "@/hooks/useEventSchedule";
 import { getEventPhase } from "@/utils/eventPhase";
 
-// True once voting has begun (stays true after the event ends, as the gallery remains viewable).
+// True only while voting is open.
 export function useVotingOpen() {
     const { state } = useEventSchedule();
     const [now, setNow] = useState(() => Date.now());
@@ -16,5 +16,5 @@ export function useVotingOpen() {
 
     if (state.status !== "ready") return false;
     const { phase } = getEventPhase(state.schedule, now);
-    return phase === "voting" || phase === "ended";
+    return phase === "voting";
 }

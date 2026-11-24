@@ -12,7 +12,7 @@ export const links = [
 export const participantLinks = [
   { href: "/dashboard", label: { en: "Home", lt: "Pagrindinis" }, disabled: false },
   { href: "/photos", label: { en: "Create a meme", lt: "Kurti memą" }, disabled: true, primary: true },
-  { href: "/gallery", label: { en: "Voting", lt: "Balsavimas" }, disabled: false, primary: true },
+  { href: "/dashboard/gallery", label: { en: "Voting", lt: "Balsavimas" }, disabled: false, primary: true },
   { href: "/rules", label: { en: "Rules", lt: "Taisyklės" }, disabled: false },
 ];
 

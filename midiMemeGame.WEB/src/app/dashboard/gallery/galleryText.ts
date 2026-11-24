@@ -17,7 +17,6 @@ type GalleryText = {
     voteFailed: string;
     loadingPhoto: string;
     photoFailed: string;
-    endedNotice: string;
     memeCount: (count: number) => string;
     emptyTitle: string;
     empty: string;
@@ -52,7 +51,6 @@ export const galleryText: Record<Lang, GalleryText> = {
         voteFailed: "Nepavyko išsaugoti balso. Bandyk dar kartą.",
         loadingPhoto: "Kraunama…",
         photoFailed: "Nepavyko įkelti nuotraukos",
-        endedNotice: "Balsavimas baigėsi. Memus vis dar gali peržiūrėti.",
         memeCount: count => `${count} ${count % 10 === 1 && count % 100 !== 11 ? "memas" : count % 10 === 0 || (count % 100 >= 11 && count % 100 <= 19) ? "memų" : "memai"}`,
         emptyTitle: "Kol kas tuščia",
         empty: "Patvirtintų memų dar nėra.",
@@ -85,7 +83,6 @@ export const galleryText: Record<Lang, GalleryText> = {
         voteFailed: "Couldn't save your vote. Please try again.",
         loadingPhoto: "Loading…",
         photoFailed: "Couldn't load photo",
-        endedNotice: "Voting has ended. You can still browse the memes.",
         memeCount: count => `${count} ${count === 1 ? "meme" : "memes"}`,
         emptyTitle: "Nothing here yet",
         empty: "There are no approved memes yet.",

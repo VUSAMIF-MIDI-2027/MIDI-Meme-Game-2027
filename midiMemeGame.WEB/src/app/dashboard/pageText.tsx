@@ -5,6 +5,7 @@ type PageText = {
     title: string;
     description: string;
     createMeme: string;
+    vote: string;
     creationNotice: string;
     adminEyebrow: string;
     adminTitle: string;
@@ -18,6 +19,7 @@ export const dashboardText: Record<Lang, PageText> = {
         title: "Sukurk memą, kurį prisimins visi.",
         description: "Pasirink nuotrauką, parašyk juokingą prierašą ir pateik savo memą. Vienas žmogus gali pateikti iki 3 memų.",
         createMeme: "Kurti memą",
+        vote: "Balsuoti",
         creationNotice: "Memų kūrimas bus pasiekiamas renginio metu.",
         adminEyebrow: "Organizatoriams",
         adminTitle: "Administravimas",
@@ -29,6 +31,7 @@ export const dashboardText: Record<Lang, PageText> = {
         title: "Create a meme everyone will remember.",
         description: "Choose a photo, write a funny caption and submit your meme. Each person can submit up to 3 memes.",
         createMeme: "Create a meme",
+        vote: "Vote",
         creationNotice: "Meme creation will be available during the event.",
         adminEyebrow: "For organisers",
         adminTitle: "Administration",

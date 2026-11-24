@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useAuth } from "@clerk/react";
-import { Heart, Info } from "lucide-react";
-import { galleryText } from "@/app/gallery/galleryText";
+import { Heart } from "lucide-react";
+import { galleryText } from "@/app/dashboard/gallery/galleryText";
 import { GalleryMessage } from "@/components/Gallery/GalleryMessage";
 import { useLanguage } from "@/context/LanguageContext";
 import { useGalleryMemes } from "@/hooks/useGalleryMemes";
@@ -128,10 +128,10 @@ function Skeleton({ label }: { label: string }) {
     );
 }
 
-export function MemeGallery({ votingEnded }: { votingEnded: boolean }) {
+export function MemeGallery() {
     const { lang } = useLanguage();
     const t = galleryText[lang];
-    const { state, retry, toggleVote, pendingIds, voteFailed } = useGalleryMemes();
+    const { state, retry, toggleVote, pendingIds, voteFailed, votePending } = useGalleryMemes();
 
     if (state.status === "loading") return <Skeleton label={t.loading} />;
 
@@ -142,17 +142,11 @@ export function MemeGallery({ votingEnded }: { votingEnded: boolean }) {
     const { memes, votes } = state;
     const votedCount = votes.votedMemeIds.length;
     const total = votes.remainingVotes + votedCount;
-    const canVote = !votingEnded && votes.remainingVotes > 0;
+    const canVote = votes.remainingVotes > 0;
     const items = memes.map(meme => ({ ...meme, hasVoted: votes.votedMemeIds.includes(meme.id) }));
 
     return (
         <>
-            {votingEnded && (
-                <p role="status" className="mb-6 flex items-center gap-3 rounded-xl border border-midi-blue/60 bg-midi-blue/10 px-4 py-3 text-sm text-midi-gray">
-                    <Info aria-hidden="true" className="size-5 shrink-0 text-[#70cfff]" />
-                    {t.endedNotice}
-                </p>
-            )}
             <VoteTracker left={votes.remainingVotes} total={total} t={t} />
             {voteFailed && (
                 <p role="alert" className="mb-6 rounded-xl border border-rose-500/50 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
@@ -172,7 +166,7 @@ export function MemeGallery({ votingEnded }: { votingEnded: boolean }) {
                             key={meme.id}
                             meme={meme}
                             canVote={canVote}
-                            pending={pendingIds.has(meme.id)}
+                            pending={votePending || pendingIds.has(meme.id)}
                             onToggle={() => void toggleVote(meme.id, !meme.hasVoted)}
                             t={t}
                         />
