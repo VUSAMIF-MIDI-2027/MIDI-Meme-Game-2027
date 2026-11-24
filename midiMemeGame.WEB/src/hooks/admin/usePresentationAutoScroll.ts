@@ -1,6 +1,7 @@
 import { useEffect, type RefObject } from "react";
 
 const SCROLL_SPEED_PX_PER_S = 35;
+const REDUCED_MOTION_SPEED_PX_PER_S = 12;
 const BOTTOM_PAUSE_MS = 4_000;
 const TOP_PAUSE_MS = 3_000;
 const RETURN_MIN_MS = 800;
@@ -15,8 +16,8 @@ type Phase = "down" | "bottomPause" | "up" | "topPause";
  * Slowly scrolls a container down, pauses, eases back to the top, pauses and repeats.
  * Everything is derived from the live scrollHeight each frame, so data refreshes and
  * resizes never reset the position. `enabled` must be true only once the container
- * is mounted. Does nothing when the content fits or when the
- * user prefers reduced motion.
+ * is mounted. Does nothing when the content fits. With prefers-reduced-motion the
+ * same loop runs at a much slower speed instead of being disabled.
  */
 export function usePresentationAutoScroll(
     containerRef: RefObject<HTMLElement | null>,
@@ -56,7 +57,7 @@ export function usePresentationAutoScroll(
             lastTime = now;
             const maxScroll = container.scrollHeight - container.clientHeight;
 
-            if (reducedMotion.matches || maxScroll <= FIT_TOLERANCE_PX) {
+            if (maxScroll <= FIT_TOLERANCE_PX) {
                 position = 0;
                 if (container.scrollTop !== 0) container.scrollTop = 0;
                 if (phase !== "topPause") enterPhase("topPause", now);
@@ -67,7 +68,10 @@ export function usePresentationAutoScroll(
                 if (phase === "topPause" && now >= waitUntil) {
                     enterPhase("down", now);
                 } else if (phase === "down") {
-                    position = Math.min(maxScroll, position + (SCROLL_SPEED_PX_PER_S * delta) / 1000);
+                    const speed = reducedMotion.matches
+                        ? REDUCED_MOTION_SPEED_PX_PER_S
+                        : SCROLL_SPEED_PX_PER_S;
+                    position = Math.min(maxScroll, position + (speed * delta) / 1000);
                     if (position >= maxScroll) enterPhase("bottomPause", now);
                 } else if (phase === "bottomPause" && now >= waitUntil) {
                     enterPhase("up", now);

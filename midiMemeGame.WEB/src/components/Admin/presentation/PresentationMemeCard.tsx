@@ -5,10 +5,9 @@ import Image from "next/image";
 type PresentationMemeCardProps = {
     imageUrl: string | undefined;
     caption: string;
-    photoMissingLabel: string;
 };
 
-export function PresentationMemeCard({ imageUrl, caption, photoMissingLabel }: PresentationMemeCardProps) {
+export function PresentationMemeCard({ imageUrl, caption }: PresentationMemeCardProps) {
     return (
         <article className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0a0a0a]">
             <div className="relative aspect-[3/2] bg-white/5">
@@ -24,9 +23,7 @@ export function PresentationMemeCard({ imageUrl, caption, photoMissingLabel }: P
                         className="object-cover"
                     />
                 ) : (
-                    <span className="absolute inset-0 grid place-items-center px-4 text-center text-lg text-white/50 motion-safe:animate-pulse">
-                        {photoMissingLabel}
-                    </span>
+                    <span aria-hidden="true" className="absolute inset-0 bg-white/10 motion-safe:animate-pulse" />
                 )}
             </div>
             <p className="flex min-h-28 flex-1 items-center justify-center bg-white px-6 py-5 text-center text-2xl leading-snug font-bold text-black xl:text-3xl 2xl:text-4xl">

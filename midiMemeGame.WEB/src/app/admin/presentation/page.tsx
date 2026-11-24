@@ -98,7 +98,6 @@ export default function PresentationPage() {
                             key={meme.id}
                             imageUrl={photoUrls[meme.sourcePhotoId]}
                             caption={meme.caption}
-                            photoMissingLabel={t.photoMissing}
                         />
                     ))}
                 </div>

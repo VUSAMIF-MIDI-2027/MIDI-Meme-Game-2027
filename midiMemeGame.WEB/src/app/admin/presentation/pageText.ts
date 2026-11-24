@@ -5,7 +5,6 @@ type PresentationPageText = {
     emptyDescription: string;
     errorTitle: string;
     errorDescription: string;
-    photoMissing: string;
 };
 
 export const presentationText: Record<Lang, PresentationPageText> = {
@@ -14,13 +13,11 @@ export const presentationText: Record<Lang, PresentationPageText> = {
         emptyDescription: "Čia pasirodys memai, kai tik jie bus patvirtinti.",
         errorTitle: "Nepavyko įkelti memų",
         errorDescription: "Bandoma iš naujo automatiškai.",
-        photoMissing: "Nepavyko įkelti nuotraukos",
     },
     en: {
         emptyTitle: "No approved memes yet",
         emptyDescription: "Memes will show up here as soon as they are approved.",
         errorTitle: "Could not load the memes",
         errorDescription: "Retrying automatically.",
-        photoMissing: "Photo could not be loaded",
     },
 };
