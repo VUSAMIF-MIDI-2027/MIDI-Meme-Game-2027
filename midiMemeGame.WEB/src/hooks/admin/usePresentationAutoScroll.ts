@@ -1,99 +1,75 @@
 import { useEffect, type RefObject } from "react";
 
-const SCROLL_SPEED_PX_PER_S = 35;
-const REDUCED_MOTION_SPEED_PX_PER_S = 12;
-const BOTTOM_PAUSE_MS = 4_000;
-const TOP_PAUSE_MS = 3_000;
-const RETURN_MIN_MS = 800;
-const RETURN_MAX_MS = 3_000;
-const RETURN_PX_PER_S = 600;
-const MAX_FRAME_MS = 100;
-const FIT_TOLERANCE_PX = 1;
+const INTRO_PAUSE_MS = 7_000;
+const ROW_PAUSE_MS = 18_000;
+const ROW_TRANSITION_MS = 650;
+const POSITION_TOLERANCE_PX = 1;
 
-type Phase = "down" | "bottomPause" | "up" | "topPause";
-
-/**
- * Slowly scrolls a container down, pauses, eases back to the top, pauses and repeats.
- * Everything is derived from the live scrollHeight each frame, so data refreshes and
- * resizes never reset the position. `enabled` must be true only once the container
- * is mounted. Does nothing when the content fits. With prefers-reduced-motion the
- * same loop runs at a much slower speed instead of being disabled.
- */
 export function usePresentationAutoScroll(
     containerRef: RefObject<HTMLElement | null>,
+    galleryRef: RefObject<HTMLElement | null>,
     enabled: boolean
 ) {
     useEffect(() => {
-        const element = containerRef.current;
-        if (!enabled || !element) return;
-        const container: HTMLElement = element;
+        const container = containerRef.current;
+        const gallery = galleryRef.current;
+        const grid = gallery?.querySelector("[data-presentation-grid]");
+        if (!enabled || !container || !gallery || !grid) return;
 
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-        let frameId = 0;
-        let lastTime = 0;
-        let phase: Phase = "topPause";
-        let waitUntil = 0;
-        let position = container.scrollTop;
-        let returnFrom = 0;
-        let returnStart = 0;
-        let returnDuration = RETURN_MIN_MS;
+        let timerId: number | undefined;
+        let frameId: number | undefined;
 
-        function enterPhase(next: Phase, now: number) {
-            phase = next;
-            if (next === "topPause") waitUntil = now + TOP_PAUSE_MS;
-            if (next === "bottomPause") waitUntil = now + BOTTOM_PAUSE_MS;
-            if (next === "up") {
-                returnFrom = position;
-                returnStart = now;
-                returnDuration = Math.min(
-                    RETURN_MAX_MS,
-                    Math.max(RETURN_MIN_MS, (returnFrom / RETURN_PX_PER_S) * 1000)
-                );
+        function getStopPositions(container: HTMLElement, gallery: HTMLElement, grid: Element) {
+            const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+            const firstCard = grid.firstElementChild;
+            if (!firstCard || maxScroll <= POSITION_TOLERANCE_PX) return [0];
+
+            const firstTop = firstCard.getBoundingClientRect().top;
+            const galleryTop = gallery.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+            const stops = [0];
+            for (const card of grid.children) {
+                const top = Math.min(maxScroll, galleryTop + card.getBoundingClientRect().top - firstTop);
+                if (top - stops[stops.length - 1] > POSITION_TOLERANCE_PX) stops.push(top);
             }
+            return stops;
         }
 
-        function frame(now: number) {
-            const delta = lastTime === 0 ? 0 : Math.min(now - lastTime, MAX_FRAME_MS);
-            lastTime = now;
-            const maxScroll = container.scrollHeight - container.clientHeight;
-
-            if (maxScroll <= FIT_TOLERANCE_PX) {
-                position = 0;
-                if (container.scrollTop !== 0) container.scrollTop = 0;
-                if (phase !== "topPause") enterPhase("topPause", now);
-                else waitUntil = now + TOP_PAUSE_MS;
-            } else {
-                position = Math.min(position, maxScroll);
-
-                if (phase === "topPause" && now >= waitUntil) {
-                    enterPhase("down", now);
-                } else if (phase === "down") {
-                    const speed = reducedMotion.matches
-                        ? REDUCED_MOTION_SPEED_PX_PER_S
-                        : SCROLL_SPEED_PX_PER_S;
-                    position = Math.min(maxScroll, position + (speed * delta) / 1000);
-                    if (position >= maxScroll) enterPhase("bottomPause", now);
-                } else if (phase === "bottomPause" && now >= waitUntil) {
-                    enterPhase("up", now);
-                } else if (phase === "up") {
-                    const progress = Math.min(1, (now - returnStart) / returnDuration);
-                    const eased = progress * progress * (3 - 2 * progress);
-                    position = Math.min(returnFrom, maxScroll) * (1 - eased);
-                    if (progress >= 1) {
-                        position = 0;
-                        enterPhase("topPause", now);
-                    }
-                }
-
-                container.scrollTop = position;
-            }
-
-            frameId = window.requestAnimationFrame(frame);
+        function pauseOnSlide(top: number) {
+            const duration = top <= POSITION_TOLERANCE_PX ? INTRO_PAUSE_MS : ROW_PAUSE_MS;
+            timerId = window.setTimeout(advance, duration);
         }
 
-        enterPhase("topPause", performance.now());
-        frameId = window.requestAnimationFrame(frame);
+        function advance() {
+            if (!container || !gallery || !grid) return;
+            const currentTop = container.scrollTop;
+            const stops = getStopPositions(container, gallery, grid);
+            const nextTop = stops.find(top => top > currentTop + POSITION_TOLERANCE_PX);
 
-        return () => window.cancelAnimationFrame(frameId);
-    }, [containerRef, enabled]);
+            if (nextTop === undefined || reducedMotion.matches) {
+                container.scrollTop = nextTop ?? 0;
+                pauseOnSlide(nextTop ?? 0);
+                return;
+            }
+
+            const viewport = container;
+            const target = nextTop;
+            const start = performance.now();
+            function animate(now: number) {
+                const progress = Math.min(1, (now - start) / ROW_TRANSITION_MS);
+                const eased = progress * progress * (3 - 2 * progress);
+                viewport.scrollTop = currentTop + (target - currentTop) * eased;
+                if (progress < 1) frameId = window.requestAnimationFrame(animate);
+                else pauseOnSlide(target);
+            }
+            frameId = window.requestAnimationFrame(animate);
+        }
+
+        container.scrollTop = 0;
+        pauseOnSlide(0);
+        return () => {
+            window.clearTimeout(timerId);
+            if (frameId !== undefined) window.cancelAnimationFrame(frameId);
+        };
+    }, [containerRef, galleryRef, enabled]);
 }

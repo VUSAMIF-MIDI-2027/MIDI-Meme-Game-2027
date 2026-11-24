@@ -12,6 +12,12 @@ const REFRESH_INTERVAL_MS = 30_000;
 const INITIAL_RETRY_INTERVAL_MS = 10_000;
 const REQUEST_TIMEOUT_MS = 20_000;
 
+function submittedAtUtc(meme: AdminMeme) {
+    const value = meme.createdAtUtc;
+    const hasOffset = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
+    return Date.parse(hasOffset ? value : value + "Z") || 0;
+}
+
 export type PresentationStatus = "loading" | "error" | "ready";
 
 export function usePresentationMemes(enabled: boolean) {
@@ -39,7 +45,7 @@ export function usePresentationMemes(enabled: boolean) {
                 const fetched = await getActiveAdminMemes(token, signal, MEME_STATUS.approved);
                 if (controller.signal.aborted) return;
                 loaded = true;
-                setMemes(fetched);
+                setMemes(fetched.sort((a, b) => submittedAtUtc(b) - submittedAtUtc(a) || b.id - a.id));
                 setInitialError(false);
             } catch {
                 // A failed refresh keeps the last good list; the next tick retries.
