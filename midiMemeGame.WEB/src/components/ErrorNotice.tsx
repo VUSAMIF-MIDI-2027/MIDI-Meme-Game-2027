@@ -1,5 +1,6 @@
 "use client";
 
+import { Info } from "lucide-react";
 import { useLanguage, type Lang } from "@/context/LanguageContext";
 import { ApiError, errorCode, isTimeoutError } from "@/services/ApiError";
 
@@ -144,6 +145,27 @@ export function ErrorNotice({ error, scope = "generic", className = "" }: Props)
     const { lang } = useLanguage();
 
     if (error == null) return null;
+
+    if (scope === "review" && error instanceof ApiError && error.status === 409 && error.code === 2702) {
+        return (
+            <div
+                role="status"
+                className={`flex items-start gap-3 rounded-xl border border-sky-400/25 bg-sky-400/5 px-4 py-3 text-white ${className}`}
+            >
+                <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-sky-300" />
+                <div>
+                    <p className="font-semibold">
+                        {lang === "lt" ? "Šio memo būsena pasikeitė" : "This meme’s status has changed"}
+                    </p>
+                    <p className="mt-1 text-sm text-white/75">
+                        {lang === "lt"
+                            ? "Tavo sprendimas neįrašytas. Sąraše matai naujausią memo būseną."
+                            : "Your decision wasn’t saved. The list shows the latest status."}
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const code = errorCode(error); // null for aborts, so nothing is shown
     if (!code) return null;

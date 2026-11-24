@@ -2,6 +2,7 @@
 
 import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 
+import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { MEME_STATUS, type MemeStatusId } from "@/services/adminService";
@@ -16,7 +17,7 @@ export function MemeApproval() {
     const t = memeApprovalText[lang];
 
     const [activeFilter, setActiveFilter] = useState<MemeStatusId>(MEME_STATUS.pending);
-    const { memes, photoUrls, loading, busyMemeId, error, updateMemeStatus } = useAdminMemes();
+    const { memes, photoUrls, loading, busyMemeId, refreshing, refresh, error, updateMemeStatus } = useAdminMemes();
 
     const tabs: MemeFilterTab[] = [
         {
@@ -50,12 +51,23 @@ export function MemeApproval() {
         <div className="space-y-6">
             <ErrorNotice error={error?.cause} scope={error?.scope} />
 
-            <MemeFilterTabs
-                tabs={tabs}
-                activeTab={activeFilter}
-                ariaLabel={t.pendingTab}
-                onSelect={setActiveFilter}
-            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <MemeFilterTabs
+                    tabs={tabs}
+                    activeTab={activeFilter}
+                    ariaLabel={t.pendingTab}
+                    onSelect={setActiveFilter}
+                />
+                <button
+                    type="button"
+                    onClick={refresh}
+                    disabled={refreshing || busyMemeId !== null}
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50"
+                >
+                    <RefreshCw aria-hidden="true" className={refreshing ? "size-4 animate-spin" : "size-4"} />
+                    {lang === "lt" ? "Atnaujinti" : "Refresh"}
+                </button>
+            </div>
 
             {filteredMemes.length === 0 ? (
                 <div className="rounded-xl border border-white/15 bg-[#0d1013] p-6 text-sm text-white/60">

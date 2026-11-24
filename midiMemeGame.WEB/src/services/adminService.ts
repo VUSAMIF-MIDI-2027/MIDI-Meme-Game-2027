@@ -201,10 +201,11 @@ export async function getAdminMemes(
 export async function patchAdminMemeStatus(
     memeId: number,
     statusId: MemeStatusId,
+    expectedUpdatedAtUtc: string,
     token: string,
     signal?: AbortSignal
-): Promise<AdminMeme> {
-    const params = new URLSearchParams({ statusId: String(statusId) });
+): Promise<Pick<AdminMeme, "statusId" | "updatedAtUtc">> {
+    const params = new URLSearchParams({ statusId: String(statusId), expectedUpdatedAtUtc });
     const response = await send(`${apiBaseUrl}/api/admin/memes/${memeId}/status?${params}`, {
         method: "PATCH",
         headers: authHeaders(token),
@@ -212,19 +213,7 @@ export async function patchAdminMemeStatus(
         cache: "no-store",
     });
 
-    if (isJson(response)) return readJson<AdminMeme>(response);
-
-    return {
-        id: memeId,
-        sourcePhotoId: 0,
-        caption: "",
-        statusId,
-        score: 0,
-        createdAtUtc: "",
-        updatedAtUtc: new Date().toISOString(),
-        isInvalidatedBySourcePhoto: false,
-        isDeleted: false,
-    };
+    return readJson<Pick<AdminMeme, "statusId" | "updatedAtUtc">>(response);
 }
 export type ResultCandidate = {
     id: number;
