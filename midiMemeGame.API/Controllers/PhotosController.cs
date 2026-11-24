@@ -15,11 +15,16 @@ namespace MidiMemeGame.Api.Controllers
     {
         private readonly SourcePhotoQueries _sourcePhotoQueries;
         private readonly PhotoFileService _photoFiles;
+        private readonly EventPhaseService _eventScheduleService;
 
-        public PhotosController(SourcePhotoQueries sourcePhotoQueries, PhotoFileService photoFiles)
+        public PhotosController(
+            SourcePhotoQueries sourcePhotoQueries, 
+            PhotoFileService photoFiles,
+            EventPhaseService eventPhaseService)
         {
             _sourcePhotoQueries = sourcePhotoQueries;
             _photoFiles = photoFiles;
+            _eventScheduleService = eventPhaseService;
         }
 
         [HttpGet]
@@ -41,10 +46,22 @@ namespace MidiMemeGame.Api.Controllers
         }
 
         [HttpGet("{id:int}/file")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetPhotoFile(
             int id,
             CancellationToken cancellationToken)
         {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                var eventResult = await _eventScheduleService.EnsureEventEndedAsync(cancellationToken);
+
+                if (eventResult.IsError)
+                {
+                    return StatusCode(
+                        StatusCodes.Status403Forbidden,
+                        ErrorResponse.Create(eventResult.Error));
+                }
+            }
 
             var photoResult = await _sourcePhotoQueries.GetByIdAsync(id, cancellationToken);
 
