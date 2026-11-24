@@ -8,7 +8,7 @@ internal static class DeploymentSlot
         if (string.IsNullOrEmpty(slot))
             return true;
 
-        using var routing = File.OpenText("/run/midi-routing/upstreams.conf");
-        return routing.ReadLine() == $"# midi-slot {slot}";
+        using var routing = File.OpenText("/run/midi-routing/active");
+        return routing.ReadLine() == slot;
     }
 }

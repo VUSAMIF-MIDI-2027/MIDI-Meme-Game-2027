@@ -1,12 +1,3 @@
-# One-time bootstrap on the existing host (keep current services running):
-# Create DEPLOY_PATH/routing with mode 0755. Render the route.sh block below with
-# argument legacy to routing/upstreams.conf (0644). Include that exact file in
-# nginx http {}, and in the existing site use proxy_pass http://midi_game_api
-# and proxy_pass http://midi_game_web, preserving URI and forwarded headers.
-# Validate and reload nginx; localhost:19591/{slot,api/health} and / must respond.
-# Reserve all loopback ports below. Permit the SSH user a lingering systemd user
-# manager, Docker Compose v2 and noninteractive nginx -t / systemctl reload nginx.
-# DEPLOY_PATH is a private, canonical path owned by this deployment account.
 name: Deploy
 
 on:
@@ -62,13 +53,16 @@ jobs:
         run: npx tsc --noEmit --incremental false
 
   build:
-    needs: lint
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      api: ${{ steps.transfer.outputs.api }}
+      web: ${{ steps.transfer.outputs.web }}
     runs-on: ubuntu-latest
     timeout-minutes: 50
 
     env:
-      SSH_HOST: ${{ secrets.SSH_HOST }}
-      SSH_USER: ${{ secrets.SSH_USER }}
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://naktis.midi.lt' }}
 
@@ -106,209 +100,242 @@ jobs:
                   bind:
                     create_host_path: false
           FILE
-          cat > stage/route.sh <<'FILE'
-          #!/usr/bin/env bash
-          # Render an http-context include. The site's existing proxy locations use these upstreams.
-          set -eu
-          case "$1" in
-            legacy) api=5001; web=4000 ;;
-            blue) api=15001; web=14000 ;;
-            green) api=15002; web=14001 ;;
-            *) exit 2 ;;
-          esac
-          cat <<EOF
-          # midi-slot $1
-          upstream midi_game_api { server 127.0.0.1:$api; }
-          upstream midi_game_web { server 127.0.0.1:$web; }
-          server {
-              listen 127.0.0.1:19591;
-              location = /slot { return 200 '$1'; }
-              location = /api/health { proxy_pass http://midi_game_api; }
-              location = / { proxy_pass http://midi_game_web; }
-          }
-          EOF
-          FILE
           cat > stage/promote.sh <<'FILE'
           #!/usr/bin/env bash
-          # Runs as an independent systemd user service. Never stop the active slot on entry.
           set -Eeuo pipefail
           umask 077
           root=$1 project=$2 tag=$3
-          [[ $root =~ ^/[-a-zA-Z0-9_./]+$ && $root != / && $(realpath "$root") == "$root" ]]
+          [[ $root != / && $(realpath "$root") == "$root" ]]
           [[ $project =~ ^[a-z0-9][a-z0-9_-]*$ && $tag =~ ^[0-9a-f]{40}-[0-9]+-[0-9]+$ ]]
           cd "$root"
-          exec 9>.deploy.lock
-          flock -n 9 || exit 1
-          routing=$root/routing/upstreams.conf
           incoming=$root/.incoming
           base="127.0.0.1:19590/$project"
-          probe=http://127.0.0.1:19591
-
-          healthy() {
-              local status
-              status=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 "$1") && [[ $status == 2?? ]]
+          http_ok() {
+              local code
+              code=$(curl -sS --max-time 4 -o /dev/null -w '%{http_code}' "$1") && [[ $code == 2?? ]]
           }
-          routed() {
-              [[ $(curl -fsS --max-time 3 "$probe/slot") == "$1" ]] &&
-                  healthy "$probe/api/health" && healthy "$probe/"
-          }
-          wait_route() {
-              local i
-              for i in {1..20}; do routed "$1" && return 0; sleep 1; done
+          ready() {
+              for attempt in {1..30}; do
+                  if http_ok "http://127.0.0.1:$1/api/health" && http_ok "http://127.0.0.1:$2/"; then return 0; fi
+                  sleep 1
+              done
               return 1
           }
-          write_route() {
-              bash "$incoming/route.sh" "$1" > "$routing.next" &&
-              chmod 644 "$routing.next" &&
-              mv -fT "$routing.next" "$routing"
-          }
-          reload_nginx() {
-              sudo -n nginx -t && sudo -n systemctl reload nginx
-          }
-          # Restrict removal to this deployment's two Compose services; keep all mounts.
-          remove_services() {
-              local owner=$1 service ids
-              for service in api web; do
-                  ids=$(docker ps -aq --filter "label=com.docker.compose.project=$owner" \
-                      --filter "label=com.docker.compose.service=$service")
-                  if [[ -n $ids ]]; then
-                      mapfile -t containers <<< "$ids"
-                      docker stop -t 40 "${containers[@]}" >/dev/null
-                      docker rm "${containers[@]}" >/dev/null
-                  fi
+          # Resolve both live containers by their published loopback ports AND Compose labels.
+          live_container() {
+              local svc=$1 port=$2 inner=$3 owner id found=
+              for owner in "$project" "${project}_blue" "${project}_green"; do
+                  for id in $(docker ps -q --filter "label=com.docker.compose.project=$owner" --filter "label=com.docker.compose.service=$svc"); do
+                      if [[ $(docker port "$id" "$inner/tcp") == "127.0.0.1:$port" ]]; then
+                          [[ -z $found ]] || return 1
+                          found=$id
+                      fi
+                  done
               done
+              [[ -n $found ]] && echo "$found"
           }
-          clear_config() {
-              rm -f -- "$1/compose.yml" "$1/compose.production.yml" "$1/api.env" "$1/public.env"
-          }
-          clean_tags() {
-              local keep=$1 image ref
-              for image in api web; do
-                  while read -r ref; do
-                      [[ $ref == "$base/$image:"* && $ref != "$base/$image:$keep" ]] || continue
-                      docker image rm "$ref" >/dev/null || return 1
-                  done < <(docker image ls "$base/$image" --format '{{.Repository}}:{{.Tag}}')
-              done
-          }
-          read -r marker < "$routing"
-          old=${marker#\# midi-slot }
-          case "$old" in
-              legacy|green) slot=blue; api_port=15001; web_port=14000 ;;
-              blue) slot=green; api_port=15002; web_port=14001 ;;
-              *) echo "Bootstrap the Nginx routing include first" >&2; exit 1 ;;
+          owner_of() { docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$1"; }
+          old_api=$(live_container api 5001 8080)
+          old_web=$(live_container web 4000 4000)
+          old_owner=$(owner_of "$old_api")
+          [[ $(owner_of "$old_web") == "$old_owner" ]]
+          ready 5001 4000
+          case "$old_owner" in
+              "$project") old=legacy; slot=blue ;;
+              "${project}_blue") old=blue; slot=green ;;
+              "${project}_green") old=green; slot=blue ;;
           esac
-          # Verify both the durable pointer and the running proxy before reclaiming any slot.
-          cmp "$routing" <(bash "$incoming/route.sh" "$old")
-          if ! routed "$old"; then reload_nginx && wait_route "$old" || exit 1; fi
-          owner="${project}_${slot}"
           dir="$root/$slot"
-          old_owner=$project
-          [[ $old == legacy ]] || old_owner="${project}_${old}"
-          if pgrep -f '^nginx: worker process is shutting down' >/dev/null; then
-              echo "Previous Nginx generation still draining; retry later" >&2; exit 1
-          fi
-          remove_services "$owner"
           mkdir -p "$dir"
-          switched=0
+          install -d -m 0755 "$root/routing"
+          activate() {
+              printf '%s\n' "$1" > "$root/routing/active.next" &&
+                  chmod 644 "$root/routing/active.next" &&
+                  mv -fT "$root/routing/active.next" "$root/routing/active"
+          }
+          activate "$old"
+          for file in compose.yml compose.production.yml public.env api.env; do install -m 600 "$incoming/$file" "$dir/$file"; done
+          cat >> "$dir/public.env" <<EOF
+          API_IMAGE=$base/api:$tag
+          WEB_IMAGE=$base/web:$tag
+          SLOT=$slot
+          ROUTING_DIR=$root/routing
+          EOF
+          stack() {
+              local owner=$1 api=$2 web=$3
+              shift 3
+              API_PORT=$api WEB_PORT=$web docker compose -p "$owner" --env-file "$dir/public.env" \
+                  -f "$dir/compose.yml" -f "$dir/compose.production.yml" "$@"
+          }
+          candidate() { stack "${project}_check" 15001 14000 "$@"; }
+          next() { stack "${project}_$slot" 5001 4000 "$@"; }
+          # 'down' acts only on our isolated project and never receives --volumes.
+          candidate down
+          next down
           committed=0
+          guard=
           finish() {
               local rc=$?
               trap - EXIT
               set +e
-              if (( rc && !committed )); then
-                  if (( switched )); then
-                      # Keep both slots if the proxy cannot confirm rollback.
-                      write_route "$old" && reload_nginx && wait_route "$old" || exit "$rc"
-                  fi
-                  remove_services "$owner" && clear_config "$dir"
-                  for image in api web; do docker image rm "$base/$image:$tag" >/dev/null 2>&1; done
+              if [[ -n $guard ]]; then
+                  exec 9>&-
+                  wait "$guard" || { echo "Rollback needs operator attention" >&2; exit 1; }
+                  if [[ -f $dir/.committed ]]; then committed=1; fi
               fi
-              clear_config "$incoming"
-              rm -f "$incoming/promote.sh" "$incoming/route.sh"
-              rmdir "$incoming" 2>/dev/null
+              candidate down
+              if (( !committed )); then
+                  next down
+                  for svc in api web; do docker image rm "$base/$svc:$tag" >/dev/null 2>&1; done
+              fi
               exit "$rc"
           }
           trap finish EXIT
-          trap 'exit 143' TERM HUP INT
-          for file in compose.yml compose.production.yml public.env api.env; do install -m 600 "$incoming/$file" "$dir/$file"; done
-          cat >>"$dir/public.env" <<EOF
-          API_IMAGE=$base/api:$tag
-          WEB_IMAGE=$base/web:$tag
-          API_PORT=$api_port
-          WEB_PORT=$web_port
-          ROUTING_DIR=$root/routing
-          SLOT=$slot
-          EOF
-          compose=(docker compose --project-name "$owner" --env-file "$dir/public.env" -f "$dir/compose.yml" -f "$dir/compose.production.yml")
-          "${compose[@]}" config --quiet
-          "${compose[@]}" pull
-          # UID/GID and mounts must allow the same SQLite and upload access as the old API.
-          "${compose[@]}" run --rm --no-deps -T --entrypoint sh api -ec '
-              test -s /app/App_Data/Sqlite.db
-              test -r /run/midi-routing/upstreams.conf
+          trap 'exit 143' TERM INT HUP
+          candidate pull
+          candidate run --rm --no-deps -T --entrypoint sh api -ec '
+              test -s /app/App_Data/Sqlite.db && test -r /run/midi-routing/active
               for file in /app/App_Data/Sqlite.db*; do test -r "$file" && test -w "$file"; done
               probe=$(mktemp /app/App_Data/.write-check.XXXXXX) && rm "$probe"
           '
-          "${compose[@]}" up -d --no-build --pull never
-          ready=0
-          for attempt in {1..40}; do
-              if healthy "http://127.0.0.1:$api_port/api/health" && healthy "http://127.0.0.1:$web_port/"; then
-                  ready=1; break
-              fi
-              sleep 2
+          candidate up -d --no-build --pull never
+          ready 15001 14000
+          for svc in api web; do
+              [[ $(docker inspect -f '{{.State.Running}}:{{.RestartCount}}' "$(candidate ps -q "$svc")") == true:0 ]]
           done
-          (( ready )) || { echo "Candidate failed HTTP readiness" >&2; exit 1; }
-          for service in api web; do
-              id=$("${compose[@]}" ps -q "$service")
+          candidate down
+          # Create the final containers before freeing either port. Docker binds on start.
+          next create --no-build --pull never
+          new_api=$(next ps -aq api)
+          new_web=$(next ps -aq web)
+          [[ -n $new_api && -n $new_web ]]
+          old_images=$(docker inspect -f '{{.Config.Image}}' "$old_api" "$old_web")
+          # Across a daemon restart during cutover the old pair is still restartable.
+          docker update --restart=always "$old_api" "$old_web" >/dev/null
+          docker update --restart=no "$new_api" "$new_web" >/dev/null
+          rm -f "$dir/.committed"
+          exec 9>"$dir/.cutover.lock"
+          flock -x 9
+          # Independent guard survives an interrupted promotion shell. Its lock opens on
+          # shell exit (including SIGKILL). SSH itself runs promotion detached via setsid.
+          (
+              trap - EXIT TERM INT
+              trap '' HUP
+              exec 9>&-
+              exec 7>"$dir/.cutover.lock"
+              flock -x 7
+              [[ ! -f "$dir/.committed" ]] || exit 0
+              for id in "$new_api" "$new_web"; do
+                  if [[ $(docker inspect -f '{{.State.Running}}' "$id") == true ]]; then
+                      docker stop "$id" >/dev/null
+                  fi
+              done
+              activate "$old"
+              docker start "$old_api" "$old_web" >/dev/null
+              ready 5001 4000
+              docker update --restart=unless-stopped "$old_api" "$old_web" >/dev/null
+          ) &
+          guard=$!
+          docker stop -t 30 "$old_api" "$old_web" >/dev/null
+          docker start "$new_api" "$new_web" >/dev/null
+          ready 5001 4000
+          for id in "$new_api" "$new_web"; do
               [[ $(docker inspect -f '{{.State.Running}}:{{.RestartCount}}' "$id") == true:0 ]]
           done
-          switched=1
-          write_route "$slot"
-          reload_nginx
-          wait_route "$slot"
-          # Existing Nginx connections may still be served by the previous workers.
-          for attempt in {1..120}; do
-              pgrep -f '^nginx: worker process is shutting down' >/dev/null || break
-              sleep 1
-          done
-          if pgrep -f '^nginx: worker process is shutting down' >/dev/null; then
-              committed=1
-              echo "Drain timed out; keeping old containers" >&2; exit 1
-          fi
-          wait_route "$slot"
+          docker update --restart=unless-stopped "$new_api" "$new_web" >/dev/null
+          activate "$slot"
+          touch "$dir/.committed"
           committed=1
-          # Remember exact legacy image IDs before removing the corresponding containers.
-          legacy_images=()
-          for svc in api web; do
-                  for id in $(docker ps -aq --filter "label=com.docker.compose.project=$project" --filter "label=com.docker.compose.service=$svc"); do
-                      if [[ $(docker inspect -f '{{.Config.Image}}' "$id") == "midi-meme-$svc:latest" ]]; then
-                          legacy_images+=("$svc:$(docker inspect -f '{{.Image}}' "$id")")
-                      fi
-                  done
-          done
-          remove_services "$old_owner"
-          if [[ $old_owner != "$project" ]]; then remove_services "$project"; fi
-          if [[ $old != legacy ]]; then clear_config "$root/$old"; rmdir "$root/$old"; fi
-          for item in "${legacy_images[@]}"; do
-              ref="midi-meme-${item%%:*}:latest"
-              if [[ $(docker image inspect -f '{{.Id}}' "$ref" 2>/dev/null || :) == "${item#*:}" ]]; then docker image rm "$ref"; fi
-          done
-          clean_tags "$tag"
-          # Migrate only the known files produced by the former workflow.
-          [[ ! -L $root/releases ]] || exit 1
+          exec 9>&-
+          wait "$guard"
+          guard=
+          docker rm "$old_api" "$old_web"
+          if [[ $old != legacy ]]; then
+              for f in compose.yml compose.production.yml public.env api.env .committed .cutover.lock; do rm -f "$root/$old/$f"; done
+              rmdir --ignore-fail-on-non-empty "$root/$old"
+          fi
+          while read -r ref; do
+              case "$ref" in
+                  "$base/api:"*|"$base/web:"*|midi-meme-api:latest|midi-meme-web:latest)
+                      if [[ -z $(docker ps -aq --filter "ancestor=$ref") ]]; then docker image rm "$ref"; fi ;;
+              esac
+          done <<< "$old_images"
+          [[ ! -L $root/releases ]]
           for release in "$root"/releases/*; do
               [[ -d $release && ! -L $release && ${release##*/} =~ ^[0-9a-f]{40}$ ]] || continue
               rm -f -- "$release/images.tar.gz" "$release/compose.yml" "$release/api.env" "$release/public.env"
               rmdir --ignore-fail-on-non-empty "$release"
           done
           if [[ -d $root/releases ]]; then rmdir --ignore-fail-on-non-empty "$root/releases"; fi
+          for file in compose.yml compose.production.yml public.env api.env promote.sh; do rm -f "$incoming/$file"; done
+          rmdir "$incoming"
           FILE
-          bash -n stage/route.sh
           bash -n stage/promote.sh
           SLOT=blue ROUTING_DIR=/tmp/midi-routing docker compose -f compose.yml -f stage/compose.production.yml config --quiet
 
-      - name: Stage configuration
+      - name: Share validated promotion scripts
         if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: stage/
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Publish temporary CI images by digest
+        id: transfer
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for service in api web; do
+            repo="ghcr.io/${GITHUB_REPOSITORY,,}/ci-$service"
+            ref="$repo:transfer-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            docker tag "midi-meme-$service:latest" "$ref"
+            docker push "$ref"
+            digest=$(docker image inspect "$ref" --format '{{range .RepoDigests}}{{println .}}{{end}}' | awk -v prefix="$repo@" 'index($0,prefix)==1 {print $0; exit}')
+            [[ ${digest#*@} =~ ^sha256:[0-9a-f]{64}$ && $digest == "$repo@"* ]]
+            echo "$service=$digest" >> "$GITHUB_OUTPUT"
+          done
+
+  deploy:
+    needs: [lint, build]
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://naktis.midi.lt' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: promotion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: stage/
+
+      - name: Fetch exact images built in CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API_REF: ${{ needs.build.outputs.api }}
+          WEB_REF: ${{ needs.build.outputs.web }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker pull "$API_REF"
+          docker pull "$WEB_REF"
+          docker tag "$API_REF" midi-meme-api:latest
+          docker tag "$WEB_REF" midi-meme-web:latest
+
+      - name: Stage configuration
         run: |
           umask 077
           cp compose.yml stage/
@@ -316,7 +343,6 @@ jobs:
             "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" "$NEXT_PUBLIC_API_BASE_URL" > stage/public.env
 
       - name: Prepare API runtime configuration
-        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
@@ -360,7 +386,6 @@ jobs:
           PY
 
       - name: Configure SSH
-        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
@@ -389,7 +414,6 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Stream images through a temporary registry and promote
-        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
         run: |
           set -euo pipefail
           [[ "$DEPLOY_PATH" =~ ^/[-a-zA-Z0-9_./]+$ && "$DEPLOY_PATH" != / ]]
@@ -407,13 +431,40 @@ jobs:
           done
           target="$SSH_USER@$SSH_HOST"
           # Only configuration travels on stdin. Docker pulls image layers over the SSH tunnel.
-          tar -C stage -cf - compose.yml compose.production.yml public.env api.env route.sh promote.sh |
+          tar -C stage -cf - compose.yml compose.production.yml public.env api.env promote.sh |
             ssh -T -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 \
               -R "127.0.0.1:19590:127.0.0.1:19590" "$target" \
               "bash -c 'set -eu; umask 077; cd \"\$1\"; exec 8>.upload.lock; flock -n 8; \
-              unit=midi-deploy-\$2; \
-              if systemctl --user is-active --quiet \"\$unit\"; then exit 1; fi; \
               mkdir -p .incoming; tar -xf - -C .incoming; \
-              systemd-run --user --wait --collect --unit=\"\$unit\" \
-              /bin/bash \"\$1/.incoming/promote.sh\" \"\$1\" \"\$2\" \"\$3\"' \
+              nohup setsid --wait /bin/bash \"\$1/.incoming/promote.sh\" \"\$1\" \"\$2\" \"\$3\" \
+                </dev/null >.promotion.log 2>&1 & pid=\$!; \
+              rc=0; wait \"\$pid\" || rc=\$?; tail -n 80 .promotion.log; exit \"\$rc\"' \
               bash '$DEPLOY_PATH' '$COMPOSE_PROJECT_NAME' '$tag'"
+
+  cleanup:
+    needs: [build, deploy]
+    if: always() && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      packages: write
+    steps:
+      - name: Remove this run's temporary GHCR versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER_TYPE: ${{ github.event.repository.owner.type }}
+        run: |
+          set -euo pipefail
+          scope="user"
+          if [[ $OWNER_TYPE == Organization ]]; then scope="orgs/$GITHUB_REPOSITORY_OWNER"; fi
+          name=${GITHUB_REPOSITORY#*/}
+          tag="transfer-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          for service in api web; do
+            endpoint="/$scope/packages/container/${name,,}%2Fci-$service/versions"
+            if ! gh api --paginate "$endpoint?per_page=100" > versions.json 2> api-error; then
+              if grep -q 'HTTP 404' api-error; then continue; fi
+              cat api-error >&2; exit 1
+            fi
+            jq -r --arg tag "$tag" '.[] | select(.metadata.container.tags == [$tag]) | .id' versions.json > ids
+            while read -r id; do gh api --method DELETE "$endpoint/$id"; done < ids
+          done
