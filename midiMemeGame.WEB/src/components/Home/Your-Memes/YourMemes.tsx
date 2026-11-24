@@ -369,8 +369,8 @@ const YourMemes = ({
                   <Image
                     src={
                       submissionsEnded
-                        ? "/cats/jakub02.webp"
-                        : "/cats/jakub.webp"
+                        ? "/jakub/jakub02.webp"
+                        : "/jakub/jakub.webp"
                     }
                     width={128}
                     height={128}
