@@ -25,9 +25,10 @@ public class MemeModerationService
         _notifications = notifications;
         _logger = logger;
     }
-    public async Task<Result> UpdateStatusAsync(
+    public async Task<Result<DateTime>> UpdateStatusAsync(
     int memeId,
     MemeStatus status,
+    DateTime expectedUpdatedAtUtc,
     CancellationToken cancellationToken)
     {
         try
@@ -43,8 +44,15 @@ public class MemeModerationService
             if (!memeResult.TryGetResult(out var meme) || meme is null)
                 return ErrorType.NOT_FOUND;
 
+            if (meme.UpdatedAtUtc.Ticks != expectedUpdatedAtUtc.Ticks)
+                return ErrorType.MEME_ALREADY_MODERATED;
+
+            var updatedAtUtc = DateTime.UtcNow;
+            if (updatedAtUtc.Ticks <= meme.UpdatedAtUtc.Ticks)
+                updatedAtUtc = meme.UpdatedAtUtc.AddTicks(1);
+
             var update = await _memeQueries.UpdateStatusAsync(
-                memeId, status, cancellationToken);
+                memeId, status, updatedAtUtc, cancellationToken);
 
             if (update.IsError)
                 return update.Error;
@@ -63,7 +71,7 @@ public class MemeModerationService
             }
 
             await transaction.CommitAsync(cancellationToken);
-            return Result.Ok();
+            return updatedAtUtc;
         }
         catch (Exception ex)
         {

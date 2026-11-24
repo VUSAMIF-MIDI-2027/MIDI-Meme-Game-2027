@@ -295,13 +295,14 @@ public class MemeQueries
     public async Task<Result> UpdateStatusAsync(
         int memeId,
         MemeStatus status,
+        DateTime updatedAtUtc,
         CancellationToken cancellationToken)
     {
         try
         {
             FormattableString query = $"""
                 UPDATE "Memes"
-                SET "StatusId" = {(int)status}
+                SET "StatusId" = {(int)status}, "UpdatedAtUtc" = {updatedAtUtc}
                 WHERE "Id" = {memeId}
                     AND "IsDeleted" = 0
                     AND "IsInvalidatedBySourcePhoto" = 0
@@ -388,6 +389,7 @@ public class MemeQueries
             FormattableString query = $"""
                 SELECT
                     m."StatusId",
+                    m."UpdatedAtUtc",
                     m."Caption",
                     u."FirstName",
                     u."Email",
