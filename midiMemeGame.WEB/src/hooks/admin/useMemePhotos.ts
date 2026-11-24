@@ -71,7 +71,11 @@ export function useMemePhotos(photoIds: readonly number[]) {
                     URL.revokeObjectURL(url);
                     throw error;
                 }
-                if (controller!.signal.aborted || !wantedNow.current.has(id)) {
+                if (
+                    controller!.signal.aborted ||
+                    !wantedNow.current.has(id) ||
+                    urls.has(id)
+                ) {
                     URL.revokeObjectURL(url);
                     return;
                 }
@@ -90,7 +94,11 @@ export function useMemePhotos(photoIds: readonly number[]) {
             } catch (error) {
                 if (!controller!.signal.aborted) console.error("Failed to load photos", error);
             } finally {
-                missing.forEach((id) => pending.current.delete(id));
+                // After an unmount or StrictMode re-run the cleanup already reset `pending`;
+                // deleting here would drop ids that a newer run has just claimed.
+                if (!controller!.signal.aborted) {
+                    missing.forEach((id) => pending.current.delete(id));
+                }
             }
         }
 
