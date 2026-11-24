@@ -356,7 +356,7 @@ public class MemeQueries
                     NULLIF(TRIM(u."FirstName" || ' ' || u."LastName"), '') AS "UserName"
                 FROM "Memes" AS m
                 LEFT JOIN "Users" AS u ON u."Id" = m."UserId"
-                WHERE m."IsDeleted" = 0
+                WHERE (m."IsDeleted" = 0 OR m."StatusId" = {(int)MemeStatus.Approved})
                     AND ({statusFilter} IS NULL OR m."StatusId" = {statusFilter})
                 ORDER BY m."CreatedAtUtc" DESC, m."Id" DESC
                 """;

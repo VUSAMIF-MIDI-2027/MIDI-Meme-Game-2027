@@ -8,7 +8,6 @@ using MidiMemeGame.Api.Data;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Memes.Results;
 using MidiMemeGame.Api.Models;
-using MidiMemeGame.Api.Services.Interfaces;
 using MidiMemeGame.Api.Models.Memes.Results;
 
 namespace MidiMemeGame.Api.Services;
@@ -18,7 +17,7 @@ public class ResultPublicationService
     private readonly AppDbContext _db;
     private readonly EventPhaseService _eventPhase;
     private readonly MemeQueries _memeQueries;
-    private readonly IEmailService _emailService;
+    private readonly MemeNotificationService _notifications;
     private readonly ResultPublicationQueries _publicationQueries;
     private readonly ILogger<ResultPublicationService> _logger;
 
@@ -26,14 +25,14 @@ public class ResultPublicationService
         AppDbContext db,
         EventPhaseService eventPhase,
         MemeQueries memeQueries,
-        IEmailService emailService,
+        MemeNotificationService notifications,
         ResultPublicationQueries publicationQueries,
         ILogger<ResultPublicationService> logger)
     {
         _db = db;
         _eventPhase = eventPhase;
         _memeQueries = memeQueries;
-        _emailService = emailService;
+        _notifications = notifications;
         _publicationQueries = publicationQueries;
         _logger = logger;
     }
@@ -125,8 +124,9 @@ public class ResultPublicationService
 
             var order = BuildFinalOrder(candidates.Value, podiumMemeIds);
             if (order.IsError)
-                return Result.Fail(order.Error, order.ErrorMessage!);
+                return order.Error;
 
+            var publicationId = Guid.NewGuid();
             var publication = new ResultPublication
             {
                 EventScheduleId = eventId,
@@ -154,24 +154,16 @@ public class ResultPublicationService
 
                 if (place <= 3)
                 {
-                    var variables = new Dictionary<string, string>
-                    {
-                        ["recipientName"] = meme.UserName ?? "dalyvi",
-                        ["memeTitle"] = meme.Caption,
-                        ["place"] = place.ToString()
-                    };
-
-                    var email = await _emailService.EnqueueTemplatedAsync(
-                        EmailTemplateKeys.WinnerNotification,
-                        meme.Email,
-                        variables,
-                        $"results:{eventId}:winner:{place}",
-                        cancellationToken);
+                    var details = await _memeQueries.GetModerationDetailsAsync(
+                        meme.Id, cancellationToken);
+                    if (details.IsError)
+                        return details.Error;
+                        
+                    var email = await _notifications.EnqueueWinnerAsync(
+                        publicationId, meme.Id, details.Value, place, cancellationToken);
 
                     if (email.IsError)
-                        return Result.Fail(
-                            email.Error,
-                            $"Nepavyko paruošti {place} vietos laimėtojo laiško.");
+                        return email.Error;
 
                     row.WinnerEmail = email.Value.RecipientAddress;
                     row.WinnerDeliveryId = email.Value.Id;
@@ -245,8 +237,7 @@ public class ResultPublicationService
             Candidates = candidates.Value
         };
     }
-    public async Task<Result> UnpublishAsync(
-    CancellationToken cancellationToken)
+    public async Task<Result> UnpublishAsync(CancellationToken cancellationToken)
     {
         try
         {

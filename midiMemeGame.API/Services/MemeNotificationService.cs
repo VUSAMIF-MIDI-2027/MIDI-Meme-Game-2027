@@ -1,3 +1,5 @@
+using System.Globalization;
+using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data.Queries;
@@ -29,6 +31,36 @@ public class MemeNotificationService
         string templateKey,
         CancellationToken cancellationToken)
     {
+        var delivery = await EnqueueWithPreviewAsync(
+            memeId, meme, templateKey, null, null, cancellationToken);
+
+        return delivery.IsError ? Result.Fail(delivery.Error) : Result.Ok();
+    }
+
+    public Task<Result<EmailDelivery>> EnqueueWinnerAsync(
+        Guid publicationId,
+        int memeId,
+        ModerationDetails meme,
+        int place,
+        CancellationToken cancellationToken)
+    {
+        return EnqueueWithPreviewAsync(
+            memeId,
+            meme,
+            EmailTemplateKeys.WinnerNotification,
+            place,
+            $"results:{publicationId:N}:winner:{place}:meme:{memeId}",
+            cancellationToken);
+    }
+
+    private async Task<Result<EmailDelivery>> EnqueueWithPreviewAsync(
+        int memeId,
+        ModerationDetails meme,
+        string templateKey,
+        int? place,
+        string? deduplicationKey,
+        CancellationToken cancellationToken)
+    {
         if (string.IsNullOrWhiteSpace(meme.Email))
             return ErrorType.EMAIL_RECIPIENT_MISSING;
 
@@ -37,10 +69,12 @@ public class MemeNotificationService
             ["recipientName"] = EmailTemplateHelper.BuildRecipientName(meme.FirstName),
             ["memeTitle"] = meme.Caption
         };
+        if (place.HasValue)
+            variables["place"] = place.Value.ToString(CultureInfo.InvariantCulture);
 
         var delivery = await _emailService.EnqueueTemplatedAsync(
             templateKey, meme.Email, variables,
-            deduplicationKey: null,
+            deduplicationKey,
             cancellationToken: cancellationToken);
 
         if (delivery.IsError)
@@ -56,10 +90,15 @@ public class MemeNotificationService
         var jpeg = MemePreviewRenderer.Render(path.Value, meme.Caption);
         var fileName = $"memas-{memeId}.jpg";
 
-        return await _attachmentQueries.InsertAsync(
+        var attachment = await _attachmentQueries.InsertAsync(
             delivery.Value.Id,
             fileName,
             jpeg,
             cancellationToken);
+
+        if (attachment.IsError)
+           return attachment.Error;
+
+        return delivery;
     }
 }

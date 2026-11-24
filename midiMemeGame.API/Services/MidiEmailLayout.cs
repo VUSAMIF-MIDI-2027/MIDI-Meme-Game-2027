@@ -48,7 +48,7 @@ internal static class MidiEmailLayout
         {
             EmailTemplateKeys.MemeApproved => Random.Shared.Next(2) == 0 ? "trophy.png" : "medal.png",
             EmailTemplateKeys.MemeRejected => "reader.png",
-            EmailTemplateKeys.MemeSubmitted => Random.Shared.Next(2) == 0 ? "astronaut.png" : "sleepy.png",
+            EmailTemplateKeys.MemeSubmitted => "diocat.png",
             EmailTemplateKeys.EventStarted => "astronaut.png",
             EmailTemplateKeys.VotingOpened => "diocat.png",
             EmailTemplateKeys.EventEnded => "astronaut.png",
