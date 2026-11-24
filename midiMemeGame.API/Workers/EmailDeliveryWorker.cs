@@ -41,7 +41,8 @@ public class EmailDeliveryWorker : BackgroundService
         {
             try
             {
-                await ProcessBatchAsync(stoppingToken);
+                if (DeploymentSlot.IsActive())
+                    await ProcessBatchAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

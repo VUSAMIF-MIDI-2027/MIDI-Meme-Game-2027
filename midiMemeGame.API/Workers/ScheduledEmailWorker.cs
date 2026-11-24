@@ -29,6 +29,11 @@ public class ScheduledEmailWorker : BackgroundService
         {
             try
             {
+                if (!DeploymentSlot.IsActive())
+                {
+                    await Task.Delay(pollInterval, stoppingToken);
+                    continue;
+                }
                 using var scope = _scopeFactory.CreateScope();
                 var scheduledEmailService = scope.ServiceProvider.GetRequiredService<IScheduledEmailService>();
                 await scheduledEmailService.ProcessMilestonesAsync(stoppingToken);
