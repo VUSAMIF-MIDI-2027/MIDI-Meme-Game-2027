@@ -28,6 +28,7 @@ export type YourMeme = {
   submittedAt: string;
   status: MemeStatus;
   isInvalidated: boolean;
+  isPhotoMissing: boolean;
 };
 
 const statusStyles: Record<MemeStatus, string> = {
@@ -68,6 +69,7 @@ function YourMemeItem({
 }: YourMemeItemProps) {
   const t = yourMemesText[lang];
   const ct = memeCreationText[lang];
+  const isPhotoUnavailable = meme.isInvalidated || meme.isPhotoMissing;
   const [draft, setDraft] = useState(meme.caption);
   const [editOpen, setEditOpen] = useState(false);
   const [busy, setBusy] = useState<"save" | "delete" | null>(null);
@@ -129,17 +131,15 @@ function YourMemeItem({
         image={meme.image}
         imageAlt={imageAlt}
         caption={meme.caption}
-        status={{ label: statusLabel, className: statusClassName }}
+        status={isPhotoUnavailable
+          ? { label: meme.isPhotoMissing ? t.photoMissing : t.invalidated }
+          : { label: statusLabel, className: statusClassName }}
+        muted={isPhotoUnavailable}
         layout="meta-footer"
         metaLabel={metaLabel}
         footer={
-          meme.isInvalidated || onSaveCaption || onDelete || failed ? (
+          onSaveCaption || onDelete || failed ? (
             <div className="flex flex-col gap-2">
-              {meme.isInvalidated && (
-                <p className="inline-flex w-fit items-center rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">
-                  {t.invalidated}
-                </p>
-              )}
               {(onSaveCaption || onDelete) && (
                 <div className="flex gap-2">
                   {onSaveCaption && (
@@ -147,7 +147,7 @@ function YourMemeItem({
                       type="button"
                       onClick={openEdit}
                       disabled={
-                        !submissionsOpen || meme.isInvalidated || busy !== null
+                        !submissionsOpen || isPhotoUnavailable || busy !== null
                       }
                       className={secondaryButtonClass}
                     >

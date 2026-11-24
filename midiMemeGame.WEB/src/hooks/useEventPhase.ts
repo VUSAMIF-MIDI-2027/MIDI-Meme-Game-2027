@@ -9,6 +9,7 @@ type KnownPhaseResult = {
     dateTime: string;
     remainingSeconds: number;
     remainingMilliseconds: number;
+    now: number;
 };
 
 type UnknownPhaseResult = {
@@ -16,6 +17,7 @@ type UnknownPhaseResult = {
     dateTime: undefined;
     remainingSeconds: number;
     remainingMilliseconds: number;
+    now: number;
 };
 
 export function useEventPhase(schedule: EventSchedule): KnownPhaseResult;

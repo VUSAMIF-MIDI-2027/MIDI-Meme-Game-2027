@@ -21,6 +21,7 @@ import {
   MEME_SUBMISSION_LIMIT,
   updateMemeCaption,
 } from "@/services/memeService";
+import { ApiError } from "@/services/ApiError";
 import { getPhotoBlob } from "@/services/userService";
 import { useLanguage } from "@/context/LanguageContext";
 import { dashboardText } from "./pageText";
@@ -73,27 +74,30 @@ export default function DashboardPage() {
           (meme) => !meme.isInvalidatedBySourcePhoto,
         ).length;
         const entries = await Promise.all(
-          list.map(async (meme) => {
+          list.map(async (meme): Promise<YourMeme> => {
+            let image = "";
+            let isPhotoMissing = false;
             try {
               const blob = await getPhotoBlob(
                 meme.sourcePhotoId,
                 token,
                 controller.signal,
               );
-              const url = URL.createObjectURL(blob);
-              createdUrls.push(url);
-              return {
-                id: meme.id,
-                image: url,
-                sourcePhotoId: meme.sourcePhotoId,
-                caption: meme.caption,
-                submittedAt: asUtc(meme.createdAtUtc),
-                status: statusById[meme.statusId] ?? "pending",
-                isInvalidated: meme.isInvalidatedBySourcePhoto,
-              };
-            } catch {
-              return null;
+              image = URL.createObjectURL(blob);
+              createdUrls.push(image);
+            } catch (error) {
+              isPhotoMissing = error instanceof ApiError && error.status === 404;
             }
+            return {
+              id: meme.id,
+              image,
+              sourcePhotoId: meme.sourcePhotoId,
+              caption: meme.caption,
+              submittedAt: asUtc(meme.createdAtUtc),
+              status: statusById[meme.statusId] ?? "pending",
+              isInvalidated: meme.isInvalidatedBySourcePhoto,
+              isPhotoMissing,
+            };
           }),
         );
         if (cancelled) {
@@ -103,7 +107,7 @@ export default function DashboardPage() {
         imageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
         imageUrlsRef.current = createdUrls;
         setSubmissionsUsed(used);
-        setMyMemes(entries.filter((e): e is YourMeme => e !== null));
+        setMyMemes(entries);
       } catch {
         // Keep whatever list is already shown.
       }

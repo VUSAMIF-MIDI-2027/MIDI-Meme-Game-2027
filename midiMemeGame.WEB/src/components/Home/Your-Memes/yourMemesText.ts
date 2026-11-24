@@ -13,6 +13,7 @@ type YourMemesText = {
     photoAlt: (id: number) => string;
     status: Record<MemeStatus, string>;
     invalidated: string;
+    photoMissing: string;
     edit: string;
     editTitle: string;
     delete: string;
@@ -42,7 +43,8 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
             pending: "Laukiama patvirtinimo",
             rejected: "Atmestas",
         },
-        invalidated: "Šablonas išjungtas",
+        invalidated: "Nuotrauka nebenaudojama",
+        photoMissing: "Nuotrauka nepasiekiama",
         edit: "Redaguoti",
         editTitle: "Redaguoti prierašą",
         delete: "Ištrinti",
@@ -70,7 +72,8 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
             pending: "Pending review",
             rejected: "Rejected",
         },
-        invalidated: "Template disabled",
+        invalidated: "Photo disabled",
+        photoMissing: "Photo unavailable",
         edit: "Edit",
         editTitle: "Edit caption",
         delete: "Delete",

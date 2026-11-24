@@ -22,6 +22,7 @@ type MemeCardProps = {
   imageAlt: string;
   caption: string;
   selected?: boolean;
+  muted?: boolean;
   status?: MemeCardStatus;
   metaLabel?: string;
   button?: MemeCardButton;
@@ -34,6 +35,7 @@ export default function MemeCard({
   imageAlt,
   caption,
   selected = false,
+  muted = false,
   status,
   metaLabel,
   button,
@@ -49,7 +51,7 @@ export default function MemeCard({
 
   return (
     <article
-      className={`flex min-w-0 flex-col overflow-hidden rounded-xl border transition-colors ${metaFooter ? "bg-[#1d1d1d]" : "bg-[#0a0a0a]"} ${borderStyle}`}
+      className={`flex min-w-0 flex-col overflow-hidden rounded-xl border transition-colors ${metaFooter ? "bg-[#1d1d1d]" : "bg-[#0a0a0a]"} ${borderStyle} ${muted ? "grayscale opacity-75" : ""}`}
     >
       <figure className="flex min-w-0 flex-1 flex-col">
         <div className="relative aspect-[3/2]">
