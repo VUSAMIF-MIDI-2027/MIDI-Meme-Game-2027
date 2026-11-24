@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/react";
 import { useRouter } from "next/navigation";
 import { LoadingScreen } from "@/components/Loading/LoadingScreen";
@@ -49,6 +49,7 @@ export default function DashboardPage() {
   const [myMemes, setMyMemes] = useState<YourMeme[]>([]);
   const [submissionsUsed, setSubmissionsUsed] = useState(0);
   const [memesRefresh, setMemesRefresh] = useState(0);
+  const imageUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!isSignedIn) return;
@@ -92,10 +93,14 @@ export default function DashboardPage() {
             }
           }),
         );
-        if (!cancelled) {
-          setSubmissionsUsed(used);
-          setMyMemes(entries.filter((e): e is YourMeme => e !== null));
+        if (cancelled) {
+          createdUrls.forEach((url) => URL.revokeObjectURL(url));
+          return;
         }
+        imageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+        imageUrlsRef.current = createdUrls;
+        setSubmissionsUsed(used);
+        setMyMemes(entries.filter((e): e is YourMeme => e !== null));
       } catch {
         // Keep whatever list is already shown.
       }
@@ -105,9 +110,17 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
       controller.abort();
-      createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [isSignedIn, getToken, memesRefresh]);
+
+  // Revoke the live object-url batch only on unmount — during refreshes the
+  // previous batch is revoked above, after its replacement is committed.
+  useEffect(() => {
+    return () => {
+      imageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      imageUrlsRef.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace("/login");

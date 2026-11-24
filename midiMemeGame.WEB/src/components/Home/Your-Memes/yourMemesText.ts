@@ -4,7 +4,6 @@ import type { MemeStatus } from "./YourMemes";
 type YourMemesText = {
     eyebrow: string;
     title: string;
-    description: string;
     emptyTitle: string;
     emptyEndedTitle: string;
     emptyEndedNotice: string;
@@ -14,9 +13,6 @@ type YourMemesText = {
     photoAlt: (id: number) => string;
     status: Record<MemeStatus, string>;
     invalidated: string;
-    invalidatedInfoLabel: string;
-    invalidatedBody: string;
-    close: string;
     edit: string;
     editTitle: string;
     delete: string;
@@ -34,8 +30,6 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
     lt: {
         eyebrow: "Tavo darbai",
         title: "Mano memai",
-        description:
-            "Visi tavo pateikti memai ir jų moderavimo būsena vienoje vietoje.",
         emptyTitle: "Jakubas laukia tavo prikolo.",
         emptyEndedTitle: "Jakubas nedasilaukė tavo prikolų.",
         emptyEndedNotice: "Pateikimų laikotarpis pasibaigė.",
@@ -49,10 +43,6 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
             rejected: "Atmestas",
         },
         invalidated: "Šablonas išjungtas",
-        invalidatedInfoLabel: "Ką tai reiškia?",
-        invalidatedBody:
-            "Organizatoriai išjungė nuotrauką, su kuria šis memas buvo sukurtas, todėl jis nedalyvaus balsavime. Į pateikimų limitą jis neįskaičiuojamas.",
-        close: "Uždaryti",
         edit: "Redaguoti",
         editTitle: "Redaguoti prierašą",
         delete: "Ištrinti",
@@ -68,8 +58,6 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
     en: {
         eyebrow: "Your creations",
         title: "My memes",
-        description:
-            "All your submitted memes and their moderation status in one place.",
         emptyTitle: "Jakub is waiting for your meme.",
         emptyEndedTitle: "Jakub didn't wait for your memes.",
         emptyEndedNotice: "The submission period has ended.",
@@ -83,10 +71,6 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
             rejected: "Rejected",
         },
         invalidated: "Template disabled",
-        invalidatedInfoLabel: "What does this mean?",
-        invalidatedBody:
-            "The organizers disabled the photo this meme was made with, so it won't appear in voting. It doesn't count toward your submission limit.",
-        close: "Close",
         edit: "Edit",
         editTitle: "Edit caption",
         delete: "Delete",

@@ -3,6 +3,19 @@ import type { Lang } from "@/context/LanguageContext";
 export const CAPTION_MAX_WORDS = 30;
 export const CAPTION_MAX_CHARS = 250;
 
+export function countCaptionWords(trimmedCaption: string): number {
+    return trimmedCaption ? trimmedCaption.split(/\s+/).filter(Boolean).length : 0;
+}
+
+export function isCaptionValid(caption: string): boolean {
+    const trimmed = caption.trim();
+    return (
+        trimmed.length > 0 &&
+        trimmed.length <= CAPTION_MAX_CHARS &&
+        countCaptionWords(trimmed) <= CAPTION_MAX_WORDS
+    );
+}
+
 type MemeCreationText = {
     pageTitle: string;
     backToDashboard: string;

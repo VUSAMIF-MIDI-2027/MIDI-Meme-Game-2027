@@ -8,9 +8,12 @@ import { useLanguage, type Lang } from "@/context/LanguageContext";
 import { useEventPhase } from "@/hooks/useEventPhase";
 import type { EventSchedule } from "@/services/eventScheduleService";
 import MemeCard from "@/components/Shared/MemeCard";
+import { MEME_SUBMISSION_LIMIT } from "@/services/memeService";
 import {
   CAPTION_MAX_CHARS,
   CAPTION_MAX_WORDS,
+  countCaptionWords,
+  isCaptionValid,
   memeCreationText,
 } from "@/components/MemeCreation/memeCreationText";
 import { yourMemesText } from "./yourMemesText";
@@ -69,12 +72,13 @@ function YourMemeItem({
   const [busy, setBusy] = useState<"save" | "delete" | null>(null);
   const [failed, setFailed] = useState(false);
   const editDialog = useRef<HTMLDialogElement>(null);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
 
   const trimmed = draft.trim();
-  const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
+  const words = countCaptionWords(trimmed);
   const wordsOver = words > CAPTION_MAX_WORDS;
   const charsOver = trimmed.length > CAPTION_MAX_CHARS;
-  const draftValid = trimmed.length > 0 && !wordsOver && !charsOver;
+  const draftValid = isCaptionValid(draft);
   const draftChanged = trimmed !== meme.caption.trim();
   const captionId = `meme-caption-${meme.id}`;
 
@@ -98,12 +102,18 @@ function YourMemeItem({
     }
   }
 
+  function openDelete() {
+    setFailed(false);
+    deleteDialog.current?.showModal();
+  }
+
   async function handleDelete() {
-    if (!onDelete || busy || !window.confirm(t.deleteConfirm)) return;
+    if (!onDelete || busy) return;
     setBusy("delete");
     setFailed(false);
     try {
       await onDelete(meme.id);
+      deleteDialog.current?.close();
     } catch {
       setFailed(true);
     } finally {
@@ -146,7 +156,7 @@ function YourMemeItem({
                   {onDelete && (
                     <button
                       type="button"
-                      onClick={handleDelete}
+                      onClick={openDelete}
                       disabled={!submissionsOpen || busy !== null}
                       aria-busy={busy === "delete"}
                       className={dangerButtonClass}
@@ -224,6 +234,48 @@ function YourMemeItem({
           </button>
         </div>
       </dialog>
+      <dialog
+        ref={deleteDialog}
+        aria-labelledby={`${captionId}-delete-title`}
+        onCancel={(event) => {
+          if (busy !== null) event.preventDefault();
+        }}
+        className="fixed inset-0 m-auto max-h-[85svh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-white/15 bg-[#0d1013] p-6 text-white backdrop:bg-black/80 sm:p-8"
+      >
+        <h2
+          id={`${captionId}-delete-title`}
+          className="text-lg font-bold text-white"
+        >
+          {t.delete}
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-white/75">
+          {t.deleteConfirm}
+        </p>
+        {failed && (
+          <p role="alert" className="mt-3 text-sm text-rose-400">
+            {t.actionFailed}
+          </p>
+        )}
+        <div className="mt-5 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => deleteDialog.current?.close()}
+            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t.cancel}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={busy !== null}
+            aria-busy={busy === "delete"}
+            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy === "delete" ? t.deleting : t.delete}
+          </button>
+        </div>
+      </dialog>
     </>
   );
 }
@@ -246,6 +298,8 @@ const YourMemes = ({
   const { phase } = useEventPhase(schedule);
   const submissionsOpen = phase === "submissions";
   const submissionsEnded = phase === "voting" || phase === "ended";
+  const limitReached =
+    memes.filter((meme) => !meme.isInvalidated).length >= MEME_SUBMISSION_LIMIT;
   const dateTimeFormatter = new Intl.DateTimeFormat(
     lang === "lt" ? "lt-LT" : "en-GB",
     {
@@ -278,7 +332,7 @@ const YourMemes = ({
               {t.title}
             </h2>
           </div>
-          {submissionsOpen && memes.length > 0 && (
+          {submissionsOpen && memes.length > 0 && !limitReached && (
             <Link
               href="/dashboard/create"
               className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-midi-blue px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-midi-blue/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue"

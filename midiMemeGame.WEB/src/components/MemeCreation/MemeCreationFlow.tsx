@@ -5,11 +5,7 @@ import { useAuth } from "@clerk/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { getPhotos } from "@/services/memeService";
 import { getPhotoBlob } from "@/services/userService";
-import {
-  CAPTION_MAX_CHARS,
-  CAPTION_MAX_WORDS,
-  memeCreationText,
-} from "./memeCreationText";
+import { isCaptionValid, memeCreationText } from "./memeCreationText";
 import StepIndicator from "./StepIndicator";
 import PhotoStep from "./steps/PhotoStep";
 import CaptionStep from "./steps/CaptionStep";
@@ -26,10 +22,14 @@ const CONFIRMATION_STEP = 4;
 
 type MemeCreationFlowProps = {
   onViewMemes: () => void;
+  onSubmitted?: () => void;
+  canCreateAnother?: boolean;
 };
 
 export default function MemeCreationFlow({
   onViewMemes,
+  onSubmitted,
+  canCreateAnother = true,
 }: MemeCreationFlowProps) {
   const { getToken } = useAuth();
   const { lang } = useLanguage();
@@ -51,13 +51,7 @@ export default function MemeCreationFlow({
       : null;
 
   const trimmedCaption = caption.trim();
-  const captionWordCount = trimmedCaption
-    ? trimmedCaption.split(/\s+/).filter(Boolean).length
-    : 0;
-  const captionIsValid =
-    trimmedCaption.length > 0 &&
-    trimmedCaption.length <= CAPTION_MAX_CHARS &&
-    captionWordCount <= CAPTION_MAX_WORDS;
+  const captionIsValid = isCaptionValid(caption);
 
   function goToStep(next: number) {
     setStep(next);
@@ -173,11 +167,15 @@ export default function MemeCreationFlow({
             caption={trimmedCaption}
             onEdit={() => setStep(2)}
             onChangePhoto={() => setStep(1)}
-            onSubmitted={() => goToStep(CONFIRMATION_STEP)}
+            onSubmitted={() => {
+              goToStep(CONFIRMATION_STEP);
+              onSubmitted?.();
+            }}
           />
         )}
         {step === CONFIRMATION_STEP && (
           <ConfirmationStep
+            canCreateAnother={canCreateAnother}
             onCreateAnother={() => {
               setPhotoId(null);
               setCaption("");

@@ -6,6 +6,8 @@ import MemeCard from "@/components/Shared/MemeCard";
 import {
   CAPTION_MAX_CHARS,
   CAPTION_MAX_WORDS,
+  countCaptionWords,
+  isCaptionValid,
   memeCreationText,
 } from "../memeCreationText";
 
@@ -31,10 +33,10 @@ export default function CaptionStep({
   const [touched, setTouched] = useState(false);
 
   const trimmed = caption.trim();
-  const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
+  const words = countCaptionWords(trimmed);
   const wordsOver = words > CAPTION_MAX_WORDS;
   const charsOver = trimmed.length > CAPTION_MAX_CHARS;
-  const isValid = trimmed.length > 0 && !wordsOver && !charsOver;
+  const isValid = isCaptionValid(caption);
   const counterClass = (over: boolean) =>
     over ? "text-rose-400" : "text-white/60";
 

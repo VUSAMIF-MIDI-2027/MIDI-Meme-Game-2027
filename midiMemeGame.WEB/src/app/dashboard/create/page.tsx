@@ -23,6 +23,7 @@ export default function CreateMemePage() {
     scheduleState.status === "ready" ? scheduleState.schedule : undefined;
   const { phase } = useEventPhase(schedule);
   const [submissionsUsed, setSubmissionsUsed] = useState<number | null>(null);
+  const [submittedCount, setSubmittedCount] = useState(0);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace("/login");
@@ -91,6 +92,11 @@ export default function CreateMemePage() {
           ) : (
             <MemeCreationFlow
               onViewMemes={() => router.push("/dashboard#your-memes")}
+              onSubmitted={() => setSubmittedCount((count) => count + 1)}
+              canCreateAnother={
+                submissionsUsed === null ||
+                submissionsUsed + submittedCount < MEME_SUBMISSION_LIMIT
+              }
             />
           )}
         </div>

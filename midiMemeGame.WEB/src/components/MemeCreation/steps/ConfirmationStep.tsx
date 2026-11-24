@@ -7,11 +7,13 @@ import { memeCreationText } from "../memeCreationText";
 type ConfirmationStepProps = {
   onCreateAnother: () => void;
   onViewMemes: () => void;
+  canCreateAnother?: boolean;
 };
 
 export default function ConfirmationStep({
   onCreateAnother,
   onViewMemes,
+  canCreateAnother = true,
 }: ConfirmationStepProps) {
   const { lang } = useLanguage();
   const t = memeCreationText[lang];
@@ -26,13 +28,15 @@ export default function ConfirmationStep({
         {t.confirmBody}
       </p>
       <div className="mt-5 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-        <button
-          type="button"
-          onClick={onCreateAnother}
-          className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-midi-blue px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue"
-        >
-          {t.createAnother}
-        </button>
+        {canCreateAnother && (
+          <button
+            type="button"
+            onClick={onCreateAnother}
+            className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-midi-blue px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue"
+          >
+            {t.createAnother}
+          </button>
+        )}
         <button
           type="button"
           onClick={onViewMemes}
