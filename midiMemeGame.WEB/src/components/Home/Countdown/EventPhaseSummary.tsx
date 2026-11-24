@@ -18,10 +18,33 @@ type Props = {
 
 export function EventPhaseSummary({ schedule, lang }: Props) {
     const { phase, dateTime, remainingSeconds } = useEventPhase(schedule);
-    const ended = phase === "ended";
     const isLive = phase === "submissions" || phase === "voting";
     const copy = eventCountdownText[lang];
     const stage = copy.phases[phase];
+
+    if (phase === "ended") {
+        return (
+            <>
+                <h2 id="countdown-heading" aria-live="polite" className="text-[11px] font-extrabold tracking-widest uppercase sm:text-sm">
+                    {stage.heading}
+                </h2>
+                <div className="relative flow-root">
+                    <SleepingCat className={catStyles.perched} />
+                    <Countdown remainingSeconds={0} />
+                </div>
+                <p className="mt-4 text-xl font-bold text-white sm:text-2xl">
+                    {stage.description}
+                </p>
+                <Link
+                    href="/results"
+                    className="pointer-events-auto mt-5 inline-flex min-h-12 items-center justify-center gap-3 rounded-lg bg-midi-blue px-8 py-3 text-base font-bold text-white transition-colors duration-150 hover:bg-midi-blue/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#70cfff]"
+                >
+                    {copy.viewResults}
+                    <ArrowUpRight size={20} className="shrink-0" aria-hidden="true" />
+                </Link>
+            </>
+        );
+    }
 
     return (
         <>
@@ -38,12 +61,10 @@ export function EventPhaseSummary({ schedule, lang }: Props) {
                 )}
             </h2>
 
-            {!ended && (
-                <div className="relative flow-root">
-                    <SleepingCat className={catStyles.perched} />
-                    <Countdown remainingSeconds={remainingSeconds} />
-                </div>
-            )}
+            <div className="relative flow-root">
+                <SleepingCat className={catStyles.perched} />
+                <Countdown remainingSeconds={remainingSeconds} />
+            </div>
 
             <p className="mt-5.75 flex flex-col items-center gap-1.5 text-base font-bold sm:flex-row sm:flex-wrap sm:justify-center sm:gap-1.75 sm:text-[19px]">
                 <span className="inline-flex items-center gap-1.5">

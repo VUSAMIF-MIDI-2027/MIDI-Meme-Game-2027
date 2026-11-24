@@ -62,10 +62,10 @@ export function Header() {
             {isLoaded && isSignedIn && (
                 <div className="flex items-center gap-2 sm:gap-3">
                     <nav aria-label={lang === "lt" ? "Dalyvio navigacija" : "Participant navigation"} className="hidden items-center gap-4 min-[1100px]:flex">
-                        {navLinks.map(({ href, label, disabled, primary }) => {
-                            const active = !disabled && isCurrentPath(pathname, href);
+                        {navLinks.map(({ href, label, disabled, primary, exact }) => {
+                            const active = !disabled && isCurrentPath(pathname, href, exact);
                             const className = primary
-                                ? "rounded bg-midi-blue px-4 py-3 text-sm font-bold text-white"
+                                ? ("rounded bg-midi-blue px-4 py-3 text-sm font-bold text-white" + (active ? " ring-2 ring-[#70cfff] ring-offset-2 ring-offset-midi-black" : ""))
                                 : `border-b-2 py-3 text-sm font-semibold transition-colors ${active ? "border-midi-blue text-[#70cfff]" : "border-transparent text-white/85 hover:text-white"}`;
 
                             return disabled ? (

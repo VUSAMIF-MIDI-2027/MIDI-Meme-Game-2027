@@ -21,6 +21,8 @@ type GalleryText = {
     emptyTitle: string;
     empty: string;
     showMore: string;
+    loadedCount: (count: number) => string;
+    loadMoreError: string;
     yourVotes: string;
     votesLeft: (left: number) => string;
     allVotesUsed: string;
@@ -33,6 +35,9 @@ type GalleryText = {
     votesCount: (count: number) => string;
     by: string;
     fullRanking: string;
+    galleryFilter: string;
+    votedMemes: string;
+    noVotedMemes: string;
 };
 
 export const galleryText: Record<Lang, GalleryText> = {
@@ -57,6 +62,8 @@ export const galleryText: Record<Lang, GalleryText> = {
         emptyTitle: "Kol kas tuščia",
         empty: "Patvirtintų memų dar nėra.",
         showMore: "Rodyti daugiau",
+        loadedCount: count => "Įkelta " + count,
+        loadMoreError: "Nepavyko įkelti daugiau memų.",
         yourVotes: "Tavo balsai",
         votesLeft: left => `Liko ${left} ${left === 1 ? "balsas" : "balsai"}`,
         allVotesUsed: "Visi balsai panaudoti",
@@ -69,6 +76,9 @@ export const galleryText: Record<Lang, GalleryText> = {
         votesCount: count => `${count} ${count % 10 === 1 && count % 100 !== 11 ? "balsas" : count % 10 === 0 || (count % 100 >= 11 && count % 100 <= 19) ? "balsų" : "balsai"}`,
         by: "Autorius",
         fullRanking: "Visi memai",
+        galleryFilter: "Memų filtras",
+        votedMemes: "Mano balsuoti",
+        noVotedMemes: "Čia matysi memus, už kuriuos balsavai.",
     },
     en: {
         eyebrow: "Voting",
@@ -91,6 +101,8 @@ export const galleryText: Record<Lang, GalleryText> = {
         emptyTitle: "Nothing here yet",
         empty: "There are no approved memes yet.",
         showMore: "Show more",
+        loadedCount: count => "Loaded " + count,
+        loadMoreError: "Couldn’t load more memes.",
         yourVotes: "Your votes",
         votesLeft: left => `${left} ${left === 1 ? "vote" : "votes"} left`,
         allVotesUsed: "All votes used",
@@ -103,5 +115,8 @@ export const galleryText: Record<Lang, GalleryText> = {
         votesCount: count => `${count} ${count === 1 ? "vote" : "votes"}`,
         by: "By",
         fullRanking: "All memes",
+        galleryFilter: "Filter memes",
+        votedMemes: "My votes",
+        noVotedMemes: "Memes you’ve voted for will appear here.",
     },
 };

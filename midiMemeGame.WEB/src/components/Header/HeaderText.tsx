@@ -10,7 +10,7 @@ export const links = [
 
 // Enable these destinations when their separate page implementations are ready.
 export const participantLinks = [
-  { href: "/dashboard", label: { en: "Home", lt: "Pagrindinis" }, disabled: false },
+  { href: "/dashboard", label: { en: "Home", lt: "Pagrindinis" }, disabled: false, exact: true },
   { href: "/photos", label: { en: "Create a meme", lt: "Kurti memą" }, disabled: true, primary: true },
   { href: "/dashboard/gallery", label: { en: "Voting", lt: "Balsavimas" }, disabled: false, primary: true },
   { href: "/rules", label: { en: "Rules", lt: "Taisyklės" }, disabled: false },

@@ -50,10 +50,21 @@ function isGalleryMeme(value: unknown): value is GalleryMeme {
         && typeof meme?.isOwnMeme === "boolean";
 }
 
-export async function getGalleryMemes(token: string, signal: AbortSignal): Promise<GalleryMeme[]> {
-    const memes = await request("/api/voting/memes", token, signal);
-    if (!Array.isArray(memes) || !memes.every(isGalleryMeme)) throw new Error("Invalid gallery response.");
-    return memes;
+export type GalleryPage = {
+    items: GalleryMeme[];
+    nextAfterId: number | null;
+};
+
+export async function getGalleryMemes(token: string, signal: AbortSignal, afterId = 0, onlyVoted = false): Promise<GalleryPage> {
+    const params = new URLSearchParams({ afterId: String(afterId) });
+    if (onlyVoted) params.set("onlyVoted", "true");
+    const page = await request("/api/voting/memes?" + params, token, signal) as GalleryPage | null;
+    if (!page || !Array.isArray(page.items) || !page.items.every(isGalleryMeme)
+        || (page.nextAfterId !== null
+            && (!Number.isInteger(page.nextAfterId) || page.nextAfterId <= afterId || page.nextAfterId !== page.items.at(-1)?.id))) {
+        throw new Error("Invalid gallery response.");
+    }
+    return page;
 }
 
 export async function getVoteStatus(token: string, signal: AbortSignal): Promise<VoteStatus> {
