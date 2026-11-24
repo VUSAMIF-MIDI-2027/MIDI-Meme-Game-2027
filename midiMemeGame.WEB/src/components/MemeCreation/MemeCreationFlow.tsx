@@ -162,6 +162,7 @@ export default function MemeCreationFlow({
             caption={caption}
             onCaptionChange={setCaption}
             onPreview={() => goToStep(3)}
+            onBack={() => setStep(1)}
           />
         )}
         {step === 3 && photoId !== null && photoUrl && (
@@ -171,6 +172,7 @@ export default function MemeCreationFlow({
             photoAlt={t.photoAlt(photoId)}
             caption={trimmedCaption}
             onEdit={() => setStep(2)}
+            onChangePhoto={() => setStep(1)}
             onSubmitted={() => goToStep(CONFIRMATION_STEP)}
           />
         )}

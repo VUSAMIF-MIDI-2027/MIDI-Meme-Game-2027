@@ -26,12 +26,14 @@ type MemeCreationText = {
     previewButton: string;
     previewTitle: string;
     edit: string;
+    changePhoto: string;
     submit: string;
     submitting: string;
     submitError: string;
     submitErrorClosed: string;
     submitErrorPhotoDisabled: string;
     submitErrorDenied: string;
+    submitErrorLimit: string;
     authError: string;
     confirmTitle: string;
     confirmBody: string;
@@ -63,12 +65,14 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         previewButton: "Peržiūrėti memą",
         previewTitle: "Peržiūrėk memą",
         edit: "Redaguoti",
+        changePhoto: "Rinktis kitą nuotrauką",
         submit: "Pateikti memą",
         submitting: "Pateikiama…",
         submitError: "Memą pateikti nepavyko. Bandyk dar kartą.",
         submitErrorClosed: "Memų teikimas šiuo metu uždarytas.",
         submitErrorPhotoDisabled: "Pasirinkta nuotrauka nebegalima. Pasirink kitą.",
         submitErrorDenied: "Tavo paskyra negali teikti memų.",
+        submitErrorLimit: "Jau išnaudojai 3 memų pateikimo limitą.",
         authError: "Prisijunk iš naujo ir bandyk dar kartą.",
         confirmTitle: "Memas pateiktas!",
         confirmBody: "Tavo memas laukia organizatorių peržiūros. Kai jį patvirtins, jis atsiras balsavime.",
@@ -98,12 +102,14 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         previewButton: "Preview meme",
         previewTitle: "Review your meme",
         edit: "Edit",
+        changePhoto: "Choose a different photo",
         submit: "Submit meme",
         submitting: "Submitting…",
         submitError: "Couldn't submit the meme. Try again.",
         submitErrorClosed: "Meme submissions are closed right now.",
         submitErrorPhotoDisabled: "That photo is no longer available. Choose another one.",
         submitErrorDenied: "Your account isn't allowed to submit memes.",
+        submitErrorLimit: "You've used all 3 meme submissions.",
         authError: "Sign in again and try once more.",
         confirmTitle: "Meme submitted!",
         confirmBody: "Your meme is waiting for organizer review. Once approved, it will appear in voting.",

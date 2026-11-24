@@ -60,8 +60,12 @@ export function Header() {
                 <div className="flex items-center gap-2 sm:gap-3">
                     <nav aria-label={lang === "lt" ? "Dalyvio navigacija" : "Participant navigation"} className="hidden items-center gap-4 min-[1100px]:flex">
                         {participantLinks.map(({ href, label, disabled }) => {
-                            const active = !disabled && isCurrentPath(pathname, href);
-                            const className = href === "/photos"
+                            const active = !disabled && isCurrentPath(pathname, href) &&
+                                !participantLinks.some((other) =>
+                                    other.href !== href && !other.disabled &&
+                                    other.href.startsWith(`${href}/`) &&
+                                    isCurrentPath(pathname, other.href));
+                            const className = href === "/dashboard/create"
                                 ? "rounded bg-midi-blue px-4 py-3 text-sm font-bold text-white"
                                 : `border-b-2 py-3 text-sm font-semibold transition-colors ${active ? "border-midi-blue text-[#70cfff]" : "border-transparent text-white/85 hover:text-white"}`;
 

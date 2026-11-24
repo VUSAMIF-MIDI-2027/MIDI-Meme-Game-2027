@@ -12,10 +12,13 @@ import { CompetitionStatus } from "@/components/Shared/CompetitionStatus";
 import CreateMemeButton from "@/components/MemeCreation/CreateMemeButton";
 import { useEventSchedule } from "@/hooks/useEventSchedule";
 import {
+  deleteMeme,
   getMyMemes,
   MEME_STATUS_APPROVED,
   MEME_STATUS_PENDING,
   MEME_STATUS_REJECTED,
+  MEME_SUBMISSION_LIMIT,
+  updateMemeCaption,
 } from "@/services/memeService";
 import { getPhotoBlob } from "@/services/userService";
 import { useLanguage } from "@/context/LanguageContext";
@@ -44,6 +47,8 @@ export default function DashboardPage() {
   const schedule =
     scheduleState.status === "ready" ? scheduleState.schedule : undefined;
   const [myMemes, setMyMemes] = useState<YourMeme[]>([]);
+  const [submissionsUsed, setSubmissionsUsed] = useState(0);
+  const [memesRefresh, setMemesRefresh] = useState(0);
 
   useEffect(() => {
     if (!isSignedIn) return;
@@ -58,6 +63,12 @@ export default function DashboardPage() {
         if (!token) return;
 
         const list = await getMyMemes(token, controller.signal);
+        // Deleted memes still count toward the limit server-side, so this
+        // client-side count can understate usage; MEME_LIMIT_REACHED on
+        // submit remains the authoritative guard.
+        const used = list.filter(
+          (meme) => !meme.isInvalidatedBySourcePhoto,
+        ).length;
         const entries = await Promise.all(
           list.map(async (meme) => {
             try {
@@ -75,6 +86,7 @@ export default function DashboardPage() {
                 caption: meme.caption,
                 submittedAt: asUtc(meme.createdAtUtc),
                 status: statusById[meme.statusId] ?? "pending",
+                isInvalidated: meme.isInvalidatedBySourcePhoto,
               };
             } catch {
               return null;
@@ -82,6 +94,7 @@ export default function DashboardPage() {
           }),
         );
         if (!cancelled) {
+          setSubmissionsUsed(used);
           setMyMemes(entries.filter((e): e is YourMeme => e !== null));
         }
       } catch {
@@ -95,11 +108,25 @@ export default function DashboardPage() {
       controller.abort();
       createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [isSignedIn, getToken]);
+  }, [isSignedIn, getToken, memesRefresh]);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace("/login");
   }, [isLoaded, isSignedIn, router]);
+
+  async function handleSaveCaption(id: number, caption: string) {
+    const token = await getToken();
+    if (!token) throw new Error("Missing session token.");
+    await updateMemeCaption(id, caption, token);
+    setMemesRefresh((value) => value + 1);
+  }
+
+  async function handleDelete(id: number) {
+    const token = await getToken();
+    if (!token) throw new Error("Missing session token.");
+    await deleteMeme(id, token);
+    setMemesRefresh((value) => value + 1);
+  }
 
   if (!isLoaded || !isSignedIn || !isUserLoaded) return <LoadingScreen />;
 
@@ -127,7 +154,8 @@ export default function DashboardPage() {
             </p>
             <CreateMemeButton
               schedule={schedule}
-              onOpen={() => router.push("/create")}
+              limitReached={submissionsUsed >= MEME_SUBMISSION_LIMIT}
+              onOpen={() => router.push("/dashboard/create")}
             />
           </div>
 
@@ -144,7 +172,12 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <YourMemes memes={myMemes} />
+        <YourMemes
+          memes={myMemes}
+          schedule={schedule}
+          onSaveCaption={handleSaveCaption}
+          onDelete={handleDelete}
+        />
         <Link
           href="/rules"
           className="mt-6 inline-flex min-h-11 items-center text-sm text-white/80 underline underline-offset-4 hover:text-white"

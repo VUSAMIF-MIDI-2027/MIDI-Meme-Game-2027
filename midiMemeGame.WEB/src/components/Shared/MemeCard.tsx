@@ -22,6 +22,7 @@ type MemeCardProps = {
   status?: MemeCardStatus;
   metaLabel?: string;
   button?: MemeCardButton;
+  footer?: ReactNode;
   layout?: "stacked" | "meta-footer";
 };
 
@@ -33,6 +34,7 @@ export default function MemeCard({
   status,
   metaLabel,
   button,
+  footer,
   layout = "stacked",
 }: MemeCardProps) {
   const metaFooter = layout === "meta-footer";
@@ -62,7 +64,7 @@ export default function MemeCard({
           {caption}
         </figcaption>
       </figure>
-      {(status || metaLabel || button) && (
+      {(status || metaLabel || button || footer) && (
         <div
           className={`flex flex-col gap-2 p-3 ${metaFooter ? "sm:p-4" : ""}`}
         >
@@ -92,6 +94,7 @@ export default function MemeCard({
               {button.label}
             </button>
           )}
+          {footer}
         </div>
       )}
     </article>

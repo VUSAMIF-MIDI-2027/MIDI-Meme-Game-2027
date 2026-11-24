@@ -45,8 +45,12 @@ export function MobileMenu({
                 }`}
         >
             {links.map(({ href, label, disabled }) => {
-                const active = !disabled && isCurrentPath(pathname, href);
-                const primary = participant && href === "/photos";
+                const active = !disabled && isCurrentPath(pathname, href) &&
+                    !links.some((other) =>
+                        other.href !== href && !other.disabled &&
+                        other.href.startsWith(`${href}/`) &&
+                        isCurrentPath(pathname, other.href));
+                const primary = participant && href === "/dashboard/create";
 
                 if (participant && href === "/admin") {
                     return (

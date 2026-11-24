@@ -36,12 +36,12 @@ export default function PhotoStep({
           <p className="sr-only">{t.photoLoading}</p>
           <div
             aria-hidden="true"
-            className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-3"
           >
             {Array.from({ length: 6 }, (_, index) => (
               <div
                 key={index}
-                className="aspect-[3/2] animate-pulse rounded-lg bg-white/10"
+                className="aspect-[4/3] animate-pulse rounded-lg bg-white/10"
               />
             ))}
           </div>
@@ -65,7 +65,7 @@ export default function PhotoStep({
         </div>
       ) : (
         <div
-          className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3"
+          className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3"
           role="group"
           aria-label={t.photoTitle}
         >
@@ -79,7 +79,7 @@ export default function PhotoStep({
                 aria-label={t.photoAlt(id)}
                 aria-pressed={isSelected}
                 onClick={() => onSelect(id)}
-                className={`relative aspect-[3/2] cursor-pointer overflow-hidden rounded-lg border-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue ${
+                className={`relative aspect-[4/3] cursor-pointer overflow-hidden rounded-lg border-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue ${
                   isSelected
                     ? "border-midi-blue"
                     : "border-white/15 hover:border-white/40"
@@ -90,7 +90,7 @@ export default function PhotoStep({
                   alt=""
                   fill
                   loading="eager"
-                  sizes="(min-width: 640px) 200px, 45vw"
+                  sizes="(min-width: 640px) 390px, 90vw"
                   className="object-cover"
                 />
                 {isSelected && (

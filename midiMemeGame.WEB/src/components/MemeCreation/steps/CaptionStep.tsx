@@ -15,6 +15,7 @@ type CaptionStepProps = {
   caption: string;
   onCaptionChange: (value: string) => void;
   onPreview: () => void;
+  onBack: () => void;
 };
 
 export default function CaptionStep({
@@ -23,6 +24,7 @@ export default function CaptionStep({
   caption,
   onCaptionChange,
   onPreview,
+  onBack,
 }: CaptionStepProps) {
   const { lang } = useLanguage();
   const t = memeCreationText[lang];
@@ -77,14 +79,23 @@ export default function CaptionStep({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onPreview}
-            disabled={!isValid}
-            className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-lg bg-midi-blue px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-          >
-            {t.previewButton}
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={onPreview}
+              disabled={!isValid}
+              className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-lg bg-midi-blue px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            >
+              {t.previewButton}
+            </button>
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue sm:w-auto"
+            >
+              {t.changePhoto}
+            </button>
+          </div>
         </div>
       </div>
     </div>

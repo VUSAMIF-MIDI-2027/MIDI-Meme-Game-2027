@@ -6,6 +6,7 @@ type PageText = {
     description: string;
     createMeme: string;
     creationNotice: string;
+    limitReached: string;
     adminEyebrow: string;
     adminTitle: string;
     adminDescription: string;
@@ -19,6 +20,7 @@ export const dashboardText: Record<Lang, PageText> = {
         description: "Pasirink nuotrauką, parašyk juokingą prierašą ir pateik savo memą. Vienas žmogus gali pateikti iki 3 memų.",
         createMeme: "Kurti memą",
         creationNotice: "Memų kūrimas bus pasiekiamas renginio metu.",
+        limitReached: "Jau išnaudojai 3 memų pateikimo limitą.",
         adminEyebrow: "Organizatoriams",
         adminTitle: "Administravimas",
         adminDescription: "Konkurso administravimo erdvė tavo komandai.",
@@ -30,6 +32,7 @@ export const dashboardText: Record<Lang, PageText> = {
         description: "Choose a photo, write a funny caption and submit your meme. Each person can submit up to 3 memes.",
         createMeme: "Create a meme",
         creationNotice: "Meme creation will be available during the event.",
+        limitReached: "You've used all 3 meme submissions.",
         adminEyebrow: "For organisers",
         adminTitle: "Administration",
         adminDescription: "Your team’s competition administration area.",

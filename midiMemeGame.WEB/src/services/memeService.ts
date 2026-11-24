@@ -12,15 +12,19 @@ export type SubmittedMeme = {
     score: number;
     createdAtUtc: string;
     updatedAtUtc: string;
+    isInvalidatedBySourcePhoto: boolean;
 };
 
 export const MEME_STATUS_PENDING = 1;
 export const MEME_STATUS_REJECTED = 2;
 export const MEME_STATUS_APPROVED = 3;
 
+export const MEME_SUBMISSION_LIMIT = 3;
+
 // Backend ErrorType codes returned as `{ error: { code } }` with HTTP 500.
 export const MEME_ERROR_SUBMISSIONS_NOT_OPEN = 2402;
 export const MEME_ERROR_SUBMISSIONS_CLOSED = 2403;
+export const MEME_ERROR_LIMIT_REACHED = 2700;
 export const MEME_ERROR_PHOTO_DISABLED = 2701;
 export const MEME_ERROR_ACCESS_DENIED = 4004;
 
@@ -49,7 +53,8 @@ function isSubmittedMeme(value: unknown): value is SubmittedMeme {
         typeof meme?.caption === "string" &&
         Number.isInteger(meme?.statusId) &&
         typeof meme?.createdAtUtc === "string" &&
-        Number.isFinite(Date.parse(meme.createdAtUtc))
+        Number.isFinite(Date.parse(meme.createdAtUtc)) &&
+        typeof meme?.isInvalidatedBySourcePhoto === "boolean"
     );
 }
 
@@ -93,6 +98,49 @@ export async function submitMeme(
         throw new Error("Invalid meme submission response.");
     }
     return meme;
+}
+
+export async function updateMemeCaption(
+    memeId: number,
+    caption: string,
+    token: string,
+    signal?: AbortSignal
+): Promise<SubmittedMeme> {
+    const response = await fetch(apiBaseUrl + `/api/memes/${memeId}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({ caption }),
+        signal,
+        cache: "no-store",
+    });
+    if (!response.ok) {
+        throw new MemeServiceError(response.status, await readErrorCode(response));
+    }
+
+    const meme: unknown = await response.json();
+    if (!isSubmittedMeme(meme)) {
+        throw new Error("Invalid meme update response.");
+    }
+    return meme;
+}
+
+export async function deleteMeme(
+    memeId: number,
+    token: string,
+    signal?: AbortSignal
+): Promise<void> {
+    const response = await fetch(apiBaseUrl + `/api/memes/${memeId}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token },
+        signal,
+        cache: "no-store",
+    });
+    if (!response.ok) {
+        throw new MemeServiceError(response.status, await readErrorCode(response));
+    }
 }
 
 export async function getMyMemes(token: string, signal?: AbortSignal): Promise<SubmittedMeme[]> {

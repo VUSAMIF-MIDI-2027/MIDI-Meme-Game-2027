@@ -6,38 +6,57 @@ import { useEventPhase } from "@/hooks/useEventPhase";
 import type { EventSchedule } from "@/services/eventScheduleService";
 import { dashboardText } from "@/app/dashboard/pageText";
 
+type DisabledReason = "phase" | "limit";
+
 type CreateMemeButtonProps = {
   schedule?: EventSchedule;
+  limitReached?: boolean;
   onOpen: () => void;
 };
 
 export default function CreateMemeButton({
   schedule,
+  limitReached = false,
   onOpen,
 }: CreateMemeButtonProps) {
   return schedule ? (
-    <PhaseGatedButton schedule={schedule} onOpen={onOpen} />
+    <PhaseGatedButton
+      schedule={schedule}
+      limitReached={limitReached}
+      onOpen={onOpen}
+    />
   ) : (
-    <Button enabled={false} onOpen={onOpen} />
+    <Button enabled={false} reason="phase" onOpen={onOpen} />
   );
 }
 
 function PhaseGatedButton({
   schedule,
+  limitReached,
   onOpen,
 }: {
   schedule: EventSchedule;
+  limitReached: boolean;
   onOpen: () => void;
 }) {
   const { phase } = useEventPhase(schedule);
-  return <Button enabled={phase === "submissions"} onOpen={onOpen} />;
+  const open = phase === "submissions";
+  return (
+    <Button
+      enabled={open && !limitReached}
+      reason={open ? "limit" : "phase"}
+      onOpen={onOpen}
+    />
+  );
 }
 
 function Button({
   enabled,
+  reason,
   onOpen,
 }: {
   enabled: boolean;
+  reason: DisabledReason;
   onOpen: () => void;
 }) {
   const { lang } = useLanguage();
@@ -61,7 +80,7 @@ function Button({
       </button>
       {!enabled && (
         <p id="creation-notice" className="mt-3 text-sm text-text-muted">
-          {t.creationNotice}
+          {reason === "limit" ? t.limitReached : t.creationNotice}
         </p>
       )}
     </>
