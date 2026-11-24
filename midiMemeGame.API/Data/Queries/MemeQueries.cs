@@ -107,6 +107,7 @@ public class MemeQueries
                     FROM "Memes"
                     WHERE "UserId" = {userId}
                         AND "IsInvalidatedBySourcePhoto" = 0
+                        AND "IsDeleted" = 0
                 ) < 3
                 RETURNING
                     "Id", "SourcePhotoId", "UserId", "StatusId", "Caption",
