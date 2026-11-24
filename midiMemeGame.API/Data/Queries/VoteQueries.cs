@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MidiMemeGame.Api.Common.Constants;
@@ -29,6 +30,7 @@ public class VoteQueries
     {
         try
         {
+            var ownerId = userId.ToString(CultureInfo.InvariantCulture);
             FormattableString query = $"""
                 SELECT
                     m."Id",
@@ -40,7 +42,8 @@ public class VoteQueries
                         FROM "MemeVotes" AS v
                         WHERE v."UserId" = {userId}
                             AND v."MemeId" = m."Id"
-                    ) AS "HasVoted"
+                    ) AS "HasVoted",
+                    (m."UserId" = {ownerId}) AS "IsOwnMeme"
                 FROM "Memes" AS m
                 INNER JOIN "SourcePhotos" AS p
                     ON p."Id" = CAST(m."SourcePhotoId" AS INTEGER)
@@ -97,6 +100,7 @@ public class VoteQueries
                 await _db.Database.BeginTransactionAsync(cancellationToken);
 
             var now = DateTime.UtcNow;
+            var ownerId = userId.ToString(CultureInfo.InvariantCulture);
 
             FormattableString insert = $"""
                 INSERT INTO "MemeVotes" ("UserId", "MemeId", "CreatedAtUtc")
@@ -105,6 +109,7 @@ public class VoteQueries
                 INNER JOIN "SourcePhotos" AS p
                     ON p."Id" = CAST(m."SourcePhotoId" AS INTEGER)
                 WHERE m."Id" = {memeId}
+                    AND m."UserId" <> {ownerId}
                     AND m."StatusId" = {(int)MemeStatus.Approved}
                     AND m."IsDeleted" = 0
                     AND m."IsInvalidatedBySourcePhoto" = 0
@@ -147,6 +152,10 @@ public class VoteQueries
 
                 if (instant >= schedule.EventEndsAt)
                     return ErrorType.VOTING_CLOSED;
+
+                if (await _db.Memes.AnyAsync(
+                    meme => meme.Id == memeId && meme.UserId == ownerId, cancellationToken))
+                    return ErrorType.CANNOT_VOTE_FOR_OWN_MEME;
 
                 if (state.VotedMemeIds.Contains(memeId))
                     return ErrorType.MEME_ALREADY_VOTED;

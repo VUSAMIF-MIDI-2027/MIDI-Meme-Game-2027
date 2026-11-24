@@ -27,6 +27,8 @@ type GalleryText = {
     vote: string;
     removeVote: string;
     voteLimit: string;
+    ownMeme: string;
+    ownMemeVote: string;
     yourVote: string;
     votesCount: (count: number) => string;
     by: string;
@@ -61,6 +63,8 @@ export const galleryText: Record<Lang, GalleryText> = {
         vote: "Balsuoti",
         removeVote: "Atšaukti balsą",
         voteLimit: "Balsų nebeliko",
+        ownMeme: "Tavo memas",
+        ownMemeVote: "Už savo memą balsuoti negalima.",
         yourVote: "Tavo balsas",
         votesCount: count => `${count} ${count % 10 === 1 && count % 100 !== 11 ? "balsas" : count % 10 === 0 || (count % 100 >= 11 && count % 100 <= 19) ? "balsų" : "balsai"}`,
         by: "Autorius",
@@ -93,6 +97,8 @@ export const galleryText: Record<Lang, GalleryText> = {
         vote: "Vote",
         removeVote: "Remove vote",
         voteLimit: "No votes left",
+        ownMeme: "Your meme",
+        ownMemeVote: "You can’t vote for your own meme.",
         yourVote: "Your vote",
         votesCount: count => `${count} ${count === 1 ? "vote" : "votes"}`,
         by: "By",

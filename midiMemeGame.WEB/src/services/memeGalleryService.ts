@@ -7,6 +7,7 @@ export type GalleryMeme = {
     userName?: string | null;
     createdAtUtc: string;
     hasVoted: boolean;
+    isOwnMeme: boolean;
 };
 
 export type VoteStatus = {
@@ -45,7 +46,8 @@ function isGalleryMeme(value: unknown): value is GalleryMeme {
     const meme = value as GalleryMeme | null;
     return Number.isInteger(meme?.id)
         && Number.isInteger(meme?.sourcePhotoId)
-        && typeof meme?.caption === "string";
+        && typeof meme?.caption === "string"
+        && typeof meme?.isOwnMeme === "boolean";
 }
 
 export async function getGalleryMemes(token: string, signal: AbortSignal): Promise<GalleryMeme[]> {

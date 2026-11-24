@@ -88,11 +88,21 @@ function GalleryImage({ photoId, caption, t }: { photoId: number; caption: strin
 
 function GalleryCard({ meme, canVote, pending, onToggle, t }: { meme: GalleryMeme; canVote: boolean; pending: boolean; onToggle: () => void; t: Strings }) {
     const voted = meme.hasVoted;
-    const disabled = pending || (!voted && !canVote);
-    const label = `${voted ? t.removeVote : !canVote ? t.voteLimit : t.vote}: ${meme.caption}`;
+    const ownMemeBlocked = meme.isOwnMeme && !voted;
+    const disabled = pending || (!voted && (!canVote || meme.isOwnMeme));
+    const action = ownMemeBlocked ? t.ownMemeVote : voted ? t.removeVote : !canVote ? t.voteLimit : t.vote;
+    const label = `${action}: ${meme.caption}`;
+    const borderColor = meme.isOwnMeme ? "border-[#70cfff]" : voted ? "border-rose-500/60" : "border-white/15";
     return (
-        <li className={`flex flex-col overflow-hidden rounded-2xl border bg-[#0a0a0a] transition-colors ${voted ? "border-rose-500/60" : "border-white/15"}`}>
-            <GalleryImage photoId={meme.sourcePhotoId} caption={meme.caption} t={t} />
+        <li className={`flex flex-col overflow-hidden rounded-2xl border bg-[#0a0a0a] transition-colors ${borderColor}`}>
+            <div className="relative">
+                <GalleryImage photoId={meme.sourcePhotoId} caption={meme.caption} t={t} />
+                {meme.isOwnMeme && (
+                    <span className="absolute top-3 left-3 rounded-lg bg-[#70cfff] px-3 py-1.5 text-sm font-extrabold text-black shadow-md">
+                        {t.ownMeme}
+                    </span>
+                )}
+            </div>
             <div className="flex flex-1 flex-col justify-between gap-4 p-4 sm:p-5">
                 <div className="min-w-0">
                     <p className="text-base leading-snug font-bold text-midi-gray text-pretty sm:text-lg">{meme.caption}</p>
@@ -110,6 +120,7 @@ function GalleryCard({ meme, canVote, pending, onToggle, t }: { meme: GalleryMem
                         className={`size-5 transition-colors ${voted ? "fill-rose-500 text-rose-500 motion-safe:animate-[heartPop_400ms_ease-out]" : disabled ? "text-white/25" : "text-white"} ${pending ? "motion-safe:animate-pulse" : ""}`}
                     />
                 </button>
+                {ownMemeBlocked && <p className="text-sm text-text-muted">{t.ownMemeVote}</p>}
             </div>
         </li>
     );

@@ -48,7 +48,7 @@ export function useGalleryMemes() {
                     getVoteStatus(token, signal),
                 ]);
                 // Shuffle once per load so ordering is fair; votes must not reorder cards.
-                if (!request.signal.aborted) setState({ status: "ready", memes: shuffle(memes), votes });
+                if (!request.signal.aborted) setState({ status: "ready", memes: memes, votes });
             } catch {
                 if (!request.signal.aborted) setState({ status: "error" });
             }

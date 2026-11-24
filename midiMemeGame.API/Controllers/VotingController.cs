@@ -111,7 +111,7 @@ namespace MidiMemeGame.Api.Controllers
 
             return error switch
             {
-                ErrorType.USER_ACCESS_DENIED =>
+                ErrorType.USER_ACCESS_DENIED or ErrorType.CANNOT_VOTE_FOR_OWN_MEME =>
                     StatusCode(StatusCodes.Status403Forbidden, response),
 
                 ErrorType.NOT_FOUND or ErrorType.EVENT_SCHEDULE_NOT_FOUND =>
