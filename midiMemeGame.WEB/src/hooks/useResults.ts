@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/services/ApiError";
 import {
     EVENT_SCHEDULE_NOT_FOUND,
@@ -12,11 +12,17 @@ import {
 } from "@/services/resultsService";
 
 const REQUEST_TIMEOUT_MS = 20_000;
-export const GALLERY_PAGE_SIZE = 9;
 
 type ResultsState =
     | { status: "loading" | "ongoing" | "unpublished" | "error" }
-    | { status: "ready"; winners: Winner[]; others: ResultMeme[] };
+    | {
+        status: "ready";
+        winners: Winner[];
+        others: ResultMeme[];
+        nextAfterPlace: number | null;
+        publicationVersion: string;
+        moreStatus: "idle" | "loading" | "error";
+    };
 
 function failureState(error: unknown): ResultsState {
     if (error instanceof ApiError) {
@@ -30,8 +36,10 @@ function failureState(error: unknown): ResultsState {
 
 export function useResults() {
     const [state, setState] = useState<ResultsState>({ status: "loading" });
-    const [visibleCount, setVisibleCount] = useState(GALLERY_PAGE_SIZE);
     const [attempt, setAttempt] = useState(0);
+    const pageRequest = useRef<AbortController | null>(null);
+    const nextAfterPlace = state.status === "ready" ? state.nextAfterPlace : null;
+    const publicationVersion = state.status === "ready" ? state.publicationVersion : null;
 
     useEffect(() => {
         const request = new AbortController();
@@ -39,17 +47,21 @@ export function useResults() {
 
         async function load() {
             try {
-                const { winners, others } = await getResults(signal);
+                const page = await getResults(signal);
                 if (request.signal.aborted) return;
 
-                setState(winners.length ? { status: "ready", winners, others } : { status: "unpublished" });
+                setState({ status: "ready", ...page, moreStatus: "idle" });
             } catch (error) {
                 if (!request.signal.aborted) setState(failureState(error));
             }
         }
 
         void load();
-        return () => request.abort();
+        return () => {
+            request.abort();
+            pageRequest.current?.abort();
+            pageRequest.current = null;
+        };
     }, [attempt]);
 
     // While the results are not out yet, check again when the person returns to the tab.
@@ -69,22 +81,46 @@ export function useResults() {
         };
     }, [waiting]);
 
-    function retry() {
+    const retry = useCallback(() => {
         setState({ status: "loading" });
         setAttempt(value => value + 1);
-    }
+    }, []);
 
-    function loadMore() {
-        setVisibleCount(count => count + GALLERY_PAGE_SIZE);
-    }
+    const loadMore = useCallback(async () => {
+        if (nextAfterPlace === null || pageRequest.current) return;
+        const request = new AbortController();
+        pageRequest.current = request;
+        const signal = AbortSignal.any([request.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
 
-    const others = state.status === "ready" ? state.others : [];
+        setState(current => current.status === "ready" ? { ...current, moreStatus: "loading" } : current);
+        try {
+            const page = await getResults(signal, nextAfterPlace);
+            if (request.signal.aborted) return;
+            if (page.publicationVersion !== publicationVersion) {
+                retry();
+                return;
+            }
+
+            setState(current => current.status === "ready" && current.nextAfterPlace === nextAfterPlace
+                ? { ...current, others: [...current.others, ...page.others], nextAfterPlace: page.nextAfterPlace, moreStatus: "idle" }
+                : current);
+        } catch (error) {
+            if (request.signal.aborted) return;
+            const failure = failureState(error);
+            setState(current => failure.status === "error" && current.status === "ready"
+                ? { ...current, moreStatus: "error" }
+                : failure);
+        } finally {
+            if (pageRequest.current === request) pageRequest.current = null;
+        }
+    }, [nextAfterPlace, publicationVersion, retry]);
 
     return {
         state,
         winners: state.status === "ready" ? state.winners : [],
-        visibleOthers: others.slice(0, visibleCount),
-        hasMore: others.length > visibleCount,
+        visibleOthers: state.status === "ready" ? state.others : [],
+        hasMore: nextAfterPlace !== null,
+        moreStatus: state.status === "ready" ? state.moreStatus : "idle",
         loadMore,
         retry,
     };

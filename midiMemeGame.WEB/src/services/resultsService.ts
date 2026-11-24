@@ -13,20 +13,30 @@ export type ResultMeme = {
     place: number;
     userName: string;
     caption: string;
+    score: number;
     imageUrl: string;
 };
 
 export type Winner = ResultMeme & { place: PodiumPlace };
 
-// One item of the GET /api/results array. The API also sends the score, status and
-// timestamps; they are left out on purpose so they can never end up on the page.
+// Fields used by the results page from each ranked item.
 type ResultResponse = {
     id: number;
     place: number;
     sourcePhotoId: number;
     caption: string;
     userName: string | null;
+    score: number;
 };
+
+type ResultsPageResponse = {
+    items: ResultResponse[];
+    nextAfterPlace: number | null;
+    publicationVersion: string;
+};
+
+const GALLERY_PAGE_SIZE = 12;
+const PODIUM_SIZE = 3;
 
 async function readJson<T>(response: Response): Promise<T> {
     try {
@@ -36,21 +46,23 @@ async function readJson<T>(response: Response): Promise<T> {
     }
 }
 
-const isPodiumPlace = (place: number): place is PodiumPlace => place >= 1 && place <= 3;
+const isPodiumPlace = (place: number): place is PodiumPlace => Number.isInteger(place) && place >= 1 && place <= PODIUM_SIZE;
 
 const toResultMeme = (result: ResultResponse): ResultMeme => ({
     id: result.id,
     place: result.place,
     userName: result.userName?.trim() ?? "",
     caption: result.caption.trim(),
+    score: result.score,
     imageUrl: `${apiBaseUrl}/api/photos/${result.sourcePhotoId}/file`,
 });
 
-// The API returns every ranked meme, already ordered by place.
-export async function getResults(signal: AbortSignal): Promise<{ winners: Winner[]; others: ResultMeme[] }> {
+export async function getResults(signal: AbortSignal, afterPlace = 0) {
+    const limit = GALLERY_PAGE_SIZE + (afterPlace === 0 ? PODIUM_SIZE : 0);
+    const params = new URLSearchParams({ afterPlace: String(afterPlace), limit: String(limit) });
     let response: Response;
     try {
-        response = await fetch(`${apiBaseUrl}/api/results`, {
+        response = await fetch(`${apiBaseUrl}/api/results/page?${params}`, {
             headers: { Accept: "application/json" },
             signal,
             cache: "no-store",
@@ -61,10 +73,19 @@ export async function getResults(signal: AbortSignal): Promise<{ winners: Winner
     }
     if (!response.ok) throw await ApiError.fromResponse(response);
 
-    const results = (await readJson<ResultResponse[]>(response)).map(toResultMeme);
+    const page = await readJson<ResultsPageResponse | null>(response);
+    if (!page || !Array.isArray(page.items) || typeof page.publicationVersion !== "string"
+        || (page.nextAfterPlace !== null && (!Number.isInteger(page.nextAfterPlace)
+            || page.nextAfterPlace <= afterPlace || page.nextAfterPlace !== page.items.at(-1)?.place))) {
+        throw ApiError.invalidResponse();
+    }
+
+    const results = page.items.map(toResultMeme);
 
     return {
         winners: results.filter((meme): meme is Winner => isPodiumPlace(meme.place)),
         others: results.filter(meme => !isPodiumPlace(meme.place)),
+        nextAfterPlace: page.nextAfterPlace,
+        publicationVersion: page.publicationVersion,
     };
 }

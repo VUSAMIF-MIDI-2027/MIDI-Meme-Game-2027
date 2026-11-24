@@ -10,3 +10,13 @@
     pointer-events: auto;
   }
 }
+
+.dioCat {
+  --dio-cat-size: clamp(4.75rem, 19vw, 7rem);
+}
+
+@media (min-width: 64rem) {
+  .dioCat {
+    --dio-cat-size: 10rem;
+  }
+}

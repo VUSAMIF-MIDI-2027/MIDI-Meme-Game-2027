@@ -1,12 +1,14 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ArrowDown } from "lucide-react";
 import Image from "next/image";
+import midiLogo from "#/public/logos/MIDI-Logotipas-pilnas-baltas.png";
+import dioCatStyles from "@/components/Shared/DioCat.module.css";
 import stars from "../account/account.module.css";
 import styles from "./results.module.css";
 import { text } from "./pageText";
 import { FlyingCat } from "@/components/FlyingCat";
-import { EmptyWinnerCard } from "@/components/Results/EmptyWinnerCard";
 import { GalleryCard } from "@/components/Results/GalleryCard";
 import { WinnerCard } from "@/components/Results/WinnerCard";
 import { useLanguage } from "@/context/LanguageContext";
@@ -17,9 +19,30 @@ const BUTTON_CLASS = "inline-flex min-h-11 items-center justify-center gap-3 rou
 export default function ResultsPage() {
     const { lang } = useLanguage();
     const t = text[lang];
-    const { state, winners, visibleOthers, hasMore, loadMore, retry } = useResults();
+    const { state, winners, visibleOthers, hasMore, moreStatus, loadMore, retry } = useResults();
+    const moreButtonRef = useRef<HTMLButtonElement>(null);
 
-    const showResults = state.status === "ready" || state.status === "unpublished";
+    useEffect(() => {
+        const button = moreButtonRef.current;
+        if (!button || !hasMore || moreStatus !== "idle" || typeof IntersectionObserver === "undefined") return;
+
+        const observer = new IntersectionObserver(entries => {
+            if (entries.some(entry => entry.isIntersecting)) {
+                observer.disconnect();
+                void loadMore();
+            }
+        }, { rootMargin: "320px 0px" });
+        observer.observe(button);
+        return () => observer.disconnect();
+    }, [hasMore, loadMore, moreStatus]);
+
+    const publishedEmpty = state.status === "ready" && winners.length === 0 && visibleOthers.length === 0;
+    const showResults = state.status === "ready" && !publishedEmpty;
+    const noticeTitle = state.status === "ongoing" ? t.ongoingTitle
+        : state.status === "unpublished" ? t.unpublishedTitle
+        : publishedEmpty ? t.publishedEmpty : null;
+    const noticeDescription = state.status === "ongoing" ? t.ongoing
+        : state.status === "unpublished" ? t.unpublished : null;
     const memeAlt = (caption: string) => caption ? `${t.memeAlt}: ${caption}` : t.memeAlt;
 
     return (
@@ -27,26 +50,32 @@ export default function ResultsPage() {
             <div className={stars.page}>
                 <FlyingCat startSide="left" bounceOnContact />
                 <div className={`${styles.content} mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:py-20`}>
-                    <header className="grid items-center gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] md:gap-8">
-                        <div>
+                    <header className="text-center">
+                        <div className="mx-auto max-w-xl">
+                            <Image
+                                src={midiLogo}
+                                alt="Matematikų ir informatikų dienos"
+                                loading="eager"
+                                sizes="(min-width: 768px) 192px, (min-width: 640px) 176px, 144px"
+                                className="pointer-events-none mx-auto mb-6 h-auto w-36 select-none sm:mb-8 sm:w-44 md:w-48"
+                            />
                             <p className="text-xs font-semibold tracking-widest text-[#70cfff]">{t.eyebrow}</p>
-                            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">{t.title}</h1>
-                            <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/80">{t.intro}</p>
+                            <h1 className="mt-4 text-[clamp(2.25rem,7vw,5.25rem)] leading-[1.04] font-extrabold tracking-tight">
+                                <span className="block">{t.title}</span>{" "}
+                                <span className="block text-midi-blue">{t.titleAccent}</span>
+                            </h1>
+                            {showResults && (
+                                <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-pretty text-white/80 sm:text-lg">{t.intro}</p>
+                            )}
                         </div>
-                        <Image
-                            src="/cats/diocat.svg"
-                            width={250}
-                            height={250}
-                            alt=""
-                            loading="eager"
-                            className="pointer-events-none w-full max-w-40 justify-self-center select-none [image-rendering:pixelated] md:max-w-56"
-                        />
                     </header>
 
-                    {state.status === "ongoing" && (
-                        <section role="status" aria-labelledby="ongoing-title" className="mt-12 rounded-xl border border-white/15 px-6 py-14 text-center sm:mt-16">
-                            <h2 id="ongoing-title" className="text-2xl font-bold text-midi-gray sm:text-3xl">{t.ongoingTitle}</h2>
-                            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-text-muted">{t.ongoing}</p>
+                    {noticeTitle && (
+                        <section role="status" aria-labelledby="results-status-title" className="mt-12 rounded-xl border border-white/15 px-6 py-14 text-center sm:mt-16">
+                            <h2 id="results-status-title" className="text-2xl font-bold text-midi-gray sm:text-3xl">{noticeTitle}</h2>
+                            {noticeDescription && (
+                                <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-text-muted">{noticeDescription}</p>
+                            )}
                         </section>
                     )}
 
@@ -65,31 +94,27 @@ export default function ResultsPage() {
 
                     {showResults && (
                         <>
-                            <section id="winners" aria-labelledby="winners-title" className="mt-12 scroll-mt-24 sm:mt-16">
-                                <div className="mb-7 sm:mb-9">
-                                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-midi-white">{t.winnersEyebrow}</p>
-                                    <h2 id="winners-title" className="mt-5 text-4xl font-bold leading-tight text-midi-gray sm:text-5xl">{t.winnersTitle}</h2>
+                            <section id="winners" aria-labelledby="winners-title" className="mt-16 scroll-mt-24 sm:mt-20 lg:mt-24">
+                                <div className="mb-9 flex items-end justify-between gap-3 sm:mb-12">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-bold uppercase tracking-[0.12em] text-midi-white">{t.winnersEyebrow}</p>
+                                        <h2 id="winners-title" className="mt-5 text-4xl font-bold leading-tight text-midi-gray sm:text-5xl">{t.winnersTitle}</h2>
+                                    </div>
+                                    <span aria-hidden="true" className={dioCatStyles.cat + " " + styles.dioCat} />
                                 </div>
 
-                                {state.status === "ready" ? (
-                                    <div className="grid gap-6 md:grid-cols-3 md:items-start">
-                                        {winners.map(winner => (
-                                            <WinnerCard
-                                                key={winner.id}
-                                                winner={winner}
-                                                placeLabel={t.places[winner.place - 1]}
-                                                imageAlt={memeAlt(winner.caption)}
-                                                fallbackLabel={t.imageUnavailable}
-                                            />
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div role="status" aria-label={t.emptyPodium} className="grid gap-6 md:grid-cols-3 md:items-start">
-                                        {([1, 2, 3] as const).map(place => (
-                                            <EmptyWinnerCard key={place} place={place} placeLabel={t.places[place - 1]} />
-                                        ))}
-                                    </div>
-                                )}
+                                <div className="grid grid-cols-2 items-start gap-3 sm:gap-4 md:grid-cols-3 md:gap-6">
+                                    {winners.map(winner => (
+                                        <WinnerCard
+                                            key={winner.id}
+                                            winner={winner}
+                                            placeLabel={t.places[winner.place - 1]}
+                                            imageAlt={memeAlt(winner.caption)}
+                                            fallbackLabel={t.imageUnavailable}
+                                            scoreLabel={t.points(winner.score)}
+                                        />
+                                    ))}
+                                </div>
                             </section>
 
                             <section aria-labelledby="gallery-title" className="mt-14 border-t border-white/15 pt-12 sm:mt-18 sm:pt-16">
@@ -99,26 +124,36 @@ export default function ResultsPage() {
                                 </div>
 
                                 {visibleOthers.length === 0 ? (
-                                    <div role="status" className="rounded-xl border border-white/15 px-6 py-12 text-center">
-                                        <h3 className="text-xl font-bold uppercase tracking-wide text-white">{t.galleryEmptyTitle}</h3>
-                                        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-text-muted">{t.galleryEmpty}</p>
-                                    </div>
+                                    <p className="rounded-xl border border-white/15 px-6 py-12 text-center text-text-muted">{t.galleryEmpty}</p>
                                 ) : (
                                     <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                                         {visibleOthers.map(meme => (
                                             <li key={meme.id} className="min-w-0">
-                                                <GalleryCard meme={meme} imageAlt={memeAlt(meme.caption)} fallbackLabel={t.imageUnavailable} />
+                                                <GalleryCard
+                                                    meme={meme}
+                                                    imageAlt={memeAlt(meme.caption)}
+                                                    fallbackLabel={t.imageUnavailable}
+                                                    scoreLabel={t.points(meme.score)}
+                                                />
                                             </li>
                                         ))}
                                     </ul>
                                 )}
 
                                 {hasMore && (
-                                    <div className="mt-10 flex justify-center">
-                                        <button type="button" onClick={loadMore} className={BUTTON_CLASS}>
-                                            {t.loadMore}
-                                            <ArrowDown aria-hidden="true" className="size-4" />
+                                    <div className="mt-10 flex flex-col items-center gap-3">
+                                        {moreStatus === "error" && <p role="alert" className="text-sm text-rose-200">{t.loadMoreError}</p>}
+                                        <button
+                                            ref={moreButtonRef}
+                                            type="button"
+                                            onClick={() => void loadMore()}
+                                            disabled={moreStatus === "loading"}
+                                            className={BUTTON_CLASS + " disabled:cursor-wait"}
+                                        >
+                                            {moreStatus === "loading" ? t.loadingMore : moreStatus === "error" ? t.retry : t.loadMore}
+                                            {moreStatus === "idle" && <ArrowDown aria-hidden="true" className="size-4" />}
                                         </button>
+                                        <span role="status" className="sr-only">{moreStatus === "loading" ? t.loadingMore : ""}</span>
                                     </div>
                                 )}
                             </section>

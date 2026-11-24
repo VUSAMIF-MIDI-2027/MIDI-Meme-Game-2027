@@ -31,6 +31,7 @@ export function Header() {
     const navLinks = participantLinks.map(link => {
         if (link.href === "/dashboard/create") return { ...link, disabled: phase !== "submissions" };
         if (link.href === "/dashboard/gallery") return { ...link, disabled: phase !== "voting" };
+        if (link.href === "/results") return { ...link, disabled: phase !== "ended" };
         return link;
     });
     const mobileLinks = isAdmin

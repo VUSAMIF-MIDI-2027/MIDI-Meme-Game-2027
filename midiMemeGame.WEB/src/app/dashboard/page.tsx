@@ -26,6 +26,7 @@ import { getPhotoBlob } from "@/services/userService";
 import { useLanguage } from "@/context/LanguageContext";
 import { dashboardText } from "./pageText";
 import styles from "./dashboard.module.css";
+import dioCatStyles from "@/components/Shared/DioCat.module.css";
 import Link from "next/link";
 import { useEventPhase } from "@/hooks/useEventPhase";
 
@@ -171,12 +172,12 @@ export default function DashboardPage() {
             <p className="mt-6 max-w-[720px] text-base leading-[1.75] text-text-muted sm:text-lg">
               {t.description}
             </p>
-            {phase === "voting" ? (
+            {phase === "voting" || phase === "ended" ? (
               <Link
-                  href="/dashboard/gallery"
+                  href={phase === "ended" ? "/results" : "/dashboard/gallery"}
                   className="mt-8 inline-flex min-h-13 items-center gap-3 rounded-xl bg-midi-blue px-6 py-3 text-base font-bold text-white transition-colors hover:bg-midi-blue/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-midi-blue"
               >
-                  {t.vote}
+                  {phase === "ended" ? t.viewResults : t.vote}
                   <ArrowRight aria-hidden="true" className="size-5" />
               </Link>
             ) : (
@@ -190,7 +191,7 @@ export default function DashboardPage() {
 
           <div>
             <div className={styles.catScene} aria-hidden="true">
-              <span className={styles.dioCat} />
+              <span className={dioCatStyles.cat + " " + styles.dioCat} />
             </div>
             <CompetitionStatus
               layout="dashboard"

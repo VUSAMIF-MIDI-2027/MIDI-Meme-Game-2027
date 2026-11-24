@@ -62,26 +62,7 @@
 }
 
 .dioCat {
-  --cat-size: 200px;
-  display: block;
-  width: var(--cat-size);
-  height: var(--cat-size);
-  flex-shrink: 0;
-  background: url("/cats/diocat-sprite.png") 0 0 / calc(var(--cat-size) * 48) var(--cat-size) no-repeat;
-  animation: dio-crouch 3.2s steps(48) infinite;
   margin-bottom: -5px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  pointer-events: none;
-  user-select: none;
-}
-
-@keyframes dio-crouch {
-  to { background-position-x: calc(var(--cat-size) * -48); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dioCat { animation: none; }
 }
 
 @media (max-width: 1023px) {
@@ -94,7 +75,7 @@
   }
 
   .dioCat {
-    --cat-size: 150px;
+    --dio-cat-size: 150px;
   }
 }
 
