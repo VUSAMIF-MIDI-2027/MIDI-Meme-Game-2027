@@ -63,9 +63,8 @@ export default function DashboardPage() {
         if (!token) return;
 
         const list = await getMyMemes(token, controller.signal);
-        // Deleted memes still count toward the limit server-side, so this
-        // client-side count can understate usage; MEME_LIMIT_REACHED on
-        // submit remains the authoritative guard.
+        // Deleting frees the slot and invalidated memes never count, so
+        // this matches the server-side submission count exactly.
         const used = list.filter(
           (meme) => !meme.isInvalidatedBySourcePhoto,
         ).length;
@@ -178,12 +177,14 @@ export default function DashboardPage() {
           onSaveCaption={handleSaveCaption}
           onDelete={handleDelete}
         />
-        <Link
-          href="/rules"
-          className="mt-6 inline-flex min-h-11 items-center text-sm text-white/80 underline underline-offset-4 hover:text-white"
-        >
-          {lang === "lt" ? "Konkurso taisyklės" : "Competition rules"}
-        </Link>
+        {myMemes.length > 0 && (
+          <Link
+            href="/rules"
+            className="mt-6 inline-flex min-h-11 items-center text-sm text-white/80 underline underline-offset-4 hover:text-white"
+          >
+            {lang === "lt" ? "Konkurso taisyklės" : "Competition rules"}
+          </Link>
+        )}
       </div>
     </div>
   );

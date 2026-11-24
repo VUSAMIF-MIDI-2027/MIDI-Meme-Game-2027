@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useLanguage, type Lang } from "@/context/LanguageContext";
@@ -121,45 +122,47 @@ function YourMemeItem({
         metaLabel={metaLabel}
         footer={
           meme.isInvalidated || onSaveCaption || onDelete || failed ? (
-          <div className="flex flex-col gap-2">
-            {meme.isInvalidated && (
-              <p className="inline-flex w-fit items-center rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">
-                {t.invalidated}
-              </p>
-            )}
-            {(onSaveCaption || onDelete) && (
-              <div className="flex gap-2">
-                {onSaveCaption && (
-                  <button
-                    type="button"
-                    onClick={openEdit}
-                    disabled={!submissionsOpen || meme.isInvalidated || busy !== null}
-                    className={secondaryButtonClass}
-                  >
-                    <Pencil aria-hidden="true" className="size-4" />
-                    {t.edit}
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={!submissionsOpen || busy !== null}
-                    aria-busy={busy === "delete"}
-                    className={dangerButtonClass}
-                  >
-                    <Trash2 aria-hidden="true" className="size-4" />
-                    {busy === "delete" ? t.deleting : t.delete}
-                  </button>
-                )}
-              </div>
-            )}
-            {failed && (
-              <p role="alert" className="text-sm text-rose-400">
-                {t.actionFailed}
-              </p>
-            )}
-          </div>
+            <div className="flex flex-col gap-2">
+              {meme.isInvalidated && (
+                <p className="inline-flex w-fit items-center rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">
+                  {t.invalidated}
+                </p>
+              )}
+              {(onSaveCaption || onDelete) && (
+                <div className="flex gap-2">
+                  {onSaveCaption && (
+                    <button
+                      type="button"
+                      onClick={openEdit}
+                      disabled={
+                        !submissionsOpen || meme.isInvalidated || busy !== null
+                      }
+                      className={secondaryButtonClass}
+                    >
+                      <Pencil aria-hidden="true" className="size-4" />
+                      {t.edit}
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={!submissionsOpen || busy !== null}
+                      aria-busy={busy === "delete"}
+                      className={dangerButtonClass}
+                    >
+                      <Trash2 aria-hidden="true" className="size-4" />
+                      {busy === "delete" ? t.deleting : t.delete}
+                    </button>
+                  )}
+                </div>
+              )}
+              {failed && (
+                <p role="alert" className="text-sm text-rose-400">
+                  {t.actionFailed}
+                </p>
+              )}
+            </div>
           ) : null
         }
       />
@@ -242,6 +245,7 @@ const YourMemes = ({
   const t = yourMemesText[lang];
   const { phase } = useEventPhase(schedule);
   const submissionsOpen = phase === "submissions";
+  const submissionsEnded = phase === "voting" || phase === "ended";
   const dateTimeFormatter = new Intl.DateTimeFormat(
     lang === "lt" ? "lt-LT" : "en-GB",
     {
@@ -274,7 +278,7 @@ const YourMemes = ({
               {t.title}
             </h2>
           </div>
-          {submissionsOpen && (
+          {submissionsOpen && memes.length > 0 && (
             <Link
               href="/dashboard/create"
               className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-midi-blue px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-midi-blue/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue"
@@ -285,13 +289,85 @@ const YourMemes = ({
           )}
         </div>
         {memes.length === 0 ? (
-          <div className="py-2">
-            <h3 className="text-lg font-semibold text-midi-gray">
-              {t.emptyTitle}
-            </h3>
-            <p className="mt-2 max-w-lg text-sm leading-relaxed text-text-muted">
-              {t.empty}
-            </p>
+          <div className="relative">
+            <div
+              className="skeleton-drift grid gap-6 md:grid-cols-3"
+              aria-hidden="true"
+            >
+              {[0, 1, 2].map((index) => (
+                <div
+                  key={index}
+                  className="overflow-hidden rounded-xl border border-white/15 bg-[#1d1d1d]"
+                >
+                  <div className="aspect-[4/3] bg-white/10" />
+                  <div className="flex min-h-20 items-center justify-center px-5 py-4">
+                    <div className="h-4 w-3/4 rounded bg-white/10" />
+                  </div>
+                  <div className="p-3 sm:p-4">
+                    <div className="h-3 w-1/2 rounded bg-white/10" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <div className="relative flex w-full max-w-xs flex-col items-center gap-5 rounded-xl border border-white/15 bg-[#1d1d1d] px-5 py-5 shadow-lg sm:px-8 sm:py-6">
+                <div className="relative size-24 shrink-0 self-center sm:size-28">
+                  <Image
+                    src={
+                      submissionsEnded
+                        ? "/cats/jakub02.webp"
+                        : "/cats/jakub.webp"
+                    }
+                    width={128}
+                    height={128}
+                    alt=""
+                    className="size-full rounded-full border-2 border-midi-blue object-cover"
+                  />
+                  {!submissionsEnded && (
+                    <Image
+                      src="/cats/sleepy.svg"
+                      width={48}
+                      height={48}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute -top-10 left-1/2 size-20 -translate-x-1/2 rotate-[28deg] select-none [image-rendering:pixelated] sm:-top-16 sm:size-36"
+                    />
+                  )}
+                </div>
+                <div className="flex flex-col items-center">
+                  {submissionsEnded && (
+                    <p className="mb-1 text-center text-sm text-white/60">
+                      {t.emptyEndedNotice}
+                    </p>
+                  )}
+                  <p className="text-center text-base text-midi-gray">
+                    {submissionsEnded ? t.emptyEndedTitle : t.emptyTitle}
+                  </p>
+                  {submissionsEnded && (
+                    <p className="mt-1 text-center text-sm font-semibold text-red-400">
+                      {t.emptyEndedCaption}
+                    </p>
+                  )}
+                  <div className="mt-3 flex items-center gap-4">
+                    <Link
+                      href="/rules"
+                      className="inline-flex min-h-9 items-center text-sm text-white/60 underline underline-offset-4 hover:text-white focus-visible:outline-2 focus-visible:outline-midi-blue"
+                    >
+                      {t.rulesLink}
+                    </Link>
+                    {submissionsOpen && (
+                      <Link
+                        href="/dashboard/create"
+                        className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-midi-blue px-4 py-1.5 text-sm font-bold text-white transition-colors hover:bg-midi-blue/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue"
+                      >
+                        <Plus aria-hidden="true" className="size-4" />
+                        {t.create}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-3">

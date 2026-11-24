@@ -5,12 +5,18 @@ type YourMemesText = {
     eyebrow: string;
     title: string;
     description: string;
-    empty: string;
     emptyTitle: string;
+    emptyEndedTitle: string;
+    emptyEndedNotice: string;
+    emptyEndedCaption: string;
+    rulesLink: string;
     submitted: string;
     photoAlt: (id: number) => string;
     status: Record<MemeStatus, string>;
     invalidated: string;
+    invalidatedInfoLabel: string;
+    invalidatedBody: string;
+    close: string;
     edit: string;
     editTitle: string;
     delete: string;
@@ -30,8 +36,11 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
         title: "Mano memai",
         description:
             "Visi tavo pateikti memai ir jų moderavimo būsena vienoje vietoje.",
-        empty: "Kai pateiksi memą, jis atsiras čia.",
-        emptyTitle: "Kol kas tuščia",
+        emptyTitle: "Jakubas laukia tavo prikolo.",
+        emptyEndedTitle: "Jakubas nedasilaukė tavo prikolų.",
+        emptyEndedNotice: "Pateikimų laikotarpis pasibaigė.",
+        emptyEndedCaption: "Labai labai piktas.",
+        rulesLink: "Konkurso taisyklės",
         submitted: "Pateikta",
         photoAlt: (id) => `Konkurso nuotrauka ${id}`,
         status: {
@@ -40,6 +49,10 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
             rejected: "Atmestas",
         },
         invalidated: "Šablonas išjungtas",
+        invalidatedInfoLabel: "Ką tai reiškia?",
+        invalidatedBody:
+            "Organizatoriai išjungė nuotrauką, su kuria šis memas buvo sukurtas, todėl jis nedalyvaus balsavime. Į pateikimų limitą jis neįskaičiuojamas.",
+        close: "Uždaryti",
         edit: "Redaguoti",
         editTitle: "Redaguoti prierašą",
         delete: "Ištrinti",
@@ -47,7 +60,7 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
         save: "Išsaugoti",
         saving: "Saugoma…",
         cancel: "Atšaukti",
-        deleteConfirm: "Ar tikrai ištrinti šį memą? Ištrinti memai vis tiek skaičiuojasi į pateikimo limitą.",
+        deleteConfirm: "Ar tikrai ištrinti šį memą?",
         deleting: "Trinama…",
         actionFailed: "Veiksmas nepavyko. Bandyk dar kartą.",
         create: "Kurti memą",
@@ -57,8 +70,11 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
         title: "My memes",
         description:
             "All your submitted memes and their moderation status in one place.",
-        empty: "Your memes will appear here after you submit them.",
-        emptyTitle: "Nothing here yet",
+        emptyTitle: "Jakub is waiting for your meme.",
+        emptyEndedTitle: "Jakub didn't wait for your memes.",
+        emptyEndedNotice: "The submission period has ended.",
+        emptyEndedCaption: "Very, very angry.",
+        rulesLink: "Competition rules",
         submitted: "Submitted",
         photoAlt: (id) => `Competition photo ${id}`,
         status: {
@@ -67,6 +83,10 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
             rejected: "Rejected",
         },
         invalidated: "Template disabled",
+        invalidatedInfoLabel: "What does this mean?",
+        invalidatedBody:
+            "The organizers disabled the photo this meme was made with, so it won't appear in voting. It doesn't count toward your submission limit.",
+        close: "Close",
         edit: "Edit",
         editTitle: "Edit caption",
         delete: "Delete",
@@ -74,7 +94,7 @@ export const yourMemesText: Record<Lang, YourMemesText> = {
         save: "Save",
         saving: "Saving…",
         cancel: "Cancel",
-        deleteConfirm: "Delete this meme? Deleted memes still count toward the submission limit.",
+        deleteConfirm: "Delete this meme?",
         deleting: "Deleting…",
         actionFailed: "That didn't work. Try again.",
         create: "Create a meme",

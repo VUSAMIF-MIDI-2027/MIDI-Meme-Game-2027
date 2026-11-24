@@ -28,6 +28,17 @@ html {
   }
 }
 
+@keyframes skeletonDrift {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+
+  50% {
+    opacity: 0.15;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .cta-main-btn {
     animation: btnPulse 4s ease-in-out infinite;
@@ -35,6 +46,10 @@ html {
 
   .cta-main-btn--alternate {
     animation-delay: -2s;
+  }
+
+  .skeleton-drift {
+    animation: skeletonDrift 3s ease-in-out infinite;
   }
 }
 
