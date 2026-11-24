@@ -199,16 +199,23 @@ jobs:
 
           release="$DEPLOY_PATH/releases/$GITHUB_SHA"
 
-          ssh "$SSH_USER@$SSH_HOST" "umask 077; mkdir -p '$release'; chmod 700 '$release'"
-
-          ssh "$SSH_USER@$SSH_HOST" bash -s -- "$DEPLOY_PATH" <<'REMOTE'
+          ssh "$SSH_USER@$SSH_HOST" bash -s -- "$DEPLOY_PATH" "$GITHUB_SHA" <<'REMOTE'
           set -euo pipefail
+          umask 077
 
-          find "$1/releases" -mindepth 2 -maxdepth 2 \
-            -type f -name images.tar.gz -delete -print
+          releases="$1/releases"
+          release="$releases/$2"
 
-          df -h "$1/releases" /var/lib/containerd
-          df -i "$1/releases" /var/lib/containerd
+          if [[ -d "$releases" ]]; then
+            find "$releases" -mindepth 2 -maxdepth 2 \
+              -type f -name images.tar.gz -delete -print
+
+            df -h "$releases" /var/lib/containerd
+            df -i "$releases" /var/lib/containerd
+          fi
+
+          mkdir -p -- "$release"
+          chmod 700 -- "$release"
           REMOTE
 
           scp bundle/images.tar.gz bundle/compose.yml bundle/public.env bundle/api.env \
