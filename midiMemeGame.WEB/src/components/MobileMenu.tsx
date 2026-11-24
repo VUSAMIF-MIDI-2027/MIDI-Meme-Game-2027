@@ -18,6 +18,7 @@ type NavLink = {
     href: string;
     label: labelLang;
     disabled?: boolean;
+    primary?: boolean;
 }
 
 type labelLang = {
@@ -44,9 +45,9 @@ export function MobileMenu({
                     : "max-h-0 border-b-0"
                 }`}
         >
-            {links.map(({ href, label, disabled }) => {
+            {links.map(({ href, label, disabled, primary: isPrimary }) => {
                 const active = !disabled && isCurrentPath(pathname, href);
-                const primary = participant && href === "/photos";
+                const primary = participant && isPrimary;
 
                 if (participant && href === "/admin") {
                     return (

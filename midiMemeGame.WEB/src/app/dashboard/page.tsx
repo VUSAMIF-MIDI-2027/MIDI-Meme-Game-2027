@@ -11,6 +11,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { dashboardText } from "./pageText";
 import styles from "./dashboard.module.css";
 import Link from "next/link";
+import { useVotingOpen } from "@/hooks/useVotingOpen";
 
 export default function DashboardPage() {
     const { isLoaded, isSignedIn } = useAuth();
@@ -18,6 +19,7 @@ export default function DashboardPage() {
     const { lang } = useLanguage();
     const router = useRouter();
     const t = dashboardText[lang];
+    const votingOpen = useVotingOpen();
 
     useEffect(() => {
         if (isLoaded && !isSignedIn) router.replace("/login");
@@ -47,19 +49,31 @@ export default function DashboardPage() {
                         <p className="mt-6 max-w-[720px] text-base leading-[1.75] text-text-muted sm:text-lg">
                             {t.description}
                         </p>
-                        {/* The creation flow is being implemented separately. */}
-                        <button
-                            type="button"
-                            disabled
-                            aria-describedby="creation-notice"
-                            className="mt-8 inline-flex min-h-13 cursor-not-allowed items-center gap-3 rounded-xl bg-midi-blue px-6 py-3 text-base font-bold text-white opacity-40"
-                        >
-                            {t.createMeme}
-                            <ArrowRight aria-hidden="true" className="size-5" />
-                        </button>
-                        <p id="creation-notice" className="mt-3 text-sm text-text-muted">
-                            {t.creationNotice}
-                        </p>
+                        {votingOpen ? (
+                            <Link
+                                href="/dashboard/gallery"
+                                className="mt-8 inline-flex min-h-13 items-center gap-3 rounded-xl bg-midi-blue px-6 py-3 text-base font-bold text-white transition-colors hover:bg-midi-blue/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-midi-blue"
+                            >
+                                {t.vote}
+                                <ArrowRight aria-hidden="true" className="size-5" />
+                            </Link>
+                        ) : (
+                            <>
+                                {/* The creation flow is being implemented separately. */}
+                                <button
+                                    type="button"
+                                    disabled
+                                    aria-describedby="creation-notice"
+                                    className="mt-8 inline-flex min-h-13 cursor-not-allowed items-center gap-3 rounded-xl bg-midi-blue px-6 py-3 text-base font-bold text-white opacity-40"
+                                >
+                                    {t.createMeme}
+                                    <ArrowRight aria-hidden="true" className="size-5" />
+                                </button>
+                                <p id="creation-notice" className="mt-3 text-sm text-text-muted">
+                                    {t.creationNotice}
+                                </p>
+                            </>
+                        )}
                     </div>
 
                     <div>
