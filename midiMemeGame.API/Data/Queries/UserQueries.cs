@@ -154,6 +154,22 @@ public class UserQueries
         }
     }
 
+    public Task<bool> IsDeletedClerkIdAsync(string clerkId, CancellationToken cancellationToken)
+    {
+        return _db.DeletedClerkUsers.AnyAsync(user => user.ClerkId == clerkId, cancellationToken);
+    }
+
+    public async Task MarkAccountDeletedAsync(string clerkId, CancellationToken cancellationToken)
+    {
+        await _db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "DeletedClerkUsers" ("ClerkId") VALUES ({clerkId})
+            ON CONFLICT ("ClerkId") DO NOTHING
+            """, cancellationToken);
+
+        await _db.Users.Where(user => user.ClerkId == clerkId && !user.IsDeleted)
+            .ExecuteUpdateAsync(update => update.SetProperty(user => user.IsDeleted, true), cancellationToken);
+    }
+
     public async Task<Result<int>> UpsertFromClerkAsync(
         User user,
         CancellationToken cancellationToken)
@@ -170,8 +186,7 @@ public class UserQueries
                 "LastClerkUpdatedAt",
                 "IsDeleted"
             )
-            VALUES
-            (
+            SELECT
                 {user.ClerkId},
                 {user.Email},
                 {user.FirstName},
@@ -179,7 +194,7 @@ public class UserQueries
                 {user.CreatedAtUtc},
                 {user.LastClerkUpdatedAt},
                 0
-            )
+            WHERE NOT EXISTS (SELECT 1 FROM "DeletedClerkUsers" WHERE "ClerkId" = {user.ClerkId})
             ON CONFLICT ("ClerkId") DO
                 UPDATE SET
                     "Email" = {user.Email},
