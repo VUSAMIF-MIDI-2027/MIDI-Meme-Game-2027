@@ -201,6 +201,16 @@ jobs:
 
           ssh "$SSH_USER@$SSH_HOST" "umask 077; mkdir -p '$release'; chmod 700 '$release'"
 
+          ssh "$SSH_USER@$SSH_HOST" bash -s -- "$DEPLOY_PATH" <<'REMOTE'
+          set -euo pipefail
+
+          find "$1/releases" -mindepth 2 -maxdepth 2 \
+            -type f -name images.tar.gz -delete -print
+
+          df -h "$1/releases" /var/lib/containerd
+          df -i "$1/releases" /var/lib/containerd
+          REMOTE
+
           scp bundle/images.tar.gz bundle/compose.yml bundle/public.env bundle/api.env \
             "$SSH_USER@$SSH_HOST:$release/"
 
