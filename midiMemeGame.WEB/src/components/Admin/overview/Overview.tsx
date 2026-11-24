@@ -2,6 +2,7 @@
 
 import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 
+import { RefreshCw } from "lucide-react";
 import { useMemo, useState, type ComponentProps } from "react";
 import MemeCard from "@/components/Shared/MemeCard";
 import { useLanguage } from "@/context/LanguageContext";
@@ -32,7 +33,7 @@ const TOP_MEMES_LIMIT = 10;
 export function Overview() {
     const { lang } = useLanguage();
     const t = overviewText[lang];
-    const { memes, schedule, photoUrls, loading } = useOverviewData();
+    const { memes, schedule, photoUrls, loading, refreshing, refresh } = useOverviewData();
     const [showAllMemes, setShowAllMemes] = useState(false);
 
     const counts: CompetitionMemeCounts = useMemo(
@@ -90,6 +91,17 @@ export function Overview() {
 
     return (
         <div className="space-y-6">
+            <div className="flex justify-end">
+                <button
+                    type="button"
+                    onClick={refresh}
+                    disabled={refreshing}
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50"
+                >
+                    <RefreshCw aria-hidden="true" className={refreshing ? "size-4 animate-spin" : "size-4"} />
+                    {lang === "lt" ? "Atnaujinti" : "Refresh"}
+                </button>
+            </div>
             <OverviewMetrics ariaLabel={t.metricsLabel} metrics={metrics} />
 
             <section className="space-y-4 rounded-xl border border-white/15 bg-[#0d1013] p-5 sm:p-6">
