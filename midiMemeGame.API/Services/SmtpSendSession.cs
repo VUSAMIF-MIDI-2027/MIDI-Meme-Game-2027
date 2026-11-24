@@ -7,6 +7,7 @@ using MailKit.Security;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
+using MidiMemeGame.Api.Models;
 using MidiMemeGame.Api.Models.Settings;
 using MidiMemeGame.Api.Services.Interfaces;
 using MimeKit;
@@ -33,7 +34,9 @@ internal sealed class SmtpSendSession : IEmailSendSession
         string subject,
         string body,
         bool isHtml,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        EmailAttachment? attachment = null,
+        string? templateKey = null)
     {
         try
         {
@@ -55,8 +58,11 @@ internal sealed class SmtpSendSession : IEmailSendSession
                 builder.TextBody = WebUtility.HtmlDecode(Regex.Replace(body, "<[^>]+>", " ")).Trim();
             }
             else
-            {
                 builder.TextBody = body;
+
+            if (templateKey is not null)
+            {
+                MidiEmailLayout.Apply(builder, subject, body, templateKey, attachment);
             }
 
             message.Body = builder.ToMessageBody();

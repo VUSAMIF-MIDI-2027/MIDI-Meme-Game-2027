@@ -3,20 +3,25 @@ using System.Globalization;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
+using MidiMemeGame.Api.Data;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Memes;
-using MidiMemeGame.Api.Models;
+using MidiMemeGame.Api.Models.Memes;
 
 namespace MidiMemeGame.Api.Services;
 
 public class MemeService
 {
+    private readonly AppDbContext _db;
+    private readonly MemeNotificationService _notifications;
     private readonly MemeQueries _memeQueries;
     private readonly UserQueries _userQueries;
     private readonly SourcePhotoQueries _sourcePhotoQueries;
     private readonly EventPhaseService _eventPhase;
     private readonly ILogger<MemeService> _logger;
     public MemeService(
+        AppDbContext db,
+        MemeNotificationService notifications,
         MemeQueries memeQueries,
         UserQueries userQueries,
         SourcePhotoQueries sourcePhotoQueries,
@@ -24,6 +29,8 @@ public class MemeService
         ILogger<MemeService> logger
     )
     {
+        _db = db;
+        _notifications = notifications;
         _memeQueries = memeQueries;
         _userQueries = userQueries;
         _sourcePhotoQueries = sourcePhotoQueries;
@@ -108,12 +115,27 @@ public class MemeService
         var sourcePhotoId = photo.Value.Id.ToString(CultureInfo.InvariantCulture);
         var caption = request.Caption.Trim();
 
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var result = await _memeQueries.CreateAsync(
-        sourcePhotoId, userId, caption, cancellationToken);
+            sourcePhotoId, userId, caption, cancellationToken);
 
         if (result.Error == ErrorType.MEME_LIMIT_REACHED)
             _logger.LogWarning(LogMessages.Memes.SUBMISSION_LIMIT_REACHED, user.Value);
 
+        if (result.IsError)
+            return result;
+
+        var details = await _memeQueries.GetModerationDetailsAsync(
+            result.Value.Id, cancellationToken);
+        if (details.IsError)
+            return details.Error;
+
+        var notification = await _notifications.EnqueueAsync(
+            result.Value.Id, details.Value, EmailTemplateKeys.MemeSubmitted, cancellationToken);
+        if (notification.IsError)
+            return notification.Error;
+
+        await transaction.CommitAsync(cancellationToken);
         return result;
     }
     public async Task<Result> DeleteAsync(int memeId, string clerkId, CancellationToken cancellationToken)

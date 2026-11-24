@@ -53,8 +53,11 @@ jobs:
         run: npx tsc --noEmit --incremental false
 
   build:
+    permissions:
+      contents: read
+      packages: write
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
 
     env:
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -74,50 +77,289 @@ jobs:
       - name: Build API and website
         run: docker compose build --pull
 
-      - name: Prepare deployment bundle
+      - name: Prepare and validate server promotion
+        shell: bash
         run: |
-          mkdir -p bundle
+          set -euo pipefail
+          umask 077
+          mkdir stage
+          cat > stage/compose.production.yml <<'FILE'
+          services:
+            api:
+              environment:
+                Deployment__Slot: ${SLOT:?Missing deployment slot}
+                ConnectionStrings__DefaultConnection: "Data Source=/app/App_Data/Sqlite.db;Mode=ReadWrite"
+              volumes:
+                - type: bind
+                  source: ${ROUTING_DIR:?Missing routing directory}
+                  target: /run/midi-routing
+                  read_only: true
+                  bind:
+                    create_host_path: false
+          FILE
+          cat > stage/promote.sh <<'FILE'
+          #!/usr/bin/env bash
+          set -Eeuo pipefail
+          umask 077
+          root=$1 project=$2 tag=$3
+          [[ $root != / && $(realpath "$root") == "$root" ]]
+          [[ $project =~ ^[a-z0-9][a-z0-9_-]*$ && $tag =~ ^[0-9a-f]{40}-[0-9]+-[0-9]+$ ]]
+          cd "$root"
+          incoming=$root/.incoming
+          base="127.0.0.1:19590/$project"
+          http_ok() {
+              local phase=$1 attempt=$2 service=$3 url=$4 metrics rc=0
+              metrics=$(curl -sS --connect-timeout 2 --max-time 4 -o /dev/null \
+                  -w '%{http_code} time=%{time_total}s' "$url") || rc=$?
+              printf '[%s] %s %02d/30 %s GET %s -> HTTP %s curl=%d\n' \
+                  "$(date -u +%T)" "$phase" "$attempt" "$service" "$url" "$metrics" "$rc"
+              [[ $rc == 0 && ${metrics%% *} == 2?? ]]
+          }
+          ready() {
+              local phase=$1 api_port=$2 web_port=$3 owner=$4 attempt failed svc id
+              echo "Starting HTTP checks: $phase"
+              for attempt in {1..30}; do
+                  failed=0
+                  http_ok "$phase" "$attempt" API "http://127.0.0.1:$api_port/api/health" || failed=1
+                  http_ok "$phase" "$attempt" WEB "http://127.0.0.1:$web_port/" || failed=1
+                  if (( !failed )); then echo "PASS: $phase API and WEB"; return 0; fi
+                  if (( attempt < 30 )); then sleep 1; fi
+              done
+              echo "FAIL: $phase readiness timed out for Compose project $owner" >&2
+              for svc in api web; do
+                  for id in $(docker ps -aq --filter "label=com.docker.compose.project=$owner" --filter "label=com.docker.compose.service=$svc"); do
+                      docker inspect -f '{{.Name}} state={{.State.Status}} exit={{.State.ExitCode}} restarts={{.RestartCount}} oom={{.State.OOMKilled}}' "$id" >&2 || :
+                  done
+              done
+              return 1
+          }
+          # Resolve both live containers by their published loopback ports AND Compose labels.
+          live_container() {
+              local svc=$1 port=$2 inner=$3 owner id found=
+              for owner in "$project" "${project}_blue" "${project}_green"; do
+                  for id in $(docker ps -q --filter "label=com.docker.compose.project=$owner" --filter "label=com.docker.compose.service=$svc"); do
+                      if [[ $(docker port "$id" "$inner/tcp") == "127.0.0.1:$port" ]]; then
+                          [[ -z $found ]] || return 1
+                          found=$id
+                      fi
+                  done
+              done
+              [[ -n $found ]] && echo "$found"
+          }
+          owner_of() { docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$1"; }
+          old_api=$(live_container api 5001 8080)
+          old_web=$(live_container web 4000 4000)
+          old_owner=$(owner_of "$old_api")
+          [[ $(owner_of "$old_web") == "$old_owner" ]]
+          ready preflight 5001 4000 "$old_owner"
+          case "$old_owner" in
+              "$project") old=legacy; slot=blue ;;
+              "${project}_blue") old=blue; slot=green ;;
+              "${project}_green") old=green; slot=blue ;;
+          esac
+          dir="$root/$slot"
+          mkdir -p "$dir"
+          install -d -m 0755 "$root/routing"
+          activate() {
+              printf '%s\n' "$1" > "$root/routing/active.next" &&
+                  chmod 644 "$root/routing/active.next" &&
+                  mv -fT "$root/routing/active.next" "$root/routing/active"
+          }
+          activate "$old"
+          for file in compose.yml compose.production.yml public.env api.env; do install -m 600 "$incoming/$file" "$dir/$file"; done
+          cat >> "$dir/public.env" <<EOF
+          API_IMAGE=$base/api:$tag
+          WEB_IMAGE=$base/web:$tag
+          SLOT=$slot
+          ROUTING_DIR=$root/routing
+          EOF
+          stack() {
+              local owner=$1 api=$2 web=$3
+              shift 3
+              API_PORT=$api WEB_PORT=$web docker compose -p "$owner" --env-file "$dir/public.env" \
+                  -f "$dir/compose.yml" -f "$dir/compose.production.yml" "$@"
+          }
+          candidate() { stack "${project}_check" 15001 14000 "$@"; }
+          next() { stack "${project}_$slot" 5001 4000 "$@"; }
+          # 'down' acts only on our isolated project and never receives --volumes.
+          candidate down
+          next down
+          committed=0
+          guard=
+          finish() {
+              local rc=$?
+              trap - EXIT
+              set +e
+              if [[ -n $guard ]]; then
+                  exec 9>&-
+                  wait "$guard" || { echo "Rollback needs operator attention" >&2; exit 1; }
+                  if [[ -f $dir/.committed ]]; then committed=1; fi
+              fi
+              candidate down
+              if (( !committed )); then
+                  next down
+                  for svc in api web; do docker image rm "$base/$svc:$tag" >/dev/null 2>&1; done
+              fi
+              exit "$rc"
+          }
+          trap finish EXIT
+          trap 'exit 143' TERM INT HUP
+          candidate pull --quiet
+          candidate run --rm --no-deps -T --entrypoint sh api -ec '
+              test -s /app/App_Data/Sqlite.db && test -r /run/midi-routing/active
+              for file in /app/App_Data/Sqlite.db*; do test -r "$file" && test -w "$file"; done
+              probe=$(mktemp /app/App_Data/.write-check.XXXXXX) && rm "$probe"
+          '
+          candidate up -d --no-build --pull never
+          ready candidate 15001 14000 "${project}_check"
+          for svc in api web; do
+              [[ $(docker inspect -f '{{.State.Running}}:{{.RestartCount}}' "$(candidate ps -q "$svc")") == true:0 ]]
+          done
+          candidate down
+          # Create the final containers before freeing either port. Docker binds on start.
+          next create --no-build --pull never
+          new_api=$(next ps -aq api)
+          new_web=$(next ps -aq web)
+          [[ -n $new_api && -n $new_web ]]
+          old_images=$(docker inspect -f '{{.Config.Image}}' "$old_api" "$old_web")
+          # Across a daemon restart during cutover the old pair is still restartable.
+          docker update --restart=always "$old_api" "$old_web" >/dev/null
+          docker update --restart=no "$new_api" "$new_web" >/dev/null
+          rm -f "$dir/.committed"
+          exec 9>"$dir/.cutover.lock"
+          flock -x 9
+          # Independent guard survives an interrupted promotion shell. Its lock opens on
+          # shell exit (including SIGKILL). SSH itself runs promotion detached via setsid.
+          (
+              trap - EXIT TERM INT
+              trap '' HUP
+              exec 9>&-
+              exec 7>"$dir/.cutover.lock"
+              flock -x 7
+              [[ ! -f "$dir/.committed" ]] || exit 0
+              for id in "$new_api" "$new_web"; do
+                  if [[ $(docker inspect -f '{{.State.Running}}' "$id") == true ]]; then
+                      docker stop "$id" >/dev/null
+                  fi
+              done
+              activate "$old"
+              docker start "$old_api" "$old_web" >/dev/null
+              ready rollback 5001 4000 "$old_owner"
+              docker update --restart=unless-stopped "$old_api" "$old_web" >/dev/null
+          ) &
+          guard=$!
+          docker stop -t 30 "$old_api" "$old_web" >/dev/null
+          docker start "$new_api" "$new_web" >/dev/null
+          ready production 5001 4000 "${project}_$slot"
+          for id in "$new_api" "$new_web"; do
+              [[ $(docker inspect -f '{{.State.Running}}:{{.RestartCount}}' "$id") == true:0 ]]
+          done
+          docker update --restart=unless-stopped "$new_api" "$new_web" >/dev/null
+          activate "$slot"
+          touch "$dir/.committed"
+          committed=1
+          echo "Promotion complete: API and website passed readiness on ports 5001 and 4000."
+          exec 9>&-
+          wait "$guard"
+          guard=
+          docker rm "$old_api" "$old_web"
+          if [[ $old != legacy ]]; then
+              for f in compose.yml compose.production.yml public.env api.env .committed .cutover.lock; do rm -f "$root/$old/$f"; done
+              rmdir --ignore-fail-on-non-empty "$root/$old"
+          fi
+          while read -r ref; do
+              case "$ref" in
+                  "$base/api:"*|"$base/web:"*|midi-meme-api:latest|midi-meme-web:latest)
+                      if [[ -z $(docker ps -aq --filter "ancestor=$ref") ]]; then docker image rm "$ref"; fi ;;
+              esac
+          done <<< "$old_images"
+          [[ ! -L $root/releases ]]
+          for release in "$root"/releases/*; do
+              [[ -d $release && ! -L $release && ${release##*/} =~ ^[0-9a-f]{40}$ ]] || continue
+              rm -f -- "$release/images.tar.gz" "$release/compose.yml" "$release/api.env" "$release/public.env"
+              rmdir --ignore-fail-on-non-empty "$release"
+          done
+          if [[ -d $root/releases ]]; then rmdir --ignore-fail-on-non-empty "$root/releases"; fi
+          # Older workflows also staged one of the routing helpers here.
+          for file in compose.yml compose.production.yml public.env api.env promote.sh route.sh backends.py; do
+              rm -f -- "$incoming/$file"
+          done
+          rmdir --ignore-fail-on-non-empty -- "$incoming"
+          if [[ -d $incoming ]]; then
+              echo "Deployment staging contains unrecognized files; leaving them in place." >&2
+          fi
+          FILE
+          bash -n stage/promote.sh
+          SLOT=blue ROUTING_DIR=/tmp/midi-routing docker compose -f compose.yml -f stage/compose.production.yml config --quiet
 
-          docker compose config --images | sort -u > bundle/images.txt
+      - name: Publish temporary CI images by digest
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for service in api web; do
+            repo="ghcr.io/${GITHUB_REPOSITORY,,}/ci-$service-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            ref="$repo:transfer"
+            docker tag "midi-meme-$service:latest" "$ref"
+            docker push "$ref"
+            digest=$(docker image inspect "$ref" --format '{{range .RepoDigests}}{{println .}}{{end}}' | awk -v prefix="$repo@" 'index($0,prefix)==1 {print $0; exit}')
+            [[ ${digest#*@} =~ ^sha256:[0-9a-f]{64}$ && $digest == "$repo@"* ]]
+            printf '%s\n' "${digest#*@}" > "stage/$service.digest"
+          done
 
-          mapfile -t images < bundle/images.txt
-
-          docker save "${images[@]}" | gzip > bundle/images.tar.gz
-
-          cp compose.yml bundle/compose.yml
-
-          printf 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=%s\nNEXT_PUBLIC_API_BASE_URL=%s\n' \
-            "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" \
-            "$NEXT_PUBLIC_API_BASE_URL" \
-            > bundle/public.env
-
-      - name: Upload deployment bundle
+      - name: Share promotion scripts and image digests
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
         uses: actions/upload-artifact@v4
         with:
-          name: deployment-bundle
-          path: bundle/
+          name: promotion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: stage/
+          retention-days: 1
           if-no-files-found: error
-          retention-days: 3
 
   deploy:
     needs: [lint, build]
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
-
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://naktis.midi.lt' }}
 
     steps:
-      - name: Download deployment bundle
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
         with:
-          name: deployment-bundle
-          path: bundle/
+          name: promotion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: stage/
+
+      - name: Fetch exact images built in CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for service in api web; do
+            digest=$(cat "stage/$service.digest")
+            [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Invalid $service digest in promotion artifact" >&2; exit 1; }
+            ref="ghcr.io/${GITHUB_REPOSITORY,,}/ci-$service-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT@$digest"
+            docker pull "$ref"
+            docker tag "$ref" "midi-meme-$service:latest"
+          done
+
+      - name: Stage configuration
+        run: |
+          umask 077
+          cp compose.yml stage/
+          printf 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=%s\nNEXT_PUBLIC_API_BASE_URL=%s\n' \
+            "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" "$NEXT_PUBLIC_API_BASE_URL" > stage/public.env
 
       - name: Prepare API runtime configuration
         env:
@@ -156,7 +398,7 @@ jobs:
                   raise SystemExit(source + " must be a production HTTPS origin without a trailing slash")
               values[target] = value
 
-          target = Path("bundle/api.env")
+          target = Path("stage/api.env")
           target.touch(mode=0o600)
           target.chmod(0o600)
           target.write_text("".join(key + "=" + value + "\n" for key, value in values.items()))
@@ -190,79 +432,56 @@ jobs:
 
           chmod 600 ~/.ssh/config
 
-      - name: Upload deployment bundle
+      - name: Stream images through a temporary registry and promote
         run: |
           set -euo pipefail
-
-          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9_./-]+$ ]]
+          [[ "$DEPLOY_PATH" =~ ^/[-a-zA-Z0-9_./]+$ && "$DEPLOY_PATH" != / ]]
           [[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]]
+          tag="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          registry=127.0.0.1:19590
+          docker run --detach --rm --name ci-registry --tmpfs /var/lib/registry \
+            --publish "$registry:5000" registry:2
+          trap 'docker stop ci-registry >/dev/null' EXIT
+          curl --retry 10 --retry-all-errors --fail "http://$registry/v2/"
+          for service in api web; do
+            ref="$registry/$COMPOSE_PROJECT_NAME/$service:$tag"
+            docker tag "midi-meme-$service:latest" "$ref"
+            docker push "$ref"
+          done
+          target="$SSH_USER@$SSH_HOST"
+          # Only configuration travels on stdin. Docker pulls image layers over the SSH tunnel.
+          tar -C stage -cf - compose.yml compose.production.yml public.env api.env promote.sh |
+            ssh -T -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 \
+              -R "127.0.0.1:19590:127.0.0.1:19590" "$target" \
+              "bash -c 'set -eu; umask 077; cd \"\$1\"; exec 8>.upload.lock; flock -n 8; \
+              mkdir -p .incoming; tar -xf - -C .incoming; \
+              : >.promotion.log; nohup setsid --wait /bin/bash \"\$1/.incoming/promote.sh\" \"\$1\" \"\$2\" \"\$3\" \
+                </dev/null >>.promotion.log 2>&1 & pid=\$!; \
+              tail --pid=\"\$pid\" -n +1 -f .promotion.log; \
+              rc=0; wait \"\$pid\" || rc=\$?; exit \"\$rc\"' \
+              bash '$DEPLOY_PATH' '$COMPOSE_PROJECT_NAME' '$tag'"
 
-          release="$DEPLOY_PATH/releases/$GITHUB_SHA"
-
-          ssh "$SSH_USER@$SSH_HOST" "umask 077; mkdir -p '$release'; chmod 700 '$release'"
-
-          scp bundle/images.tar.gz bundle/compose.yml bundle/public.env bundle/api.env \
-            "$SSH_USER@$SSH_HOST:$release/"
-
-      - name: Deploy containers
+  cleanup:
+    needs: [build, deploy]
+    if: always() && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      packages: write
+    steps:
+      - name: Remove this attempt's dedicated transfer packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER_TYPE: ${{ github.event.repository.owner.type }}
         run: |
-          ssh "$SSH_USER@$SSH_HOST" bash -s -- \
-            "$DEPLOY_PATH" "$GITHUB_SHA" "$COMPOSE_PROJECT_NAME" <<'REMOTE'
-          set -Eeuo pipefail
-
-          deploy_path="$1"
-          commit_sha="$2"
-          project_name="$3"
-
-          release="$deploy_path/releases/$commit_sha"
-          cd "$release"
-          test -s api.env
-          chmod 600 api.env
-
-          compose=(
-              docker compose
-              --env-file public.env
-              --project-name "$project_name"
-              --file compose.yml
-          )
-
-          trap '"${compose[@]}" ps -a; "${compose[@]}" logs --no-color --tail=80' ERR
-
-          "${compose[@]}" config --quiet
-
-          gzip -dc images.tar.gz | docker load
-
-          "${compose[@]}" up \
-              --detach \
-              --no-build \
-              --wait \
-              --wait-timeout 120
-
-          "${compose[@]}" ps -a
-
-          wait_for_http() {
-              local url="$1"
-              local attempt
-              local status
-
-              for attempt in {1..30}; do
-                  if status=$(curl --silent --show-error --output /dev/null \
-                      --write-out '%{http_code}' --connect-timeout 2 --max-time 5 "$url") \
-                      && [[ "$status" == 2* ]]; then
-                      echo "Ready: $url (HTTP $status)"
-                      return 0
-                  fi
-
-                  echo "Waiting for $url ($attempt/30)"
-                  sleep 2
-              done
-
-              echo "Application did not become ready: $url" >&2
-              return 1
-          }
-
-          wait_for_http http://127.0.0.1:5001/api/health
-          wait_for_http http://127.0.0.1:4000/
-
-          rm -- images.tar.gz
-          REMOTE
+          set -euo pipefail
+          scope="user"
+          if [[ $OWNER_TYPE == Organization ]]; then scope="orgs/$GITHUB_REPOSITORY_OWNER"; fi
+          name=${GITHUB_REPOSITORY#*/}
+          for service in api web; do
+            endpoint="/$scope/packages/container/${name,,}%2Fci-$service-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            if ! gh api --method DELETE "$endpoint" 2> api-error; then
+              if grep -q 'HTTP 404' api-error; then continue; fi
+              cat api-error >&2; exit 1
+            fi
+          done

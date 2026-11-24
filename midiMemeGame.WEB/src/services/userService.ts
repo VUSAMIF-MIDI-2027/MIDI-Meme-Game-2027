@@ -1,4 +1,5 @@
 import { apiBaseUrl } from "./apiBaseUrl";
+import { ApiError } from "./ApiError";
 
 export type CurrentUser = {
     userId: number;
@@ -60,16 +61,18 @@ export async function syncUser(token: string, signal: AbortSignal): Promise<void
 }
 
 // Photos
-export class PhotoBlobError extends Error {
-    constructor(public status: number) { super(`Get photo file request failed: ${status}`); }
-}
-export async function getPhotoBlob(photoId: number,token: string,signal?: AbortSignal): Promise<Blob> {
-    const response = await fetch(apiBaseUrl + `/api/photos/${photoId}/file`, {
-        method: "GET",
-        headers: { Authorization: "Bearer " + token },
-        signal,
-        cache: "no-store",
-    });
-    if (!response.ok) throw new PhotoBlobError(response.status);
+export async function getPhotoBlob(photoId: number, token: string, signal?: AbortSignal): Promise<Blob> {
+    let response: Response;
+    try {
+        response = await fetch(`${apiBaseUrl}/api/photos/${photoId}/file`, {
+            method: "GET",
+            headers: { Authorization: "Bearer " + token },
+            signal,
+        });
+    } catch (error) {
+        if (error instanceof DOMException) throw error; // abort or timeout
+        throw ApiError.network();
+    }
+    if (!response.ok) throw await ApiError.fromResponse(response);
     return response.blob();
 }

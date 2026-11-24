@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import YourMemes, {
   type MemeStatus,
@@ -25,6 +26,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { dashboardText } from "./pageText";
 import styles from "./dashboard.module.css";
 import Link from "next/link";
+import { useEventPhase } from "@/hooks/useEventPhase";
 
 const statusById: Record<number, MemeStatus> = {
   [MEME_STATUS_PENDING]: "pending",
@@ -46,6 +48,7 @@ export default function DashboardPage() {
   const { state: scheduleState, retry: retrySchedule } = useEventSchedule();
   const schedule =
     scheduleState.status === "ready" ? scheduleState.schedule : undefined;
+  const { phase } = useEventPhase(schedule);
   const [myMemes, setMyMemes] = useState<YourMeme[]>([]);
   const [submissionsUsed, setSubmissionsUsed] = useState(0);
   const [memesRefresh, setMemesRefresh] = useState(0);
@@ -164,11 +167,21 @@ export default function DashboardPage() {
             <p className="mt-6 max-w-[720px] text-base leading-[1.75] text-text-muted sm:text-lg">
               {t.description}
             </p>
-            <CreateMemeButton
-              schedule={schedule}
-              limitReached={submissionsUsed >= MEME_SUBMISSION_LIMIT}
-              onOpen={() => router.push("/dashboard/create")}
-            />
+            {phase === "voting" ? (
+              <Link
+                  href="/dashboard/gallery"
+                  className="mt-8 inline-flex min-h-13 items-center gap-3 rounded-xl bg-midi-blue px-6 py-3 text-base font-bold text-white transition-colors hover:bg-midi-blue/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-midi-blue"
+              >
+                  {t.vote}
+                  <ArrowRight aria-hidden="true" className="size-5" />
+              </Link>
+            ) : (
+              <CreateMemeButton
+                schedule={schedule}
+                limitReached={submissionsUsed >= MEME_SUBMISSION_LIMIT}
+                onOpen={() => router.push("/dashboard/create")}
+              />
+            )}
           </div>
 
           <div>

@@ -21,19 +21,22 @@ public class AdminController : ControllerBase
     private readonly UserQueries _userQueries;
     private readonly ClerkUserService _clerkUserService;
     private readonly MemeQueries _memeQueries;
+    private readonly MemeModerationService _memeModerationService;
 
     public AdminController(
         SourcePhotoQueries sourcePhotoQueries,
         PhotoFileService photoFiles,
         UserQueries userQueries,
         ClerkUserService clerkUserService,
-        MemeQueries memeQueries)
+        MemeQueries memeQueries,
+        MemeModerationService memeModerationService)
     {
         _sourcePhotoQueries = sourcePhotoQueries;
         _photoFiles = photoFiles;
         _userQueries = userQueries;
         _clerkUserService = clerkUserService;
         _memeQueries = memeQueries;
+        _memeModerationService = memeModerationService;
     }
 
     [HttpPost("photos")]
@@ -228,13 +231,18 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateMemeStatus(
         int id,
         [FromQuery] MemeStatus statusId,
+        [FromQuery] DateTime? expectedUpdatedAtUtc,
         CancellationToken cancellationToken)
     {
         if (!Enum.IsDefined(typeof(MemeStatus), statusId))
             return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
 
-        var result = await _memeQueries.UpdateStatusAsync(
-            id, statusId, cancellationToken);
+        if (expectedUpdatedAtUtc is null)
+            return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
+
+        var result = await _memeModerationService.UpdateStatusAsync(id, statusId, expectedUpdatedAtUtc.Value, cancellationToken);
+        if (result.Error == ErrorType.MEME_ALREADY_MODERATED)
+            return Conflict(ErrorResponse.Create(result.Error));
 
         if (result.Error == ErrorType.NOT_FOUND)
             return NotFound(ErrorResponse.Create(result.Error));
@@ -244,6 +252,6 @@ public class AdminController : ControllerBase
                 StatusCodes.Status500InternalServerError,
                 ErrorResponse.Create(result.Error));
 
-        return Ok(new { id, statusId = (int)statusId });
+        return Ok(new { id, statusId = (int)statusId, updatedAtUtc = result.Value });
     }
 }

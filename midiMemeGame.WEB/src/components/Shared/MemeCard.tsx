@@ -1,3 +1,6 @@
+"use client";
+
+import { useLanguage } from "@/context/LanguageContext";
 import Image, { type StaticImageData } from "next/image";
 import type { ReactNode } from "react";
 
@@ -15,7 +18,7 @@ export type MemeCardButton = {
 };
 
 type MemeCardProps = {
-  image: StaticImageData | string;
+  image: string | StaticImageData;
   imageAlt: string;
   caption: string;
   selected?: boolean;
@@ -37,6 +40,7 @@ export default function MemeCard({
   footer,
   layout = "stacked",
 }: MemeCardProps) {
+  const { lang } = useLanguage();
   const metaFooter = layout === "meta-footer";
   const borderStyle = selected ? "border-midi-blue" : "border-white/15";
   const buttonStyle = button?.pressed
@@ -49,14 +53,22 @@ export default function MemeCard({
     >
       <figure className="flex min-w-0 flex-1 flex-col">
         <div className="relative aspect-[3/2]">
-          <Image
-            src={image}
-            alt={imageAlt}
-            fill
-            loading="eager"
-            sizes="(min-width: 1024px) 360px, (min-width: 480px) 440px, 90vw"
-            className="object-cover"
-          />
+          {image ? (
+            <Image
+              src={image}
+              alt={imageAlt}
+              fill
+              unoptimized={typeof image === "string"}
+              loading="eager"
+              decoding={typeof image === "string" && image.startsWith("blob:") ? "sync" : "async"}
+              sizes="(min-width: 1024px) 360px, (min-width: 480px) 440px, 90vw"
+              className="object-cover"
+            />
+          ) : (
+            <span className="absolute inset-0 grid place-items-center px-4 text-center text-sm text-white/70">
+              {lang === "lt" ? "Nepavyko įkelti nuotraukos" : "Photo could not be loaded"}
+            </span>
+          )}
         </div>
         <figcaption
           className={`flex min-h-20 flex-1 items-center justify-center px-5 py-4 text-center text-base font-semibold leading-snug text-black ${metaFooter ? "bg-midi-gray" : "bg-white"}`}

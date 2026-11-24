@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Photos;
@@ -15,11 +16,16 @@ namespace MidiMemeGame.Api.Controllers
     {
         private readonly SourcePhotoQueries _sourcePhotoQueries;
         private readonly PhotoFileService _photoFiles;
+        private readonly EventPhaseService _eventScheduleService;
 
-        public PhotosController(SourcePhotoQueries sourcePhotoQueries, PhotoFileService photoFiles)
+        public PhotosController(
+            SourcePhotoQueries sourcePhotoQueries, 
+            PhotoFileService photoFiles,
+            EventPhaseService eventPhaseService)
         {
             _sourcePhotoQueries = sourcePhotoQueries;
             _photoFiles = photoFiles;
+            _eventScheduleService = eventPhaseService;
         }
 
         [HttpGet]
@@ -41,10 +47,24 @@ namespace MidiMemeGame.Api.Controllers
         }
 
         [HttpGet("{id:int}/file")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetPhotoFile(
             int id,
             CancellationToken cancellationToken)
         {
+            Response.Headers.CacheControl = "no-store";
+
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                var eventResult = await _eventScheduleService.EnsureEventEndedAsync(cancellationToken);
+
+                if (eventResult.IsError)
+                {
+                    return StatusCode(
+                        StatusCodes.Status403Forbidden,
+                        ErrorResponse.Create(eventResult.Error));
+                }
+            }
 
             var photoResult = await _sourcePhotoQueries.GetByIdAsync(id, cancellationToken);
 
@@ -65,9 +85,13 @@ namespace MidiMemeGame.Api.Controllers
             if (!System.IO.File.Exists(pathResult.Value))
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
+            // Revalidate access on every request before reusing the cached photo.
+            Response.Headers.CacheControl = "private, no-cache";
             return PhysicalFile(
                 pathResult.Value,
-                photo.ContentType);
+                photo.ContentType,
+                lastModified: null,
+                entityTag: new EntityTagHeaderValue($"\"{photo.FileId}\""));
         }
     }
 }

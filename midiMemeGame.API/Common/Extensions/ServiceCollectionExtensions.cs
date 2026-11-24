@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<PhotoFileService>();
         services.AddScoped<EmailTemplateQueries>();
         services.AddScoped<EmailDeliveryQueries>();
+        services.AddScoped<EmailAttachmentQueries>();
         services.AddScoped<EmailMilestoneProgressQueries>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<IEmailService, EmailService>();
@@ -45,6 +46,11 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<ScheduledEmailWorker>();
         services.AddScoped<EventPhaseService>();
         services.AddScoped<MemeService>();
+        services.AddScoped<MemeModerationService>();
+        services.AddScoped<MemeNotificationService>();
+        services.AddScoped<VoteQueries>();
+        services.AddScoped<ResultPublicationService>();
+        services.AddScoped<ResultPublicationQueries>();
 
         return services;
     }

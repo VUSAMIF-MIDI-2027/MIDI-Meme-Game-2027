@@ -18,6 +18,8 @@ type NavLink = {
     href: string;
     label: labelLang;
     disabled?: boolean;
+    primary?: boolean;
+    exact?: boolean;
 }
 
 type labelLang = {
@@ -44,13 +46,9 @@ export function MobileMenu({
                     : "max-h-0 border-b-0"
                 }`}
         >
-            {links.map(({ href, label, disabled }) => {
-                const active = !disabled && isCurrentPath(pathname, href) &&
-                    !links.some((other) =>
-                        other.href !== href && !other.disabled &&
-                        other.href.startsWith(`${href}/`) &&
-                        isCurrentPath(pathname, other.href));
-                const primary = participant && href === "/dashboard/create";
+            {links.map(({ href, label, disabled, primary: isPrimary, exact }) => {
+                const active = !disabled && isCurrentPath(pathname, href, exact);
+                const primary = participant && isPrimary;
 
                 if (participant && href === "/admin") {
                     return (

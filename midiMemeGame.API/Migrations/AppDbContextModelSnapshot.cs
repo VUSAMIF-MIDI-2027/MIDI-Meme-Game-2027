@@ -164,7 +164,7 @@ namespace MidiMemeGame.Api.Migrations
                         });
                 });
 
-            modelBuilder.Entity("MidiMemeGame.Api.Models.Meme", b =>
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.Meme", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -209,6 +209,84 @@ namespace MidiMemeGame.Api.Migrations
                     b.HasIndex("SourcePhotoId", "StatusId", "IsDeleted");
 
                     b.ToTable("Memes", (string)null);
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.MemeVote", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MemeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "MemeId");
+
+                    b.HasIndex("MemeId");
+
+                    b.ToTable("MemeVotes", (string)null);
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.Results.PublishedMemeResult", b =>
+                {
+                    b.Property<int>("EventScheduleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Place")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Caption")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MemeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Score")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SourcePhotoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StatusId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("WinnerDeliveryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WinnerEmail")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EventScheduleId", "Place");
+
+                    b.HasIndex("EventScheduleId", "MemeId")
+                        .IsUnique();
+
+                    b.ToTable("PublishedMemeResults");
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.Results.ResultPublication", b =>
+                {
+                    b.Property<int>("EventScheduleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("PublishedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EventScheduleId");
+
+                    b.ToTable("ResultPublications");
                 });
 
             modelBuilder.Entity("MidiMemeGame.Api.Models.SourcePhoto", b =>
@@ -291,6 +369,44 @@ namespace MidiMemeGame.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.MemeVote", b =>
+                {
+                    b.HasOne("MidiMemeGame.Api.Models.Memes.Meme", null)
+                        .WithMany()
+                        .HasForeignKey("MemeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MidiMemeGame.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.Results.PublishedMemeResult", b =>
+                {
+                    b.HasOne("MidiMemeGame.Api.Models.Memes.Results.ResultPublication", null)
+                        .WithMany("Results")
+                        .HasForeignKey("EventScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.Results.ResultPublication", b =>
+                {
+                    b.HasOne("MidiMemeGame.Api.Models.EventSchedule", null)
+                        .WithOne()
+                        .HasForeignKey("MidiMemeGame.Api.Models.Memes.Results.ResultPublication", "EventScheduleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MidiMemeGame.Api.Models.Memes.Results.ResultPublication", b =>
+                {
+                    b.Navigation("Results");
                 });
 #pragma warning restore 612, 618
         }

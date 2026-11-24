@@ -8,10 +8,11 @@ import {
     LayoutDashboard,
     Settings as SettingsIcon,
     ShieldCheck,
+    Trophy,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { SECTIONS, type AdminTranslations, type Section } from "@/app/admin/types";
-import { overviewText } from "@/components/Admin/overviewText";
+import { overviewText } from "@/components/Admin/overview/overviewText";
 
 type AdminSidebarProps = {
     t: AdminTranslations;
@@ -23,6 +24,7 @@ const SECTION_ICONS: Record<Section, typeof LayoutDashboard> = {
     overview: LayoutDashboard,
     "meme-approval": ImageIcon,
     photos: Camera,
+    results: Trophy,
     settings: SettingsIcon,
 };
 
@@ -46,7 +48,7 @@ export function AdminSidebar({ t, section, onSelect }: AdminSidebarProps) {
 
             <nav
                 aria-label={t.admin}
-                className="grid grid-cols-4 gap-1 lg:flex lg:flex-col lg:gap-2"
+                className="grid grid-cols-3 sm:grid-cols-5 gap-1 lg:flex lg:flex-col lg:gap-2"
             >
                 {SECTIONS.map(({ id, getTitle }) => {
                     const Icon = SECTION_ICONS[id];
