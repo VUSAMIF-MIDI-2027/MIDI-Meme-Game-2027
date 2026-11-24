@@ -199,27 +199,58 @@ jobs:
 
           release="$DEPLOY_PATH/releases/$GITHUB_SHA"
 
-          ssh "$SSH_USER@$SSH_HOST" bash -s -- "$DEPLOY_PATH" "$GITHUB_SHA" <<'REMOTE'
+          ssh "$SSH_USER@$SSH_HOST" bash -s -- \
+            "$DEPLOY_PATH" "$GITHUB_SHA" "$COMPOSE_PROJECT_NAME" <<'REMOTE'
           set -euo pipefail
           umask 077
 
           releases="$1/releases"
           release="$releases/$2"
+          project_name="$3"
+          project_label="com.docker.compose.project=$project_name"
 
-          if [[ -d "$releases" ]]; then
-            find "$releases" -mindepth 2 -maxdepth 2 \
-              -type f -name images.tar.gz -delete -print
-
-            df -h "$releases" /var/lib/containerd
-            df -i "$releases" /var/lib/containerd
+          containers=$(docker ps -aq --filter "label=$project_label")
+          active_releases=""
+          if [[ -n "$containers" ]]; then
+            mapfile -t container_ids <<< "$containers"
+            active_releases=$(docker inspect --format \
+              '{{with index .Config.Labels "com.docker.compose.project.working_dir"}}{{.}}{{else}}unknown{{end}}' \
+              "${container_ids[@]}")
           fi
 
+          for old_release in "$releases"/*; do
+            [[ -d "$old_release" && ! -L "$old_release" ]] || continue
+            [[ ${old_release##*/} =~ ^[0-9a-f]{40}$ ]] || continue
+
+            rm -fv -- "$old_release/images.tar.gz"
+            [[ "$old_release" != "$release" ]] || continue
+            if grep -Fxq -e unknown -e "$old_release" <<< "$active_releases"; then
+              continue
+            fi
+
+            rm -fv -- "$old_release/compose.yml" "$old_release/public.env" "$old_release/api.env"
+            rmdir --ignore-fail-on-non-empty -- "$old_release"
+          done
+
+          docker image prune --force --filter "label=$project_label"
+
+          df -h /var/lib/containerd
+          df -i /var/lib/containerd
           mkdir -p -- "$release"
           chmod 700 -- "$release"
           REMOTE
 
-          scp bundle/images.tar.gz bundle/compose.yml bundle/public.env bundle/api.env \
+          scp bundle/compose.yml bundle/public.env bundle/api.env \
             "$SSH_USER@$SSH_HOST:$release/"
+
+          if ! load_output=$(ssh -T "$SSH_USER@$SSH_HOST" docker image load < bundle/images.tar.gz 2>&1); then
+            printf '%s\n' "$load_output" >&2
+            exit 1
+          fi
+          printf '%s\n' "$load_output"
+          if grep -Fq 'Error unpacking image' <<< "$load_output"; then
+            exit 1
+          fi
 
       - name: Deploy containers
         run: |
@@ -246,8 +277,6 @@ jobs:
           trap '"${compose[@]}" ps -a; "${compose[@]}" logs --no-color --tail=80' ERR
 
           "${compose[@]}" config --quiet
-
-          gzip -dc images.tar.gz | docker load
 
             "${compose[@]}" run --rm --no-deps -T --entrypoint /bin/sh api -ec '
             dir=/app/App_Data
@@ -305,6 +334,4 @@ jobs:
 
           wait_for_http http://127.0.0.1:5001/api/health
           wait_for_http http://127.0.0.1:4000/
-
-          rm -- images.tar.gz
           REMOTE
