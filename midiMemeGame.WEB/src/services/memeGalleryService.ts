@@ -51,19 +51,19 @@ function isGalleryMeme(value: unknown): value is GalleryMeme {
 }
 
 export async function getGalleryMemes(token: string, signal: AbortSignal): Promise<GalleryMeme[]> {
-    const memes = await request("/api/Voting/memes", token, signal);
+    const memes = await request("/api/voting/memes", token, signal);
     if (!Array.isArray(memes) || !memes.every(isGalleryMeme)) throw new Error("Invalid gallery response.");
     return memes;
 }
 
 export async function getVoteStatus(token: string, signal: AbortSignal): Promise<VoteStatus> {
-    const status = await request("/api/Voting/me", token, signal);
+    const status = await request("/api/voting/me", token, signal);
     if (!isVoteStatus(status)) throw new Error("Invalid vote status response.");
     return status;
 }
 
 export async function setMemeVote(memeId: number, voted: boolean, token: string, signal: AbortSignal): Promise<VoteStatus> {
-    const status = await request(`/api/Voting/memes/${memeId}/vote`, token, signal, {
+    const status = await request(`/api/voting/memes/${memeId}/vote`, token, signal, {
         method: "PUT",
         body: JSON.stringify({ voted }),
     });
