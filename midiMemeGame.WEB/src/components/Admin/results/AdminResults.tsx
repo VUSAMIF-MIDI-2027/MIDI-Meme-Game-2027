@@ -17,11 +17,13 @@ const copy = {
         reload: "Atnaujinti", failed: "Nepavyko įkelti rezultatų.", saveError: "Nepavyko paskelbti rezultatų.",
         contactError: "Patikrinkite laimėtojų el. pašto adresus.", denied: "Reikalinga administratoriaus prieiga.",
         invalid: "Pasirinkimas nebegalioja. Atnaujinkite kandidatų sąrašą.",
-        review: "Prizinės vietos", final: "Rezultatai paskelbti", choose: "Pasirinkite memą",
+        review: "Prizinės vietos", final: "Rezultatai paskelbti",
         place: "Vieta", votes: "Balsai", author: "Autorius nenurodytas", empty: "Į galutinę įskaitą nepateko nė vienas memas.",
         publish: "Paskelbti rezultatus", saving: "Skelbiama…", confirm: "Patvirtinti ir paskelbti",
         verify: "Ar paskelbti šiuos rezultatus?", consequence: "Rezultatai taps vieši. Laimėtojų laiškai bus įtraukti į siuntimo eilę.",
-        cancel: "Grįžti", tied: "Esant lygiosioms, pasirinkite memą kiekvienai vietai.",
+        cancel: "Grįžti", ranking: "Visi įskaitos memai",
+        instructions: "Podiumas užpildytas pagal balsus. Norėdami pakeisti vietą, pasirinkite memą ir spauskite vietos numerį arba nutempkite kortelę į podiumą.",
+        assignPlace: "Skirti vietą",
         unpublish: "Atšaukti paskelbimą",
         unpublishing: "Atšaukiama…",
         unpublishConfirm: "Patvirtinti atšaukimą",
@@ -34,11 +36,13 @@ const copy = {
         reload: "Refresh", failed: "Could not load results.", saveError: "Could not publish results.",
         contactError: "Check the winners’ email addresses.", denied: "Administrator access is required.",
         invalid: "This selection is no longer valid. Refresh the candidates.",
-        review: "Prize places", final: "Results published", choose: "Select a meme",
+        review: "Prize places", final: "Results published",
         place: "Place", votes: "Votes", author: "Unknown author", empty: "No memes qualified for the final ranking.",
         publish: "Publish results", saving: "Publishing…", confirm: "Confirm and publish",
         verify: "Publish these results?", consequence: "Results will become public and winner emails will be queued.",
-        cancel: "Back", tied: "For tied scores, select a meme for each place.",
+        cancel: "Back", ranking: "All ranked memes",
+        instructions: "The podium is filled by vote count. To change a place, select a meme and click a place number or drag the card onto the podium.",
+        assignPlace: "Assign place",
         unpublish: "Unpublish results",
         unpublishing: "Unpublishing…",
         unpublishConfirm: "Confirm unpublishing",
@@ -68,21 +72,19 @@ export function AdminResults() {
     const { lang } = useLanguage();
     const t = copy[lang];
     const [review, setReview] = useState<AdminResultReview | null>(null);
-    const [picks, setPicks] = useState<(number | null)[]>([]);
+    const [picks, setPicks] = useState<number[]>([]);
     const [photos, setPhotos] = useState<Record<number, string>>({});
     const [active, setActive] = useState<number | null>(null);
     const [revision, setRevision] = useState(0);
     const [issue, setIssue] = useState<keyof typeof t | null>(null);
     const [confirming, setConfirming] = useState(false);
     const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
-    const [showMissing, setShowMissing] = useState(false);
     const [saving, setSaving] = useState(false);
 
     const submitting = useRef(false);
 
     function reload() {
         setActive(null);
-        setShowMissing(false);
         setReview(null);
         setIssue(null);
         setConfirming(false);
@@ -99,13 +101,10 @@ export function AdminResults() {
                 if (!token) throw ApiError.unauthorized();
                 const result = await getResultReview(token, abort.signal);
                 if (abort.signal.aborted) return;
-                setPicks(result.candidates.slice(0, 3).map(slot =>
-                    result.candidates.filter(c => c.score === slot.score).length === 1 ? slot.id : null
-                ));
+                setPicks(result.candidates.slice(0, 3).map(candidate => candidate.id));
                 setPhotos({});
                 setReview(result);
-                const cutoff = result.candidates[2]?.score ?? -Infinity;
-                const visible = result.published ? result.winners : result.candidates.filter(c => c.score >= cutoff);
+                const visible = result.published ? result.winners : result.candidates;
                 const ids = [...new Set(visible.map(c => c.sourcePhotoId))];
                 async function loadPhoto(id: number) {
                     let url = "";
@@ -119,7 +118,7 @@ export function AdminResults() {
                     }
                     setPhotos(previous => ({ ...previous, [id]: url }));
                 }
-                // Limit simultaneous authenticated image downloads for large ties.
+                // Limit simultaneous authenticated image downloads across the full ranking.
                 let next = 0;
                 async function worker() {
                     while (next < ids.length && !abort.signal.aborted) await loadPhoto(ids[next++]);
@@ -179,15 +178,14 @@ export function AdminResults() {
 
     async function publish() {
         if (submitting.current || !review || review.published || !confirming) return;
-        const ids = picks.filter((id): id is number => id !== null);
-        if (ids.length !== Math.min(3, review.candidates.length) || new Set(ids).size !== ids.length) return;
+        if (picks.length !== Math.min(3, review.candidates.length) || new Set(picks).size !== picks.length) return;
         submitting.current = true;
         setSaving(true);
         setIssue(null);
         try {
             const token = await getToken();
             if (!token) throw ApiError.unauthorized();
-            await publishPodium(token, ids);
+            await publishPodium(token, picks);
             reload();
         } catch (error) {
             if (error instanceof ApiError && [2407, 2409].includes(error.code ?? 0)) reload();
@@ -211,32 +209,20 @@ export function AdminResults() {
         </div>
     );
 
-    const slots = review.candidates.slice(0, 3);
-    const ties = slots.some(slot => review.candidates.filter(c => c.score === slot.score).length > 1);
-    const ready = picks.every(id => id !== null) && new Set(picks).size === slots.length;
-
-    function choosePlace(index: number, id: number) {
+    function assign(index: number, id: number) {
         setPicks(previous => {
             const next = [...previous];
             const oldIndex = next.indexOf(id);
             if (oldIndex >= 0) next[oldIndex] = next[index];
             next[index] = id;
-            const score = slots[index].score;
-            const open = slots.map((slot, i) => slot.score === score && next[i] === null ? i : -1).filter(i => i >= 0);
-            const remaining = review!.candidates.filter(c => c.score === score && !next.includes(c.id));
-            if (open.length === 1 && remaining.length === 1) next[open[0]] = remaining[0].id;
             return next;
         });
+        setActive(null);
     }
 
     const lt = lang === "lt";
     const chosen = review.candidates.find(c => c.id === active);
-    const available = review.candidates.filter(c => slots.some(s => s.score === c.score) && !picks.includes(c.id));
-
-    function assign(index: number, id: number) {
-        choosePlace(index, id);
-        setActive(null);
-    }
+    const editing = !confirming && !saving;
 
     function tile(c: AdminResultReview["candidates"][number]) {
         const url = photos[c.sourcePhotoId];
@@ -280,52 +266,75 @@ export function AdminResults() {
                     </ol>
                 ) : (
                     <div className="space-y-6">
-                        {ties && !confirming && <p className="text-sm text-white/70">{lt ? "Nutempkite memą į jo vietą arba pasirinkite kortelę ir paspauskite vietą." : "Drag a meme onto its place, or select a card and then a place."}</p>}
+                        {editing && picks.length > 0 && <p className="text-sm text-white/70">{t.instructions}</p>}
                         <ol className={podiumGrid}>
-                            {slots.map((slot, i) => {
-                                const meme = review.candidates.find(c => c.id === picks[i]);
-                                const movable = !confirming && !saving && review.candidates.some(c => c.score === slot.score && c.id !== meme?.id);
-                                const accepts = movable && chosen?.score === slot.score && chosen.id !== meme?.id;
+                            {picks.map((id, i) => {
+                                const meme = review.candidates.find(c => c.id === id);
+                                if (!meme) return null;
+                                const accepts = editing && !!chosen && chosen.id !== id;
                                 return (
                                     <li key={i} onDragOver={e => { if (accepts) e.preventDefault(); }}
                                         onDrop={e => { e.preventDefault(); if (accepts && chosen) assign(i, chosen.id); }}
                                         className={`min-w-0 rounded-xl border p-3 transition-colors md:w-1/3 ${podiumOrder[i]} ${accepts ? "border-midi-blue bg-sky-950/50" : "border-white/15 bg-[#0c1014]"}`}>
                                         <div className="mb-3 flex items-center justify-between">
                                             <strong className={["text-amber-300", "text-slate-300", "text-orange-300"][i]}>{t.place} {i + 1}</strong>
-                                            <span className="text-xs text-white/65">{t.votes}: {slot.score}</span>
+                                            <span className="text-xs text-white/65">{t.votes}: {meme.score}</span>
                                         </div>
-                                        <button type="button" disabled={!movable || (!!chosen && !accepts && !meme)}
-                                            draggable={movable && !!meme} onDragStart={e => {
-                                                if (meme) { e.dataTransfer.setData("text/plain", String(meme.id)); e.dataTransfer.effectAllowed = "move"; setActive(meme.id); }
+                                        <button type="button" disabled={!editing}
+                                            draggable={editing} onDragStart={e => {
+                                                e.dataTransfer.setData("text/plain", String(id));
+                                                e.dataTransfer.effectAllowed = "move";
+                                                setActive(id);
                                             }} onDragEnd={() => setActive(null)}
-                                            aria-label={`${t.place} ${i + 1} · ${accepts ? chosen.caption : meme?.caption ?? t.choose}`}
-                                            onClick={() => { if (accepts && chosen) assign(i, chosen.id); else if (meme) setActive(active === meme.id ? null : meme.id); }}
+                                            aria-label={`${t.place} ${i + 1} · ${accepts ? chosen.caption : meme.caption}`}
+                                            onClick={() => { if (accepts) assign(i, chosen.id); else setActive(active === id ? null : id); }}
                                             className="block w-full text-left focus-visible:outline-2 focus-visible:outline-midi-blue enabled:cursor-pointer">
-                                            {meme ? tile(meme) : <span className="grid aspect-[3/2] place-items-center rounded-lg border border-dashed border-white/25 text-sm text-white/55">{t.choose}</span>}
+                                            {tile(meme)}
                                         </button>
                                         <PodiumStep place={i + 1} />
                                     </li>
                                 );
                             })}
                         </ol>
-                        {!confirming && available.length > 0 && (
+                        {editing && review.candidates.length > 0 && (
                             <div className="border-t border-white/10 pt-4">
-                                <h3 id="podium-candidates" tabIndex={-1} className="mb-3 font-semibold">{lt ? "Kandidatai" : "Candidates"}</h3>
-                                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                                    {available.map(c => (
-                                        <button key={c.id} type="button" draggable aria-pressed={active === c.id}
-                                            onDragStart={e => { e.dataTransfer.setData("text/plain", String(c.id)); e.dataTransfer.effectAllowed = "move"; setActive(c.id); }}
-                                            onDragEnd={() => setActive(null)} onClick={() => setActive(active === c.id ? null : c.id)}
-                                            className="cursor-grab rounded-lg border border-white/15 p-2 text-left aria-pressed:border-midi-blue focus-visible:outline-midi-blue">
-                                            {tile(c)}
-                                        </button>
-                                    ))}
-                                </div>
+                                <h3 className="mb-3 font-semibold">{t.ranking} ({review.candidates.length})</h3>
+                                <ol className="grid grid-cols-2 items-start gap-3 lg:grid-cols-4">
+                                    {review.candidates.map((c, index) => {
+                                        const place = picks.indexOf(c.id) + 1;
+                                        return (
+                                            <li key={c.id} className={`min-w-0 rounded-lg border p-2 ${active === c.id ? "border-midi-blue" : "border-white/15"}`}>
+                                                <button type="button" draggable aria-pressed={active === c.id}
+                                                    onDragStart={e => { e.dataTransfer.setData("text/plain", String(c.id)); e.dataTransfer.effectAllowed = "move"; setActive(c.id); }}
+                                                    onDragEnd={() => setActive(null)} onClick={() => setActive(active === c.id ? null : c.id)}
+                                                    className="w-full cursor-grab text-left focus-visible:outline-midi-blue">
+                                                    <span className="mb-2 flex flex-wrap justify-between gap-1 px-1 text-xs text-white/75">
+                                                        <span>#{index + 1}</span>
+                                                        {place > 0 && <span className="text-midi-blue">{t.place} {place}</span>}
+                                                    </span>
+                                                    {tile(c)}
+                                                </button>
+                                                {active === c.id && (
+                                                    <div className="mt-2 flex flex-wrap gap-2 px-1" role="group" aria-label={t.assignPlace}>
+                                                        {picks.map((_, i) => (
+                                                            <button key={i} type="button" disabled={place === i + 1}
+                                                                onClick={() => assign(i, c.id)}
+                                                                aria-label={`${t.assignPlace} ${i + 1}`}
+                                                                className="min-h-10 min-w-10 rounded-md border border-white/20 px-2 text-sm enabled:hover:border-midi-blue disabled:opacity-45">
+                                                                {i + 1}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ol>
                             </div>
                         )}
                     </div>
                 )}
-                {(review.published ? !review.winners.length : !slots.length) && <p>{t.empty}</p>}
+                {(review.published ? !review.winners.length : !picks.length) && <p>{t.empty}</p>}
             </div>
             {issue && <div role="alert" className={panel}>{t[issue]} <button className="underline" onClick={reload}>{t.reload}</button></div>}
             {!review.published && (confirming ? (
@@ -336,17 +345,9 @@ export function AdminResults() {
                 </div>
             ) : <div className="flex flex-wrap items-center gap-4">
                 <button type="button" className={action} onClick={() => {
-                    if (ready) {
-                        setActive(null);
-                        setConfirming(true);
-                    } else {
-                        setShowMissing(true);
-                        document.getElementById("podium-candidates")?.focus();
-                    }
+                    setActive(null);
+                    setConfirming(true);
                 }}><Trophy aria-hidden className="size-4" />{t.publish}</button>
-                {showMissing && !ready && <p role="alert" className="text-sm text-amber-200">
-                    {lt ? "Dar pasirinkite memą šioms vietoms" : "Select a meme for the remaining places"}: {picks.flatMap((id, i) => id === null ? [i + 1] : []).join(", ")}.
-                </p>}
             </div>)}
             {review.published && (
                 confirmingUnpublish ? (

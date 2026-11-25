@@ -1,19 +1,10 @@
 import type { Lang } from "@/context/LanguageContext";
 
-export const CAPTION_MAX_WORDS = 30;
-export const CAPTION_MAX_CHARS = 250;
-
-export function countCaptionWords(trimmedCaption: string): number {
-    return trimmedCaption ? trimmedCaption.split(/\s+/).filter(Boolean).length : 0;
-}
+export const CAPTION_MAX_CHARS = 100;
 
 export function isCaptionValid(caption: string): boolean {
     const trimmed = caption.trim();
-    return (
-        trimmed.length > 0 &&
-        trimmed.length <= CAPTION_MAX_CHARS &&
-        countCaptionWords(trimmed) <= CAPTION_MAX_WORDS
-    );
+    return trimmed.length > 0 && trimmed.length <= CAPTION_MAX_CHARS;
 }
 
 type MemeCreationText = {
@@ -32,10 +23,8 @@ type MemeCreationText = {
     captionLabel: string;
     captionPlaceholder: string;
     captionPlaceholderCard: string;
-    captionLimits: string;
+    captionCount: (count: number) => string;
     captionRequired: string;
-    wordsLabel: string;
-    charsLabel: string;
     previewButton: string;
     previewTitle: string;
     edit: string;
@@ -71,10 +60,8 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         captionLabel: "Prierašas",
         captionPlaceholder: "Parašyk juokingą prierašą…",
         captionPlaceholderCard: "Tavo prierašas",
-        captionLimits: "Iki 30 žodžių ir 250 simbolių.",
+        captionCount: (count) => `${count} / ${CAPTION_MAX_CHARS} simbolių`,
         captionRequired: "Prierašas negali būti tuščias.",
-        wordsLabel: "Žodžiai",
-        charsLabel: "Simboliai",
         previewButton: "Peržiūrėti memą",
         previewTitle: "Peržiūrėk memą",
         edit: "Redaguoti",
@@ -108,10 +95,8 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         captionLabel: "Caption",
         captionPlaceholder: "Write a funny caption…",
         captionPlaceholderCard: "Your caption",
-        captionLimits: "Up to 30 words and 250 characters.",
+        captionCount: (count) => `${count} / ${CAPTION_MAX_CHARS} characters`,
         captionRequired: "Caption can't be empty.",
-        wordsLabel: "Words",
-        charsLabel: "Characters",
         previewButton: "Preview meme",
         previewTitle: "Review your meme",
         edit: "Edit",

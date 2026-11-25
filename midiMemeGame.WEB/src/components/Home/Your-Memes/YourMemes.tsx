@@ -11,8 +11,6 @@ import MemeCard from "@/components/Shared/MemeCard";
 import { MEME_SUBMISSION_LIMIT } from "@/services/memeService";
 import {
   CAPTION_MAX_CHARS,
-  CAPTION_MAX_WORDS,
-  countCaptionWords,
   isCaptionValid,
   memeCreationText,
 } from "@/components/MemeCreation/memeCreationText";
@@ -78,8 +76,6 @@ function YourMemeItem({
   const deleteDialog = useRef<HTMLDialogElement>(null);
 
   const trimmed = draft.trim();
-  const words = countCaptionWords(trimmed);
-  const wordsOver = words > CAPTION_MAX_WORDS;
   const charsOver = trimmed.length > CAPTION_MAX_CHARS;
   const draftValid = isCaptionValid(draft);
   const draftChanged = trimmed !== meme.caption.trim();
@@ -218,15 +214,9 @@ function YourMemeItem({
                 disabled={busy !== null}
                 className="mt-2 w-full resize-y rounded-lg border border-white/15 bg-[#0b0f12] px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus-visible:outline-2 focus-visible:outline-midi-blue disabled:opacity-60"
               />
-              <div id={`${captionId}-limits`} className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
-                <span className={wordsOver ? "text-rose-400" : "text-white/60"}>
-                  {ct.wordsLabel}: {words}/{CAPTION_MAX_WORDS}
-                </span>
-                <span className={charsOver ? "text-rose-400" : "text-white/60"}>
-                  {ct.charsLabel}: {trimmed.length}/{CAPTION_MAX_CHARS}
-                </span>
-                <span className="text-white/60">{ct.captionLimits}</span>
-              </div>
+              <p id={`${captionId}-limits`} className={`mt-2 text-sm tabular-nums ${charsOver ? "text-rose-400" : "text-white/60"}`}>
+                {ct.captionCount(trimmed.length)}
+              </p>
               {failed && (
                 <p role="alert" className="mt-3 text-sm text-rose-400">
                   {t.actionFailed}
