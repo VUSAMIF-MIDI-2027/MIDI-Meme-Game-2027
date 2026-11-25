@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MidiMemeGame.Api.Controllers
 {
     [Route("api/health")]
     [ApiController]
+    [DisableRateLimiting]
     public class HealthController : ControllerBase
     {
         [HttpGet]

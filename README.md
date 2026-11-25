@@ -37,6 +37,12 @@ The leaderboard shows each winner’s place, first name, last name, and meme. Th
 - **Database:** SQLite stored in a persistent file.
 - **Photo storage:** Uploaded photos are stored as server files. SQLite stores their relative paths. Backups cover both the database and uploaded photos.
 
+## API rate limiting
+
+The API allows 1,200 requests per minute per client IP by default. The health endpoint is exempt so readiness checks can still run. Set `RateLimiting__RequestsPerMinute` in `api.env` to adjust the limit for shared networks.
+
+For a reverse proxy, configure it to overwrite `X-Forwarded-For` with the client IP it resolved, or append that address as the rightmost entry. The API reads one hop from a trusted proxy. Loopback is trusted by default. If Docker exposes the proxy connection to the API as a bridge gateway address, set `ForwardedHeaders__KnownProxies__0` in `api.env` to the exact gateway address as seen by the API. Verify this address for each deployment slot. Otherwise, requests received from that gateway share one limit.
+
 ## Project tracking
 
 Frontend and backend work is tracked in GitHub Issues. Feature details, API endpoints, and acceptance criteria belong in the relevant issues.

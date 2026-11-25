@@ -32,11 +32,13 @@ namespace midiMemeGame.API
                 builder.Services.AddAppServices();
                 builder.Services.AddAppAuthentication();
                 builder.Services.AddAppCors();
+                builder.Services.AddApiRateLimiting(builder.Configuration);
                 builder.Services.AddDatabase(builder.Configuration);
 
                 var app = builder.Build();
 
                 app.InitializeDatabase();
+                app.UseForwardedHeaders();
                 app.UseMiddleware<TraceLoggingMiddleware>();
                 app.UseSerilogRequestLogging();
                 app.UseMiddleware<ExceptionMiddleware>();
@@ -51,6 +53,7 @@ namespace midiMemeGame.API
                 app.UseHttpsRedirection();
 
                 app.UseCors("Frontend");
+                app.UseRateLimiter();
                 app.UseAuthentication();
                 app.UseAuthorization();
 
