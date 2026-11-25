@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Microsoft.Extensions.Options;
 using MidiMemeGame.Api.Common.Constants;
 using MidiMemeGame.Api.Common.Enums;
 using MidiMemeGame.Api.Common.Models;
@@ -7,6 +8,7 @@ using MidiMemeGame.Api.Data;
 using MidiMemeGame.Api.Data.Queries;
 using MidiMemeGame.Api.Dto.Memes;
 using MidiMemeGame.Api.Models.Memes;
+using MidiMemeGame.Api.Models.Settings;
 
 namespace MidiMemeGame.Api.Services;
 
@@ -18,6 +20,7 @@ public class MemeService
     private readonly UserQueries _userQueries;
     private readonly SourcePhotoQueries _sourcePhotoQueries;
     private readonly EventPhaseService _eventPhase;
+    private readonly MemeSettings _settings;
     private readonly ILogger<MemeService> _logger;
     public MemeService(
         AppDbContext db,
@@ -26,6 +29,7 @@ public class MemeService
         UserQueries userQueries,
         SourcePhotoQueries sourcePhotoQueries,
         EventPhaseService eventPhase,
+        IOptions<MemeSettings> settings,
         ILogger<MemeService> logger
     )
     {
@@ -35,6 +39,7 @@ public class MemeService
         _userQueries = userQueries;
         _sourcePhotoQueries = sourcePhotoQueries;
         _eventPhase = eventPhase;
+        _settings = settings.Value;
         _logger = logger;
     }
     public async Task<Result<Meme>> UpdateAsync(
@@ -61,9 +66,13 @@ public class MemeService
         if (submissions.IsError)
             return submissions.Error;
 
+        caption = caption.Trim();
+        if (caption.Length > _settings.MaxCaptionLength)
+            return ErrorType.BAD_REQUEST;
+
         var userId = user.Value.ToString(CultureInfo.InvariantCulture);
 
-        var result = await _memeQueries.UpdateAsync(memeId, userId, caption.Trim(), cancellationToken);
+        var result = await _memeQueries.UpdateAsync(memeId, userId, caption, cancellationToken);
 
         if (result.Error == ErrorType.NOT_FOUND)
             _logger.LogWarning(LogMessages.Memes.UPDATE_TARGET_NOT_FOUND, user.Value, memeId);
@@ -90,6 +99,10 @@ public class MemeService
         if (submissions.IsError)
             return submissions.Error;
 
+        var caption = request.Caption.Trim();
+        if (caption.Length > _settings.MaxCaptionLength)
+            return ErrorType.BAD_REQUEST;
+
         var photo = await _sourcePhotoQueries.GetByIdAsync(request.SourcePhotoId, cancellationToken);
 
         if (photo.Error == ErrorType.NOT_FOUND)
@@ -113,7 +126,6 @@ public class MemeService
 
         var userId = user.Value.ToString(CultureInfo.InvariantCulture);
         var sourcePhotoId = photo.Value.Id.ToString(CultureInfo.InvariantCulture);
-        var caption = request.Caption.Trim();
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var result = await _memeQueries.CreateAsync(

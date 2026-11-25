@@ -304,17 +304,11 @@ public class ResultPublicationService
         for (int index = 0; index < podiumSize; index++)
         {
             int memeId = podiumMemeIds[index];
-            int place = index + 1;
 
             if (!candidatesById.TryGetValue(memeId, out var candidate))
                 return ErrorType.BAD_REQUEST;
 
             if (!selectedIds.Add(memeId))
-                return ErrorType.BAD_REQUEST;
-
-            long requiredScore = candidates[index].Score;
-
-            if (candidate.Score != requiredScore)
                 return ErrorType.BAD_REQUEST;
 
             finalOrder.Add(candidate);

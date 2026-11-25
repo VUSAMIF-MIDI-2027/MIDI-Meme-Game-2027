@@ -45,6 +45,11 @@ public static class AppSettingsRegistrationExtensions
             .Validate(settings => !string.IsNullOrWhiteSpace(settings.RootPath), "FileStorage:RootPath is required")
             .ValidateOnStart();
 
+        services.AddOptions<MemeSettings>()
+            .Bind(configuration.GetSection("Memes"))
+            .Validate(settings => settings.MaxCaptionLength > 0, "Memes:MaxCaptionLength must be positive")
+            .ValidateOnStart();
+
         services.AddOptions<PhotoUploadSettings>()
             .Bind(configuration.GetSection("PhotoUpload"))
             .Validate(settings => settings.MaxFileSizeBytes > 0 && settings.MaxRequestSizeBytes >= settings.MaxFileSizeBytes,

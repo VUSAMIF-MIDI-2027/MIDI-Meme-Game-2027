@@ -17,7 +17,7 @@ Participants choose a photo uploaded by the organisers, write a caption, and sub
 
 - Register individually and verify your email through Clerk.
 - Choose an organiser-uploaded photo and preview your caption below it.
-- Submit as many memes as you like while the competition is open. Each caption can contain up to 30 words and 250 characters.
+- Submit as many memes as you like while the competition is open. Each caption can contain up to 100 characters.
 - View, edit, or delete your own memes before submissions close.
 
 ## Admin features

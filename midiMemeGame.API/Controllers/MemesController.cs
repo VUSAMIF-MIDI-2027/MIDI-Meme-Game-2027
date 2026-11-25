@@ -127,6 +127,7 @@ namespace MidiMemeGame.Api.Controllers
             var error = ErrorResponse.Create(errorType);
             return errorType switch
             {
+                ErrorType.BAD_REQUEST => BadRequest(error),
                 ErrorType.NOT_FOUND => NotFound(error),
                 ErrorType.USER_ACCESS_DENIED => StatusCode(StatusCodes.Status403Forbidden, error),
                 ErrorType.MEME_LIMIT_REACHED or ErrorType.MEME_SOURCE_PHOTO_DISABLED
