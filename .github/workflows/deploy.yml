@@ -213,6 +213,7 @@ jobs:
               for file in /app/App_Data/Sqlite.db*; do test -r "$file" && test -w "$file"; done
               probe=$(mktemp /app/App_Data/.write-check.XXXXXX) && rm "$probe"
           '
+          candidate run --rm --no-deps -T --entrypoint sh api -ec 'umask 077; exec dotnet MidiMemeGame.Api.dll --migrate-production-db'
           candidate up -d --no-build --pull never
           ready candidate 15001 14000 "${project}_check"
           for svc in api web; do

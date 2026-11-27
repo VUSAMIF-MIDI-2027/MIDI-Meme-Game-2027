@@ -11,6 +11,14 @@ namespace midiMemeGame.API
     {
         public static void Main(string[] args)
         {
+            if (args is ["--migrate-production-db"])
+            {
+                var migrationBuilder = WebApplication.CreateBuilder();
+                migrationBuilder.Services.AddDatabase(migrationBuilder.Configuration);
+                using var migrationApp = migrationBuilder.Build();
+                migrationApp.MigrateProductionDatabase();
+                return;
+            }
             try
             {
                 var builder = WebApplication.CreateBuilder(args);
