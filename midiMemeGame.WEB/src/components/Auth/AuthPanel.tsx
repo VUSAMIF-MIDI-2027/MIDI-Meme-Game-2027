@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
 import { SignIn, SignUp } from "@clerk/react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -38,15 +39,20 @@ export function AuthPanel() {
                 </button>
             </div>
 
+            <div className="mb-5 flex items-start gap-3 rounded-xl bg-[#111111] p-3 text-sm leading-relaxed text-white/80">
+                <LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                <div>
+                    {mode === "register" && <p className="mb-1">{t.privacyNotice}</p>}
+                    <Link href="/privacy" className="font-semibold text-[#70cfff] underline underline-offset-4">
+                        {t.privacyLink}
+                    </Link>
+                </div>
+            </div>
             {mode === "register" ? (
                 <SignUp routing="hash" forceRedirectUrl="/dashboard" appearance={authAppearance} />
             ) : (
                 <SignIn routing="hash" forceRedirectUrl="/dashboard" appearance={authAppearance} />
             )}
-            <div className="mt-6 flex items-start gap-3 rounded-xl bg-[#111111] p-3 text-xs leading-relaxed text-[#898f93]">
-                <LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                <p>{t.privacyNotice}</p>
-            </div>
         </div>
     );
 }

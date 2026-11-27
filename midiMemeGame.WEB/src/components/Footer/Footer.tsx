@@ -32,6 +32,9 @@ export function Footer() {
                 <span className="text-center text-sm text-midi-white/50 min-[530px]:max-[669px]:justify-self-end">
                     {t.copyright}
                 </span>
+                <Link href="/privacy" className="min-[530px]:max-[669px]:col-span-2 min-[530px]:max-[669px]:justify-self-center text-sm text-midi-white/80 underline underline-offset-4">
+                    {t.privacy}
+                </Link>
                 <Link
                     href="https://mif.vusa.lt/lt"
                     target="_blank"

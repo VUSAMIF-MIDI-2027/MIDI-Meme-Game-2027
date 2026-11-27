@@ -8,6 +8,7 @@ import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import YourMemes, {
   type MemeStatus,
   type YourMeme,
+  type YourMemesLoadStatus,
 } from "@/components/Home/Your-Memes/YourMemes";
 import { CompetitionStatus } from "@/components/Shared/CompetitionStatus";
 import CreateMemeButton from "@/components/MemeCreation/CreateMemeButton";
@@ -19,7 +20,9 @@ import {
   MEME_STATUS_PENDING,
   MEME_STATUS_REJECTED,
   MEME_SUBMISSION_LIMIT,
+  setMemeNamePublication,
   updateMemeCaption,
+  withdrawMemePublication,
 } from "@/services/memeService";
 import { ApiError } from "@/services/ApiError";
 import { getPhotoBlob } from "@/services/userService";
@@ -52,6 +55,7 @@ export default function DashboardPage() {
     scheduleState.status === "ready" ? scheduleState.schedule : undefined;
   const { phase } = useEventPhase(schedule);
   const [myMemes, setMyMemes] = useState<YourMeme[]>([]);
+  const [memesLoadStatus, setMemesLoadStatus] = useState<YourMemesLoadStatus>("loading");
   const [submissionsUsed, setSubmissionsUsed] = useState(0);
   const [memesRefresh, setMemesRefresh] = useState(0);
   const imageUrlsRef = useRef<string[]>([]);
@@ -66,7 +70,7 @@ export default function DashboardPage() {
     async function load() {
       try {
         const token = await getToken();
-        if (!token) return;
+        if (!token) throw new Error("Missing session token.");
 
         const list = await getMyMemes(token, controller.signal);
         // Deleting frees the slot and invalidated memes never count, so
@@ -98,6 +102,9 @@ export default function DashboardPage() {
               status: statusById[meme.statusId] ?? "pending",
               isInvalidated: meme.isInvalidatedBySourcePhoto,
               isPhotoMissing,
+              publishMeme: meme.publishMeme === true,
+              galleryPublicationAccepted: meme.galleryPublicationAccepted === true,
+              publishName: meme.publishName === true,
             };
           }),
         );
@@ -109,8 +116,9 @@ export default function DashboardPage() {
         imageUrlsRef.current = createdUrls;
         setSubmissionsUsed(used);
         setMyMemes(entries);
+        setMemesLoadStatus("ready");
       } catch {
-        // Keep whatever list is already shown.
+        if (!cancelled) setMemesLoadStatus("error");
       }
     }
     void load();
@@ -134,18 +142,41 @@ export default function DashboardPage() {
     if (isLoaded && !isSignedIn) router.replace("/login");
   }, [isLoaded, isSignedIn, router]);
 
+  function refreshMemes() {
+    setMemesLoadStatus("loading");
+    setMemesRefresh((value) => value + 1);
+  }
+
   async function handleSaveCaption(id: number, caption: string) {
     const token = await getToken();
     if (!token) throw new Error("Missing session token.");
     await updateMemeCaption(id, caption, token);
-    setMemesRefresh((value) => value + 1);
+    refreshMemes();
+  }
+
+  async function handleSetNamePublication(id: number, publishName: boolean) {
+    const token = await getToken();
+    if (!token) throw new Error("Missing session token.");
+    await setMemeNamePublication(id, publishName, token);
+    setMyMemes((memes) => memes.map((meme) => meme.id === id ? { ...meme, publishName } : meme));
+    refreshMemes();
+  }
+
+  async function handleWithdrawPublication(id: number) {
+    const token = await getToken();
+    if (!token) throw new Error("Missing session token.");
+    await withdrawMemePublication(id, false, token);
+    setMyMemes((memes) => memes.map((meme) => meme.id === id
+      ? { ...meme, publishMeme: false, publishName: false }
+      : meme));
+    refreshMemes();
   }
 
   async function handleDelete(id: number) {
     const token = await getToken();
     if (!token) throw new Error("Missing session token.");
     await deleteMeme(id, token);
-    setMemesRefresh((value) => value + 1);
+    refreshMemes();
   }
 
   if (!isLoaded || !isSignedIn || !isUserLoaded) return <LoadingScreen />;
@@ -204,9 +235,13 @@ export default function DashboardPage() {
 
         <YourMemes
           memes={myMemes}
+          loadStatus={memesLoadStatus}
+          onRetry={refreshMemes}
           schedule={schedule}
           onSaveCaption={handleSaveCaption}
           onDelete={handleDelete}
+          onWithdrawPublication={handleWithdrawPublication}
+          onSetNamePublication={handleSetNamePublication}
         />
         {myMemes.length > 0 && (
           <Link

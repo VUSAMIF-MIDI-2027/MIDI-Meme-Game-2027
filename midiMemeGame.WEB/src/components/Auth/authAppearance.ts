@@ -5,6 +5,7 @@ import styles from "./AuthPanel.module.css";
 type AuthAppearance = NonNullable<ComponentProps<typeof SignUp>["appearance"]>;
 
 export const authAppearance: AuthAppearance = {
+    options: { privacyPageUrl: "/privacy/" },
     variables: {
         colorPrimary: "#0075b5",
         colorBackground: "#0a0a0a",

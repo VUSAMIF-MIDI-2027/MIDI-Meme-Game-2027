@@ -10,13 +10,13 @@ type PageText = {
     unpublishedTitle: string;
     unpublished: string;
     publishedEmpty: string;
+    publishedEmptyDescription: string;
     winnersEyebrow: string;
     winnersTitle: string;
     places: [string, string, string];
     galleryEyebrow: string;
     galleryTitle: string;
 
-    galleryEmpty: string;
     loadMore: string;
     loadingMore: string;
     loadMoreError: string;
@@ -26,6 +26,7 @@ type PageText = {
     retry: string;
     memeAlt: string;
     imageUnavailable: string;
+    anonymousAuthor: string;
     points: (score: number) => string;
 };
 
@@ -43,13 +44,13 @@ export const text: Record<Lang, PageText> = {
         ongoing: "Rezultatai bus rodomi čia, kai tik renginys baigsis ir organizatoriai juos paskelbs.",
         unpublishedTitle: "Renginys baigėsi",
         unpublished: "Rezultatai tuojau bus paskelbti.",
-        publishedEmpty: "Paskelbtuose rezultatuose memų nėra.",
+        publishedEmpty: "Šiuo metu viešai skelbiamų memų nėra.",
+        publishedEmptyDescription: "Rezultatai paskelbti. Čia rodomi tik memai, kuriems galioja viešinimo leidimas.",
         winnersEyebrow: "Šių metų geriausieji",
         winnersTitle: "Nugalėtojai",
         places: ["Pirma vieta", "Antra vieta", "Trečia vieta"],
         galleryEyebrow: "Daugiau konkurso favoritų",
         galleryTitle: "Kiti konkurso memai",
-        galleryEmpty: "Kitų konkurso memų nėra.",
         loadMore: "Rodyti daugiau",
         loadingMore: "Kraunami kiti memai…",
         loadMoreError: "Nepavyko įkelti daugiau memų.",
@@ -58,6 +59,7 @@ export const text: Record<Lang, PageText> = {
         retry: "Bandyti dar kartą",
         memeAlt: "Memas",
         imageUnavailable: "Nuotrauka nepasiekiama",
+        anonymousAuthor: "Anoniminis autorius",
         points: score => {
             const form = ltPointForms.select(score);
             const unit = form === "one" ? "taškas" : form === "few" ? "taškai" : "taškų";
@@ -73,13 +75,13 @@ export const text: Record<Lang, PageText> = {
         ongoing: "The results will appear here once the event has ended and the organisers have published them.",
         unpublishedTitle: "The event has ended",
         unpublished: "The results will be published shortly.",
-        publishedEmpty: "There are no memes in the published results.",
+        publishedEmpty: "No memes are currently on public display.",
+        publishedEmptyDescription: "The results have been published. This page only displays memes with active publication permission.",
         winnersEyebrow: "This year's best",
         winnersTitle: "Winners",
         places: ["First place", "Second place", "Third place"],
         galleryEyebrow: "More competition favourites",
         galleryTitle: "Other competition memes",
-        galleryEmpty: "There are no other competition memes.",
         loadMore: "Show more",
         loadingMore: "Loading more memes…",
         loadMoreError: "Could not load more memes.",
@@ -88,6 +90,7 @@ export const text: Record<Lang, PageText> = {
         retry: "Try again",
         memeAlt: "Meme",
         imageUnavailable: "Image unavailable",
+        anonymousAuthor: "Anonymous author",
         points: score => enPointCount.format(score) + (score === 1 ? " point" : " points"),
     },
 };

@@ -13,6 +13,9 @@ export type SubmittedMeme = {
     createdAtUtc: string;
     updatedAtUtc: string;
     isInvalidatedBySourcePhoto: boolean;
+    publishMeme?: boolean;
+    galleryPublicationAccepted?: boolean;
+    publishName?: boolean;
 };
 
 export const MEME_STATUS_PENDING = 1;
@@ -77,6 +80,7 @@ export async function submitMeme(
     sourcePhotoId: number,
     caption: string,
     token: string,
+    publication: { acceptGalleryPublication: boolean; publishName: boolean },
     signal?: AbortSignal
 ): Promise<SubmittedMeme> {
     const response = await fetch(apiBaseUrl + "/api/memes", {
@@ -85,7 +89,7 @@ export async function submitMeme(
             "Content-Type": "application/json",
             Authorization: "Bearer " + token,
         },
-        body: JSON.stringify({ sourcePhotoId, caption }),
+        body: JSON.stringify({ sourcePhotoId, caption, ...publication }),
         signal,
         cache: "no-store",
     });
@@ -136,6 +140,40 @@ export async function deleteMeme(
         method: "DELETE",
         headers: { Authorization: "Bearer " + token },
         signal,
+        cache: "no-store",
+    });
+    if (!response.ok) {
+        throw new MemeServiceError(response.status, await readErrorCode(response));
+    }
+}
+
+export async function withdrawMemePublication(
+    memeId: number,
+    nameOnly: boolean,
+    token: string,
+): Promise<void> {
+    const response = await fetch(apiBaseUrl + `/api/memes/${memeId}/publication?nameOnly=${nameOnly}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token },
+        cache: "no-store",
+    });
+    if (!response.ok) {
+        throw new MemeServiceError(response.status, await readErrorCode(response));
+    }
+}
+
+export async function setMemeNamePublication(
+    memeId: number,
+    publishName: boolean,
+    token: string,
+): Promise<void> {
+    const response = await fetch(apiBaseUrl + `/api/memes/${memeId}/publication/name`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify(publishName),
         cache: "no-store",
     });
     if (!response.ok) {

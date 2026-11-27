@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@clerk/react";
 import { Pencil } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -63,11 +64,13 @@ export default function PreviewStep({
   const { getToken } = useAuth();
   const { lang } = useLanguage();
   const t = memeCreationText[lang];
+  const [acceptGalleryPublication, setAcceptGalleryPublication] = useState(false);
+  const [publishName, setPublishName] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<SubmitError | null>(null);
 
   async function handleSubmit() {
-    if (submitting) return;
+    if (submitting || !acceptGalleryPublication) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -76,7 +79,7 @@ export default function PreviewStep({
         setError("auth");
         return;
       }
-      await submitMeme(photoId, caption, token);
+      await submitMeme(photoId, caption, token, { acceptGalleryPublication, publishName });
       onSubmitted();
     } catch (error) {
       setError(mapSubmitError(error));
@@ -102,10 +105,36 @@ export default function PreviewStep({
         </p>
       )}
       <div className="mx-auto mt-6 flex w-full max-w-xl flex-col gap-3">
+        <fieldset disabled={submitting} className="rounded-lg border border-white/15 px-4 pb-4">
+          <legend className="px-1 font-bold text-white">{t.publicationTitle}</legend>
+          <p className="mb-3 mt-1 text-sm leading-relaxed text-white/75">{t.publicationHelp}</p>
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-white">
+            <input
+              type="checkbox"
+              checked={acceptGalleryPublication}
+              required
+              onChange={(event) => setAcceptGalleryPublication(event.target.checked)}
+              className="size-5 shrink-0 accent-midi-blue"
+            />
+            <span>{t.publishMeme}</span>
+          </label>
+          <label className="flex min-h-11 items-center gap-3 text-sm text-white has-[:disabled]:opacity-55">
+            <input
+              type="checkbox"
+              checked={publishName}
+              onChange={(event) => setPublishName(event.target.checked)}
+              className="size-5 shrink-0 accent-midi-blue"
+            />
+            <span>{t.publishName}</span>
+          </label>
+          <Link href="/rules#publication" target="_blank" rel="noopener" className="mt-2 inline-block text-sm text-[#70cfff] underline underline-offset-4">
+            {t.publicationRulesLink}
+          </Link>
+        </fieldset>
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || !acceptGalleryPublication}
           aria-busy={submitting}
           className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-midi-blue px-6 py-3 font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50"
         >

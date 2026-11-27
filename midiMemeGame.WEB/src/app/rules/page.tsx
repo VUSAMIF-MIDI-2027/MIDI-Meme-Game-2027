@@ -2,6 +2,7 @@
 
 import { ArrowDown, Check, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import stars from "../account/account.module.css";
 import styles from "./rules.module.css";
 import { FlyingCat } from "@/components/FlyingCat";
@@ -15,17 +16,23 @@ const copy = {
         intro: "Dalyvauk gyvai arba nuotoliu. Štai ką reikia žinoti prieš pateikiant memą.",
         stats: [["3", "memai", "daugiausia vienam žmogui"], ["3", "balsai", "skirtingiems memams"], ["1", "taškas", "už kiekvieną balsą"]],
         steps: [
-            { title: "Pateik memus", lines: ["Prisijunk ir pasirink pateiktą nuotrauką.", "Pridėk prierašą. Gali pateikti iki 3 memų.", "Organizatoriai peržiūrės tavo pateiktus memus."] },
+            { title: "Pateik memus", lines: ["Prisijunk ir pasirink pateiktą nuotrauką.", "Pridėk prierašą. Gali pateikti iki 3 memų.", "Pateikdamas memą privalai leisti jį viešai skelbti. Prieš skelbdami organizatoriai memą peržiūrės."] },
             { title: "Balsuok", lines: ["Balsavimas prasideda pasibaigus įkėlimui.", "Rinkis iš organizatorių patvirtintų memų.", "Skirk iki 3 balsų: kiekvieną vis kitam memui."] },
-            { title: "Sulauk rezultatų", lines: ["Pasibaigus balsavimui susumuojami taškai.", "Paskelbiami rezultatai ir prizų laimėtojai."] },
+            { title: "Sulauk rezultatų", lines: ["Pasibaigus balsavimui susumuojami taškai.", "Viešuose rezultatuose rodomi patvirtinti konkurso memai. Pirmos trys vietos rodomos ant podiumo, kiti memai – galerijoje."] },
         ],
         voting: "Kaip paskirstyti balsus?",
         yes: "Gali skirti po 1 balsą 3 skirtingiems memams.",
         no: "Negali tam pačiam memui skirti daugiau nei 1 balso.",
         content: "Turinio ribos",
         explanation: "Draudžiamas seksualinis ir kitas nepadorus turinys (NSFW) bei asmeniniai įžeidimai.",
+        rights: "Naudok organizatorių pateiktą nuotrauką ir prierašą, kurį gali teisėtai pateikti. Į prierašą nedėk asmens duomenų, pagal kuriuos būtų galima atpažinti tave ar kitus žmones.",
         consequence: "Užblokuotas memas sunaudoja vieną iš trijų bandymų.",
         consequenceDetail: "Panaudotas bandymas negrąžinamas. Jei dar turi bandymų, gali pateikti kitą memą.",
+        publication: "Privalomas memo viešinimas",
+        publicationRequirement: "Norėdamas pateikti memą konkursui, privalai leisti jį skelbti viešuose rezultatuose. Patvirtintas memas bus rodomas ir tada, jei nepateks į pirmąsias tris vietas.",
+        authorChoice: "Vardo ir pavardės viešinimas neprivalomas. Jei langelį paliksi tuščią, memas bus rodomas be tavo vardo ir pavardės. Pasirinkimą gali pakeisti skiltyje „Mano memai“ paspaudęs „Redaguoti“.",
+        publicationTerms: "Pateikdamas memą konkursui suteiki VU SA neatlygintinį, neišimtinį leidimą atgaminti ir rodyti pateiktą memą prisijungusiems dalyviams balsavimo metu bei viešai skelbti jį su vieta ir taškais svetainėje naktis.midi.lt iki 30 dienų nuo rezultatų paskelbimo. Svetainė prieinama iš bet kurios šalies. Leidimas suteikiamas šiam konkursui ir jo rezultatams skelbti.",
+        privacy: "Konkurso privatumo pranešimas",
         tutorial: "Pažiūrėti, kaip kurti memą",
     },
     en: {
@@ -33,17 +40,23 @@ const copy = {
         intro: "Join in person or remotely. Here is what to know before submitting a meme.",
         stats: [["3", "memes", "maximum per person"], ["3", "votes", "for different memes"], ["1", "point", "for each vote"]],
         steps: [
-            { title: "Submit your memes", lines: ["Sign in and choose a provided photo.", "Add a caption. Submit up to 3 memes.", "Organisers will review your submissions."] },
+            { title: "Submit your memes", lines: ["Sign in and choose a provided photo.", "Add a caption. Submit up to 3 memes.", "You must give permission to publish each meme you submit. The organisers will review it before publication."] },
             { title: "Vote", lines: ["Voting opens after submissions close.", "Choose from organiser-approved memes.", "Cast up to 3 votes, each for a different meme."] },
-            { title: "See the results", lines: ["Points are counted after voting closes.", "Results and prize winners are announced."] },
+            { title: "See the results", lines: ["Points are counted after voting closes.", "Approved competition memes appear in the public results. The first three places appear on the podium and the other memes in the gallery."] },
         ],
         voting: "How can you use your votes?",
         yes: "You can give 1 vote each to 3 different memes.",
         no: "You cannot give more than 1 vote to the same meme.",
         content: "Content limits",
         explanation: "Sexual or other indecent content (NSFW) and personal insults are prohibited.",
+        rights: "Use a photo supplied by the organisers and a caption you can lawfully submit. Keep personal details that could identify you or anyone else out of the caption.",
         consequence: "A blocked meme uses up one of your three attempts.",
         consequenceDetail: "That attempt is not restored. You can submit another meme if you have attempts left.",
+        publication: "Required meme publication",
+        publicationRequirement: "To submit a meme, you must allow it to appear in the public results. If approved, your meme will appear even if it does not place in the top three.",
+        authorChoice: "Showing your first and last name is optional. Leave the box unchecked to have your meme displayed without your name. You can change your choice by selecting Edit under My Memes.",
+        publicationTerms: "By entering a meme, you give VU SR royalty-free, non-exclusive permission to reproduce and show that meme to signed-in voters during voting and to publish it with its place and score on naktis.midi.lt for up to 30 days after results are published. The site is accessible from any country. The permission covers this contest and the publication of its results.",
+        privacy: "Contest privacy notice",
         tutorial: "See how to create a meme",
     },
 };
@@ -102,6 +115,7 @@ export default function RulesPage() {
                             <section aria-labelledby="content-title">
                                 <h2 id="content-title" className="text-xl font-bold">{t.content}</h2>
                                 <p className="mt-4 max-w-prose text-base leading-relaxed text-white/85">{t.explanation}</p>
+                                <p className="mt-2 max-w-prose text-base leading-relaxed text-white/85">{t.rights}</p>
                                 <p className="mt-3 text-lg leading-snug text-amber-200 sm:text-xl">
                                     <strong className="font-bold">{t.consequence}</strong>
                                 </p>
@@ -109,6 +123,13 @@ export default function RulesPage() {
                             </section>
                         </div>
                     </div>
+                    <section id="publication" aria-labelledby="publication-title" className="mt-10 scroll-mt-24">
+                        <h2 id="publication-title" className="text-xl font-bold">{t.publication}</h2>
+                        <p className="mt-3 max-w-prose font-semibold text-white">{t.publicationRequirement}</p>
+                        <p className="mt-3 max-w-prose text-white/85">{t.authorChoice}</p>
+                        <p className="mt-3 max-w-prose text-white/85">{t.publicationTerms}</p>
+                        <Link href="/privacy" className="mt-3 inline-block text-[#70cfff] underline underline-offset-4">{t.privacy}</Link>
+                    </section>
                     <a href="#tutorial" className="mx-auto mt-12 flex min-h-12 w-fit items-center justify-center gap-3 rounded border border-white/20 px-5 py-3 font-semibold transition-colors hover:border-midi-blue hover:text-[#70cfff] focus-visible:outline-2 focus-visible:outline-midi-blue">{t.tutorial}<ArrowDown aria-hidden="true" className="size-4" /></a>
                 </div>
             </div>

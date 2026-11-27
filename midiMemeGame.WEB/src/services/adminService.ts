@@ -232,6 +232,9 @@ export async function patchAdminMemeStatus(
 }
 export type ResultCandidate = {
     id: number;
+    publicationAllowed?: boolean;
+    galleryPublicationAccepted?: boolean;
+    namePublicationAllowed?: boolean | null;
     sourcePhotoId: number;
     caption: string;
     userName: string | null;
@@ -243,7 +246,7 @@ export type AdminResultReview = {
     published: boolean;
     publishedAtUtc: string | null;
     candidates: ResultCandidate[];
-    winners: (ResultCandidate & { place: number })[];
+    winners: (ResultCandidate & { place: number; nameShown?: boolean | null })[];
 };
 
 export async function getResultReview(token: string, signal?: AbortSignal) {

@@ -64,10 +64,10 @@ export function useResults() {
         };
     }, [attempt]);
 
-    // While the results are not out yet, check again when the person returns to the tab.
-    const waiting = state.status === "ongoing" || state.status === "unpublished";
+    // Recheck results when the viewer returns to the tab.
+    const canRefresh = state.status === "ongoing" || state.status === "unpublished" || state.status === "ready";
     useEffect(() => {
-        if (!waiting) return;
+        if (!canRefresh) return;
 
         function refreshWhenVisible() {
             if (document.visibilityState === "visible") setAttempt(value => value + 1);
@@ -79,7 +79,7 @@ export function useResults() {
             window.removeEventListener("focus", refreshWhenVisible);
             document.removeEventListener("visibilitychange", refreshWhenVisible);
         };
-    }, [waiting]);
+    }, [canRefresh]);
 
     const retry = useCallback(() => {
         setState({ status: "loading" });

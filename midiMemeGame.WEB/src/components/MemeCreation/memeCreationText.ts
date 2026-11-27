@@ -27,6 +27,11 @@ type MemeCreationText = {
     captionRequired: string;
     previewButton: string;
     previewTitle: string;
+    publicationTitle: string;
+    publicationHelp: string;
+    publishMeme: string;
+    publishName: string;
+    publicationRulesLink: string;
     edit: string;
     changePhoto: string;
     submit: string;
@@ -64,6 +69,11 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         captionRequired: "Prierašas negali būti tuščias.",
         previewButton: "Peržiūrėti memą",
         previewTitle: "Peržiūrėk memą",
+        publicationTitle: "Viešinimas konkurso rezultatuose",
+        publicationHelp: "Leidimas skelbti memą būtinas norint jį pateikti. Vardą ir pavardę rodyti neprivaloma. Šį pasirinkimą gali atšaukti memo redagavimo lange.",
+        publishMeme: "Leidžiu konkurso organizatoriams viešai skelbti šį memą, jo vietą ir taškus naktis.midi.lt rezultatų puslapyje iki 30 dienų (privaloma).",
+        publishName: "Sutinku, kad prie paskelbto memo būtų rodomi mano vardas ir pavardė.",
+        publicationRulesLink: "Viešinimo sąlygos",
         edit: "Redaguoti",
         changePhoto: "Rinktis kitą nuotrauką",
         submit: "Pateikti memą",
@@ -99,6 +109,11 @@ export const memeCreationText: Record<Lang, MemeCreationText> = {
         captionRequired: "Caption can't be empty.",
         previewButton: "Preview meme",
         previewTitle: "Review your meme",
+        publicationTitle: "Publication in the contest results",
+        publicationHelp: "Permission to publish the meme is required to submit it. Showing your name is optional. You can withdraw your name consent in the meme’s Edit dialog.",
+        publishMeme: "I give the organisers permission to publish this meme, its place and its score on the naktis.midi.lt results page for up to 30 days (required).",
+        publishName: "I agree to have my first and last name shown alongside the published meme.",
+        publicationRulesLink: "Publication terms",
         edit: "Edit",
         changePhoto: "Choose a different photo",
         submit: "Submit meme",

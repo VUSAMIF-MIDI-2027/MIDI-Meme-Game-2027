@@ -60,12 +60,6 @@ export function Header() {
                 </div>
             </Link>
 
-            <div className={`pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 ${isSignedIn ? "" : "min-[1100px]:block"}`}>
-                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-midi-gray">
-                    {t.headerCenter}
-                </span>
-            </div>
-
             {isLoaded && isSignedIn && (
                 <div className="flex items-center gap-2 sm:gap-3">
                     <nav aria-label={lang === "lt" ? "Dalyvio navigacija" : "Participant navigation"} className="hidden items-center gap-4 min-[1100px]:flex">

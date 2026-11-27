@@ -19,7 +19,7 @@ const text = {
     lt: {
         title: "Trumpai prieš pradedant", progress: "Taisyklių žingsniai", close: "Uždaryti", back: "Atgal", next: "Toliau", read: "Visos taisyklės", accept: "Supratau",
         steps: [
-            { title: "3 galimybės", detail: "Gali pateikti iki 3 memų. Pasirink pateiktą nuotrauką, pridėk prierašą ir pateik organizatorių peržiūrai.", note: "Pirmiausia — memų įkėlimas. Po jo — balsavimas." },
+            { title: "3 galimybės", detail: "Gali pateikti iki 3 memų. Pasirink pateiktą nuotrauką, pridėk prierašą ir pateik organizatorių peržiūrai.", note: "Leidimas viešai skelbti memą privalomas. Vardą ir pavardę gali pasirinkti slėpti." },
             { title: "3 balsai. 3 skirtingi memai.", detail: "Balsavimui prasidėjus, gali skirti po vieną balsą trims skirtingiems memams. Kiekvienas balsas vertas 1 taško.", note: "Vienam memui — tik vienas tavo balsas." },
             { title: "Turinio taisyklės", detail: "NSFW ir asmeniniai įžeidimai draudžiami. Toks memas bus užblokuotas ir sunaudos vieną iš tavo 3 bandymų.", note: "Užblokuoto memo bandymas negrąžinamas. Likusius bandymus gali panaudoti." },
         ],
@@ -27,7 +27,7 @@ const text = {
     en: {
         title: "Before you start", progress: "Rules steps", close: "Close", back: "Back", next: "Next", read: "Full rules", accept: "Got it",
         steps: [
-            { title: "3 chances", detail: "Submit up to 3 memes. Choose a provided photo, add a caption and submit it for organiser review.", note: "Submissions come first. Voting follows." },
+            { title: "3 chances", detail: "Submit up to 3 memes. Choose a provided photo, add a caption and submit it for organiser review.", note: "Permission to publish the meme is required. Showing your name is optional." },
             { title: "3 votes. 3 different memes.", detail: "Once voting opens, give one vote each to up to three different memes. Each vote is worth 1 point.", note: "Only one of your votes can go to each meme." },
             { title: "Content rules", detail: "No NSFW content or personal insults. An offending meme will be blocked and use up one of your 3 attempts.", note: "The attempt is not refunded. You can still use your remaining attempts." },
         ],

@@ -20,8 +20,10 @@ const copy = {
         review: "Prizinės vietos", final: "Rezultatai paskelbti",
         place: "Vieta", votes: "Balsai", author: "Autorius nenurodytas", empty: "Į galutinę įskaitą nepateko nė vienas memas.",
         publish: "Paskelbti rezultatus", saving: "Skelbiama…", confirm: "Patvirtinti ir paskelbti",
-        verify: "Ar paskelbti šiuos rezultatus?", consequence: "Rezultatai taps vieši. Laimėtojų laiškai bus įtraukti į siuntimo eilę.",
-        cancel: "Grįžti", ranking: "Visi įskaitos memai",
+        verify: "Ar paskelbti šiuos rezultatus?", consequence: "Laimėtojų laiškai bus įtraukti į siuntimo eilę.",
+        nameShown: "Vardas ir pavardė rodomi rezultatuose",
+        nameHidden: "Vardas ir pavardė nerodomi rezultatuose",
+        cancel: "Grįžti", ranking: "Kiti įskaitos memai",
         instructions: "Podiumas užpildytas pagal balsus. Norėdami pakeisti vietą, pasirinkite memą ir spauskite vietos numerį arba nutempkite kortelę į podiumą.",
         assignPlace: "Skirti vietą",
         unpublish: "Atšaukti paskelbimą",
@@ -39,8 +41,10 @@ const copy = {
         review: "Prize places", final: "Results published",
         place: "Place", votes: "Votes", author: "Unknown author", empty: "No memes qualified for the final ranking.",
         publish: "Publish results", saving: "Publishing…", confirm: "Confirm and publish",
-        verify: "Publish these results?", consequence: "Results will become public and winner emails will be queued.",
-        cancel: "Back", ranking: "All ranked memes",
+        verify: "Publish these results?", consequence: "Winner emails will be queued.",
+        nameShown: "First and last name shown in results",
+        nameHidden: "First and last name hidden in results",
+        cancel: "Back", ranking: "Other ranked memes",
         instructions: "The podium is filled by vote count. To change a place, select a meme and click a place number or drag the card onto the podium.",
         assignPlace: "Assign place",
         unpublish: "Unpublish results",
@@ -76,7 +80,9 @@ export function AdminResults() {
     const [photos, setPhotos] = useState<Record<number, string>>({});
     const [active, setActive] = useState<number | null>(null);
     const [revision, setRevision] = useState(0);
-    const [issue, setIssue] = useState<keyof typeof t | null>(null);
+    const [issue, setIssue] = useState<
+        "wait" | "schedule" | "failed" | "saveError" | "contactError" | "denied" | "invalid" | "unpublishError" | null
+    >(null);
     const [confirming, setConfirming] = useState(false);
     const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -223,9 +229,20 @@ export function AdminResults() {
     const lt = lang === "lt";
     const chosen = review.candidates.find(c => c.id === active);
     const editing = !confirming && !saving;
+    const otherCandidates = review.candidates.filter(candidate => !picks.includes(candidate.id));
+    function authorVisibility(shown: boolean | null | undefined) {
+        if (typeof shown !== "boolean") return null;
+
+        return <span className={`block text-xs ${shown ? "text-emerald-300" : "text-white/65"}`}>
+            {shown ? t.nameShown : t.nameHidden}
+        </span>;
+    }
 
     function tile(c: AdminResultReview["candidates"][number]) {
         const url = photos[c.sourcePhotoId];
+        const nameShown = typeof c.namePublicationAllowed !== "boolean" ? null
+            : c.namePublicationAllowed && Boolean(c.userName?.trim()) && c.publicationAllowed === true
+                && (c.galleryPublicationAccepted === true || picks.includes(c.id));
         return <span className="pointer-events-none block overflow-hidden rounded-lg bg-black">
             <span className="relative grid aspect-[3/2] place-items-center text-xs text-white/60">
                 {url ? <Image src={url} alt="" fill unoptimized sizes="(min-width: 768px) 270px, 80vw" className="object-cover" /> :
@@ -233,7 +250,10 @@ export function AdminResults() {
                         (lt ? "Nuotrauka nepasiekiama" : "Photo unavailable")}
             </span>
             <span className="block break-words bg-white px-3 py-3 text-center font-semibold text-black">{c.caption}</span>
-            <span className="block px-3 py-2 text-xs text-white/75">{c.userName || t.author} · {t.votes}: {c.score}</span>
+            <span className="block space-y-1 px-3 py-2 text-xs text-white/75">
+                <span className="block">{c.userName || t.author} · {t.votes}: {c.score}</span>
+                {authorVisibility(nameShown)}
+            </span>
         </span>;
     }
 
@@ -258,7 +278,9 @@ export function AdminResults() {
                         {review.winners.map(w => (
                             <li key={w.id} className={`min-w-0 space-y-2 md:w-1/3 ${podiumOrder[w.place - 1]}`}>
                                 <strong>{t.place} {w.place}</strong>
-                                {preview(w, false)}<p className="text-white/70">{t.votes}: {w.score}</p>
+                                {preview(w, false)}
+                                {authorVisibility(w.nameShown)}
+                                <p className="text-white/70">{t.votes}: {w.score}</p>
                                 {w.email && <a className="break-all text-midi-blue underline" href={`mailto:${w.email}`}>{w.email}</a>}
                                 <PodiumStep place={w.place} />
                             </li>
@@ -296,31 +318,29 @@ export function AdminResults() {
                                 );
                             })}
                         </ol>
-                        {editing && review.candidates.length > 0 && (
+                        {editing && otherCandidates.length > 0 && (
                             <div className="border-t border-white/10 pt-4">
-                                <h3 className="mb-3 font-semibold">{t.ranking} ({review.candidates.length})</h3>
+                                <h3 className="mb-3 font-semibold">{t.ranking} ({otherCandidates.length})</h3>
                                 <ol className="grid grid-cols-2 items-start gap-3 lg:grid-cols-4">
-                                    {review.candidates.map((c, index) => {
-                                        const place = picks.indexOf(c.id) + 1;
+                                    {otherCandidates.map((c, index) => {
                                         return (
                                             <li key={c.id} className={`min-w-0 rounded-lg border p-2 ${active === c.id ? "border-midi-blue" : "border-white/15"}`}>
                                                 <button type="button" draggable aria-pressed={active === c.id}
                                                     onDragStart={e => { e.dataTransfer.setData("text/plain", String(c.id)); e.dataTransfer.effectAllowed = "move"; setActive(c.id); }}
                                                     onDragEnd={() => setActive(null)} onClick={() => setActive(active === c.id ? null : c.id)}
                                                     className="w-full cursor-grab text-left focus-visible:outline-midi-blue">
-                                                    <span className="mb-2 flex flex-wrap justify-between gap-1 px-1 text-xs text-white/75">
-                                                        <span>#{index + 1}</span>
-                                                        {place > 0 && <span className="text-midi-blue">{t.place} {place}</span>}
+                                                    <span className="mb-2 block px-1 text-xs text-white/75">
+                                                        #{picks.length + index + 1}
                                                     </span>
                                                     {tile(c)}
                                                 </button>
                                                 {active === c.id && (
                                                     <div className="mt-2 flex flex-wrap gap-2 px-1" role="group" aria-label={t.assignPlace}>
                                                         {picks.map((_, i) => (
-                                                            <button key={i} type="button" disabled={place === i + 1}
+                                                            <button key={i} type="button"
                                                                 onClick={() => assign(i, c.id)}
                                                                 aria-label={`${t.assignPlace} ${i + 1}`}
-                                                                className="min-h-10 min-w-10 rounded-md border border-white/20 px-2 text-sm enabled:hover:border-midi-blue disabled:opacity-45">
+                                                                className="min-h-10 min-w-10 rounded-md border border-white/20 px-2 text-sm enabled:hover:border-midi-blue">
                                                                 {i + 1}
                                                             </button>
                                                         ))}
@@ -339,7 +359,8 @@ export function AdminResults() {
             {issue && <div role="alert" className={panel}>{t[issue]} <button className="underline" onClick={reload}>{t.reload}</button></div>}
             {!review.published && (confirming ? (
                 <div className={panel}>
-                    <h3 className="font-bold">{t.verify}</h3><p className="my-3 text-white/75">{t.consequence}</p>
+                    <h3 className="mb-3 font-bold">{t.verify}</h3>
+                    <p className="my-3 text-white/75">{t.consequence}</p>
                     <button className={action} disabled={saving} onClick={publish}>{saving ? t.saving : t.confirm}</button>
                     <button className="ml-4 min-h-11" disabled={saving} onClick={() => setConfirming(false)}>{t.cancel}</button>
                 </div>

@@ -28,6 +28,7 @@ type PageText = {
     loginButton: string;
     forgotPassword: string;
     privacyNotice: string;
+    privacyLink: string;
 };
 
 export const authText: Record<Lang, PageText> = {
@@ -58,7 +59,8 @@ export const authText: Record<Lang, PageText> = {
         registerButton: "Registruotis ir kurti",
         loginButton: "Prisijungti ir kurti",
         forgotPassword: "Pamiršai slaptažodį?",
-        privacyNotice: "El. paštas neviešinamas. Jį naudosime paskyrai ir susisiekti su laimėtojais.",
+        privacyNotice: "Vardą, pavardę ir el. paštą naudojame paskyrai ir konkursui administruoti. Apie konkurso pradžią ir prizus rašome el. paštu. Pateikdamas memą galėsi pasirinkti, ar rezultatuose rodyti tavo vardą ir pavardę.",
+        privacyLink: "Konkurso privatumo pranešimas",
     },
 
     en: {
@@ -88,6 +90,7 @@ export const authText: Record<Lang, PageText> = {
         registerButton: "Register and create",
         loginButton: "Sign in and create",
         forgotPassword: "Forgot your password?",
-        privacyNotice: "Your email stays private. We'll use it for your account and to contact winners.",
+        privacyNotice: "We use your name and email to manage your account and run the contest. We email you about the contest opening and contact winners about prizes. When you submit a meme, you can choose whether to show your name in the results.",
+        privacyLink: "Contest privacy notice",
     },
 };

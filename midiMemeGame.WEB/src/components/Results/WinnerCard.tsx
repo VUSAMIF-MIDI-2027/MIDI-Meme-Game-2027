@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { UserRound } from "lucide-react";
 import { ResultImage } from "./ResultImage";
 import { PODIUM_POSITION, TROPHIES, TROPHY_SIZE } from "./podium";
 import type { Winner } from "@/services/resultsService";
@@ -10,10 +11,11 @@ type WinnerCardProps = {
     placeLabel: string;
     imageAlt: string;
     fallbackLabel: string;
+    anonymousAuthorLabel: string;
     scoreLabel: string;
 };
 
-export function WinnerCard({ winner, placeLabel, imageAlt, fallbackLabel, scoreLabel }: WinnerCardProps) {
+export function WinnerCard({ winner, placeLabel, imageAlt, fallbackLabel, anonymousAuthorLabel, scoreLabel }: WinnerCardProps) {
     return (
         <article className={`flex min-w-0 flex-col overflow-hidden rounded-xl border bg-[#0a0a0a] ${winner.place === 1 ? "border-midi-blue" : "border-white/15"} ${PODIUM_POSITION[winner.place]}`}>
             <header className="flex items-center gap-2 px-3 py-3 md:gap-4 md:px-5 md:py-4">
@@ -46,7 +48,14 @@ export function WinnerCard({ winner, placeLabel, imageAlt, fallbackLabel, scoreL
                 </figcaption>
             </figure>
             <footer className="flex flex-col items-start gap-1 px-3 py-3 md:flex-row md:items-center md:gap-3 md:px-5 md:py-4">
-                {winner.userName && <p className="min-w-0 text-sm leading-snug font-bold wrap-anywhere text-midi-gray md:text-xl">{winner.userName}</p>}
+                {winner.userName ? (
+                    <p className="min-w-0 text-sm leading-snug font-bold wrap-anywhere text-midi-gray md:text-xl">{winner.userName}</p>
+                ) : (
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs sm:text-sm font-medium text-white/65">
+                        <UserRound aria-hidden="true" className="size-4 shrink-0" />
+                        <span className="wrap-anywhere">{anonymousAuthorLabel}</span>
+                    </span>
+                )}
                 <span className="min-w-0 text-sm wrap-anywhere text-amber-200 tabular-nums md:ml-auto md:shrink-0">{scoreLabel}</span>
             </footer>
         </article>

@@ -16,6 +16,8 @@ import {
 } from "@/components/MemeCreation/memeCreationText";
 import { yourMemesText } from "./yourMemesText";
 
+export type YourMemesLoadStatus = "loading" | "ready" | "error";
+
 export type MemeStatus = "approved" | "pending" | "rejected";
 
 export type YourMeme = {
@@ -27,6 +29,9 @@ export type YourMeme = {
   status: MemeStatus;
   isInvalidated: boolean;
   isPhotoMissing: boolean;
+  publishMeme: boolean;
+  galleryPublicationAccepted: boolean;
+  publishName: boolean;
 };
 
 const statusStyles: Record<MemeStatus, string> = {
@@ -52,6 +57,8 @@ type YourMemeItemProps = {
   lang: Lang;
   onSaveCaption?: (id: number, caption: string) => Promise<void>;
   onDelete?: (id: number) => Promise<void>;
+  onWithdrawPublication?: (id: number) => Promise<void>;
+  onSetNamePublication?: (id: number, publishName: boolean) => Promise<void>;
 };
 
 function YourMemeItem({
@@ -64,11 +71,15 @@ function YourMemeItem({
   lang,
   onSaveCaption,
   onDelete,
+  onWithdrawPublication,
+  onSetNamePublication,
 }: YourMemeItemProps) {
   const t = yourMemesText[lang];
   const ct = memeCreationText[lang];
   const isPhotoUnavailable = meme.isInvalidated || meme.isPhotoMissing;
   const [draft, setDraft] = useState(meme.caption);
+  const [publishMeme, setPublishMeme] = useState(meme.publishMeme);
+  const [publishName, setPublishName] = useState(meme.publishName);
   const [editOpen, setEditOpen] = useState(false);
   const [busy, setBusy] = useState<"save" | "delete" | null>(null);
   const [failed, setFailed] = useState(false);
@@ -78,22 +89,41 @@ function YourMemeItem({
   const trimmed = draft.trim();
   const charsOver = trimmed.length > CAPTION_MAX_CHARS;
   const draftValid = isCaptionValid(draft);
-  const draftChanged = trimmed !== meme.caption.trim();
+  const canEditCaption = Boolean(onSaveCaption) && submissionsOpen && !isPhotoUnavailable;
+  const captionChanged = canEditCaption && trimmed !== meme.caption.trim();
+  const canWithdrawMeme = Boolean(onWithdrawPublication) && meme.publishMeme && !meme.galleryPublicationAccepted;
+  const canSetNamePublication = Boolean(onSetNamePublication) && meme.publishMeme;
+  const withdrawMeme = canWithdrawMeme && !publishMeme;
+  const nameChanged = canSetNamePublication && publishMeme && publishName !== meme.publishName;
+  const canSave = (!captionChanged || draftValid) && (captionChanged || withdrawMeme || nameChanged);
   const captionId = `meme-caption-${meme.id}`;
 
   function openEdit() {
     setDraft(meme.caption);
+    setPublishMeme(meme.publishMeme);
+    setPublishName(meme.publishName);
     setFailed(false);
     editDialog.current?.showModal();
     setEditOpen(true);
   }
 
   async function handleSave() {
-    if (!onSaveCaption || busy) return;
+    if (!canSave || busy) return;
     setBusy("save");
     setFailed(false);
     try {
-      await onSaveCaption(meme.id, trimmed);
+      if (withdrawMeme && onWithdrawPublication) {
+        await onWithdrawPublication(meme.id);
+      }
+      if (nameChanged && !publishName && onSetNamePublication) {
+        await onSetNamePublication(meme.id, false);
+      }
+      if (captionChanged && onSaveCaption) {
+        await onSaveCaption(meme.id, trimmed);
+      }
+      if (nameChanged && publishName && onSetNamePublication) {
+        await onSetNamePublication(meme.id, true);
+      }
       editDialog.current?.close();
     } catch {
       setFailed(true);
@@ -134,41 +164,30 @@ function YourMemeItem({
         layout="meta-footer"
         metaLabel={metaLabel}
         footer={
-          onSaveCaption || onDelete || failed ? (
-            <div className="flex flex-col gap-2">
-              {(onSaveCaption || onDelete) && (
-                <div className="flex gap-2">
-                  {onSaveCaption && (
-                    <button
-                      type="button"
-                      onClick={openEdit}
-                      disabled={
-                        !submissionsOpen || isPhotoUnavailable || busy !== null
-                      }
-                      className={secondaryButtonClass}
-                    >
-                      <Pencil aria-hidden="true" className="size-4" />
-                      {t.edit}
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      type="button"
-                      onClick={openDelete}
-                      disabled={!submissionsOpen || busy !== null}
-                      aria-busy={busy === "delete"}
-                      className={dangerButtonClass}
-                    >
-                      <Trash2 aria-hidden="true" className="size-4" />
-                      {busy === "delete" ? t.deleting : t.delete}
-                    </button>
-                  )}
-                </div>
+          onSaveCaption || onWithdrawPublication || onSetNamePublication || onDelete ? (
+            <div className="flex gap-2">
+              {(onSaveCaption || onWithdrawPublication || onSetNamePublication) && (
+                <button
+                  type="button"
+                  onClick={openEdit}
+                  disabled={busy !== null || (!canEditCaption && !canWithdrawMeme && !canSetNamePublication)}
+                  className={secondaryButtonClass}
+                >
+                  <Pencil aria-hidden="true" className="size-4" />
+                  {t.edit}
+                </button>
               )}
-              {failed && (
-                <p role="alert" className="text-sm text-rose-400">
-                  {t.actionFailed}
-                </p>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={openDelete}
+                  disabled={!submissionsOpen || busy !== null}
+                  aria-busy={busy === "delete"}
+                  className={dangerButtonClass}
+                >
+                  <Trash2 aria-hidden="true" className="size-4" />
+                  {busy === "delete" ? t.deleting : t.delete}
+                </button>
               )}
             </div>
           ) : null
@@ -211,12 +230,44 @@ function YourMemeItem({
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder={ct.captionPlaceholder}
                 rows={4}
+                readOnly={!canEditCaption}
                 disabled={busy !== null}
                 className="mt-2 w-full resize-y rounded-lg border border-white/15 bg-[#0b0f12] px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus-visible:outline-2 focus-visible:outline-midi-blue disabled:opacity-60"
               />
-              <p id={`${captionId}-limits`} className={`mt-2 text-sm tabular-nums ${charsOver ? "text-rose-400" : "text-white/60"}`}>
-                {ct.captionCount(trimmed.length)}
+              <p id={`${captionId}-limits`} className={`mt-2 text-sm tabular-nums ${canEditCaption && charsOver ? "text-rose-400" : "text-white/60"}`}>
+                {canEditCaption ? ct.captionCount(trimmed.length) : t.captionLocked}
               </p>
+              {(onSetNamePublication || canWithdrawMeme) && (
+                <fieldset disabled={busy !== null} className="mt-4 rounded-lg border border-white/15 px-4 pb-3">
+                  <legend className="px-1 text-sm font-semibold text-white">{t.publicationTitle}</legend>
+                  <p className="mb-1 mt-1 text-sm text-white/70">{meme.publishMeme ? t.publicationHelp : t.publicationUnavailable}</p>
+                  {canWithdrawMeme && (
+                    <label className="flex min-h-10 items-center gap-3 text-sm text-white">
+                      <input
+                        type="checkbox"
+                        checked={publishMeme && meme.publishMeme}
+                        onChange={(event) => {
+                          setPublishMeme(event.target.checked);
+                          if (!event.target.checked) setPublishName(false);
+                        }}
+                        disabled={!meme.publishMeme}
+                        className="size-5 shrink-0 accent-midi-blue"
+                      />
+                      <span>{t.publishMeme}</span>
+                    </label>
+                  )}
+                  <label className="flex min-h-10 items-center gap-3 text-sm text-white has-[:disabled]:opacity-55">
+                    <input
+                      type="checkbox"
+                      checked={publishName && publishMeme}
+                      onChange={(event) => setPublishName(event.target.checked)}
+                      disabled={!canSetNamePublication || !publishMeme}
+                      className="size-5 shrink-0 accent-midi-blue"
+                    />
+                    <span>{t.publishName}</span>
+                  </label>
+                </fieldset>
+              )}
               {failed && (
                 <p role="alert" className="mt-3 text-sm text-rose-400">
                   {t.actionFailed}
@@ -227,7 +278,7 @@ function YourMemeItem({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={busy !== null || !draftValid || !draftChanged}
+                disabled={busy !== null || !canSave}
                 aria-busy={busy === "save"}
                 className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-midi-blue px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -293,16 +344,24 @@ function YourMemeItem({
 
 type YourMemesProps = {
   memes?: readonly YourMeme[];
+  loadStatus: YourMemesLoadStatus;
+  onRetry: () => void;
   schedule?: EventSchedule;
   onSaveCaption?: (id: number, caption: string) => Promise<void>;
   onDelete?: (id: number) => Promise<void>;
+  onWithdrawPublication?: (id: number) => Promise<void>;
+  onSetNamePublication?: (id: number, publishName: boolean) => Promise<void>;
 };
 
 const YourMemes = ({
   memes = [],
+  loadStatus,
+  onRetry,
   schedule,
   onSaveCaption,
   onDelete,
+  onWithdrawPublication,
+  onSetNamePublication,
 }: YourMemesProps) => {
   const { lang } = useLanguage();
   const t = yourMemesText[lang];
@@ -353,7 +412,26 @@ const YourMemes = ({
             </Link>
           )}
         </div>
-        {memes.length === 0 ? (
+        {loadStatus === "loading" && (
+          <p role="status" className="mb-4 text-sm text-white/75">
+            {t.loading}
+          </p>
+        )}
+        {loadStatus === "error" && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-white/15 bg-[#1d1d1d] p-4">
+            <p role="alert" className="text-sm text-white">
+              {t.loadFailed}
+            </p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-midi-blue px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-midi-blue"
+            >
+              {t.retry}
+            </button>
+          </div>
+        )}
+        {memes.length === 0 && loadStatus === "ready" && (
           <div className="relative">
             <div
               className="skeleton-drift grid gap-6 md:grid-cols-3"
@@ -434,7 +512,8 @@ const YourMemes = ({
               </div>
             </div>
           </div>
-        ) : (
+        )}
+        {memes.length > 0 && (
           <div className="grid gap-6 md:grid-cols-3">
             {memes.map((meme) => (
               <YourMemeItem
@@ -448,6 +527,8 @@ const YourMemes = ({
                 lang={lang}
                 onSaveCaption={onSaveCaption}
                 onDelete={onDelete}
+                onWithdrawPublication={onWithdrawPublication}
+                onSetNamePublication={onSetNamePublication}
               />
             ))}
           </div>
