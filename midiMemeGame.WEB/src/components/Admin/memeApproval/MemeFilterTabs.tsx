@@ -2,17 +2,19 @@
 
 import type { MemeStatusId } from "@/services/adminService";
 
+export type MemeFilter = MemeStatusId | "deleted";
+
 export type MemeFilterTab = {
-    id: MemeStatusId;
+    id: MemeFilter;
     label: string;
     count: number;
 };
 
 type MemeFilterTabsProps = {
     tabs: MemeFilterTab[];
-    activeTab: MemeStatusId;
+    activeTab: MemeFilter;
     ariaLabel: string;
-    onSelect: (id: MemeStatusId) => void;
+    onSelect: (id: MemeFilter) => void;
 };
 
 export function MemeFilterTabs({

@@ -45,7 +45,7 @@ export function useAdminMemes() {
                 signal.throwIfAborted();
                 if (!token) throw ApiError.unauthorized();
 
-                const fetched = await getAdminMemes(token, signal);
+                const fetched = await getAdminMemes(token, signal, { includeDeleted: true });
                 if (!controller.signal.aborted && version === mutationVersion.current) {
                     setMemes(fetched);
                     const photoIds = new Set(fetched.map((meme) => meme.sourcePhotoId));
@@ -109,7 +109,7 @@ export function useAdminMemes() {
     const updateMemeStatus = useCallback(
         async (memeId: number, nextStatusId: MemeStatusId) => {
             const meme = memes.find(item => item.id === memeId);
-            if (!meme || moderating.current) return;
+            if (!meme || meme.isDeleted || moderating.current) return;
             moderating.current = true;
             mutationVersion.current++;
             setBusyMemeId(memeId);

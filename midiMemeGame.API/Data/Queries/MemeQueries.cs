@@ -389,7 +389,8 @@ public class MemeQueries
     }
     public async Task<Result<List<AdminMemeResponseDto>>> GetAdminMemesAsync(
         MemeStatus? statusId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeDeleted = false)
     {
         try
         {
@@ -410,7 +411,7 @@ public class MemeQueries
                     CASE WHEN u."IsDeleted" = 0 THEN u."Email" END AS "AuthorEmail"
                 FROM "Memes" AS m
                 LEFT JOIN "Users" AS u ON u."Id" = m."UserId"
-                WHERE m."IsDeleted" = 0
+                WHERE ({includeDeleted} OR m."IsDeleted" = 0)
                     AND ({statusFilter} IS NULL OR m."StatusId" = {statusFilter})
                 ORDER BY m."CreatedAtUtc" DESC, m."Id" DESC
                 """;

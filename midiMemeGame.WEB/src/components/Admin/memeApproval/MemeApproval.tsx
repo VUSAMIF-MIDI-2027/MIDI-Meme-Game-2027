@@ -5,8 +5,8 @@ import { LoadingScreen } from "@/components/Loading/LoadingScreen";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { MEME_STATUS, type MemeStatusId } from "@/services/adminService";
-import { MemeFilterTabs, type MemeFilterTab } from "./MemeFilterTabs";
+import { MEME_STATUS } from "@/services/adminService";
+import { MemeFilterTabs, type MemeFilter, type MemeFilterTab } from "./MemeFilterTabs";
 import { MemeReviewItem } from "./MemeReviewItem";
 import { memeApprovalText } from "./memeApprovalText";
 import { useAdminMemes } from "@/hooks/admin/useAdminMemes";
@@ -16,34 +16,45 @@ export function MemeApproval() {
     const { lang } = useLanguage();
     const t = memeApprovalText[lang];
 
-    const [activeFilter, setActiveFilter] = useState<MemeStatusId>(MEME_STATUS.pending);
+    const [activeFilter, setActiveFilter] = useState<MemeFilter>(MEME_STATUS.pending);
     const { memes, photoUrls, loading, busyMemeId, refreshing, refresh, error, updateMemeStatus } = useAdminMemes();
+
+    const activeMemes = memes.filter((meme) => !meme.isDeleted);
+    const deletedMemes = memes.filter((meme) => meme.isDeleted);
 
     const tabs: MemeFilterTab[] = [
         {
             id: MEME_STATUS.pending,
             label: t.pendingTab,
-            count: memes.filter((m) => m.statusId === MEME_STATUS.pending).length,
+            count: activeMemes.filter((m) => m.statusId === MEME_STATUS.pending).length,
         },
         {
             id: MEME_STATUS.approved,
             label: t.approvedTab,
-            count: memes.filter((m) => m.statusId === MEME_STATUS.approved).length,
+            count: activeMemes.filter((m) => m.statusId === MEME_STATUS.approved).length,
         },
         {
             id: MEME_STATUS.rejected,
             label: t.rejectedTab,
-            count: memes.filter((m) => m.statusId === MEME_STATUS.rejected).length,
+            count: activeMemes.filter((m) => m.statusId === MEME_STATUS.rejected).length,
+        },
+        {
+            id: "deleted",
+            label: t.deletedTab,
+            count: deletedMemes.length,
         },
     ];
 
-    const emptyMessages: Record<MemeStatusId, string> = {
+    const emptyMessages: Record<MemeFilter, string> = {
         [MEME_STATUS.pending]: t.emptyPending,
         [MEME_STATUS.approved]: t.emptyApproved,
         [MEME_STATUS.rejected]: t.emptyRejected,
+        deleted: t.emptyDeleted,
     };
 
-    const filteredMemes = memes.filter((m) => m.statusId === activeFilter);
+    const filteredMemes = activeFilter === "deleted"
+        ? deletedMemes
+        : activeMemes.filter((meme) => meme.statusId === activeFilter);
 
     if (loading) return <LoadingScreen overlay="section" />;
 

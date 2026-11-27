@@ -4,6 +4,7 @@ type MemeApprovalText = {
     pendingTab: string;
     approvedTab: string;
     rejectedTab: string;
+    deletedTab: string;
     statusPending: string;
     statusApproved: string;
     statusRejected: string;
@@ -23,6 +24,7 @@ type MemeApprovalText = {
     emptyPending: string;
     emptyApproved: string;
     emptyRejected: string;
+    emptyDeleted: string;
     photoFallbackAlt: string;
 };
 
@@ -31,6 +33,7 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         pendingTab: "Laukia patvirtinimo",
         approvedTab: "Patvirtinti",
         rejectedTab: "Atmesti",
+        deletedTab: "Ištrinti",
         statusPending: "Laukia peržiūros",
         statusApproved: "Patvirtintas",
         statusRejected: "Atmestas",
@@ -50,12 +53,14 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         emptyPending: "Šiuo metu nėra memų, laukiančių patvirtinimo.",
         emptyApproved: "Kol kas nėra patvirtintų memų.",
         emptyRejected: "Kol kas nėra atmestų memų.",
+        emptyDeleted: "Kol kas nėra ištrintų memų.",
         photoFallbackAlt: "Konkurso nuotrauka memui",
     },
     en: {
         pendingTab: "Pending approval",
         approvedTab: "Approved",
         rejectedTab: "Rejected",
+        deletedTab: "Deleted",
         statusPending: "Pending review",
         statusApproved: "Approved",
         statusRejected: "Rejected",
@@ -75,6 +80,7 @@ export const memeApprovalText: Record<Lang, MemeApprovalText> = {
         emptyPending: "There are no memes pending approval.",
         emptyApproved: "No approved memes yet.",
         emptyRejected: "No rejected memes yet.",
+        emptyDeleted: "No deleted memes yet.",
         photoFallbackAlt: "Competition meme photo",
     },
 };

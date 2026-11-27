@@ -211,13 +211,14 @@ public class AdminController : ControllerBase
     [HttpGet("memes")]
     public async Task<IActionResult> GetMemes(
         [FromQuery] MemeStatus? statusId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] bool includeDeleted = false)
     {
         if (statusId.HasValue && !Enum.IsDefined(statusId.Value))
             return BadRequest(ErrorResponse.Create(ErrorType.BAD_REQUEST));
 
         var result = await _memeQueries.GetAdminMemesAsync(
-            statusId, cancellationToken);
+            statusId, cancellationToken, includeDeleted);
 
         if (result.IsError)
             return StatusCode(

@@ -186,9 +186,12 @@ export interface AdminMeme {
 export async function getAdminMemes(
     token: string,
     signal?: AbortSignal,
-    statusId?: MemeStatusId
+    options: { statusId?: MemeStatusId; includeDeleted?: boolean } = {},
 ): Promise<AdminMeme[]> {
-    const query = statusId ? `?${new URLSearchParams({ statusId: String(statusId) })}` : "";
+    const params = new URLSearchParams();
+    if (options.statusId !== undefined) params.set("statusId", String(options.statusId));
+    if (options.includeDeleted) params.set("includeDeleted", "true");
+    const query = params.size > 0 ? `?${params}` : "";
     const response = await send(`${apiBaseUrl}/api/admin/memes${query}`, {
         method: "GET",
         headers: authHeaders(token),
