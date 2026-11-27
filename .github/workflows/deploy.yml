@@ -129,6 +129,9 @@ jobs:
               for svc in api web; do
                   for id in $(docker ps -aq --filter "label=com.docker.compose.project=$owner" --filter "label=com.docker.compose.service=$svc"); do
                       docker inspect -f '{{.Name}} state={{.State.Status}} exit={{.State.ExitCode}} restarts={{.RestartCount}} oom={{.State.OOMKilled}}' "$id" >&2 || :
+                      if [[ "$phase" == candidate && "$svc" == api ]]; then
+                          docker logs --timestamps --tail 100 "$id" >&2 || :
+                      fi
                   done
               done
               return 1
