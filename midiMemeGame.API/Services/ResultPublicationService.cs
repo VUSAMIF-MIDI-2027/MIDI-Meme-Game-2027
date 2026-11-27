@@ -45,36 +45,18 @@ public class ResultPublicationService
         try
         {
             var take = limit.HasValue ? limit.Value + 1 : int.MaxValue;
-            var publication = await _db.ResultPublications
-                .AsNoTracking()
-                .Where(x => x.EventScheduleId == EventSchedule.SingletonId)
-                .Select(x => new
-                {
-                    x.PublishedAtUtc,
-                    Rows = x.Results
-                        .Where(r => r.Place > afterPlace)
-                        .OrderBy(r => r.Place)
-                        .Take(take)
-                        .Select(r => new PublishedResultDto
-                        {
-                            Id = r.MemeId,
-                            Place = r.Place,
-                            SourcePhotoId = r.SourcePhotoId,
-                            Caption = r.Caption,
-                            UserName = r.UserName,
-                            StatusId = r.StatusId,
-                            Score = r.Score,
-                            CreatedAtUtc = r.CreatedAtUtc,
-                            UpdatedAtUtc = r.UpdatedAtUtc
-                        })
-                        .ToList()
-                })
-                .SingleOrDefaultAsync(cancellationToken);
-
-            if (publication is null)
+            var publication = await _publicationQueries.GetPublishedAtAsync(
+                EventSchedule.SingletonId, cancellationToken);
+            if (publication.IsError)
+                return publication.Error;
+            if (!publication.TryGetResult(out var publishedAt))
                 return ErrorType.RESULTS_NOT_PUBLISHED;
 
-            var rows = publication.Rows;
+            var rows = await _publicationQueries.GetPublicResults(DateTime.UtcNow, publishedAt)
+                .Where(row => row.Place > afterPlace)
+                .OrderBy(row => row.Place)
+                .Take(take)
+                .ToListAsync(cancellationToken);
             int? nextAfterPlace = null;
             if (limit is int pageSize && rows.Count > pageSize)
             {
@@ -85,7 +67,7 @@ public class ResultPublicationService
             return new PublishedResultsPageDto(
                 rows,
                 nextAfterPlace,
-                publication.PublishedAtUtc.Ticks.ToString(CultureInfo.InvariantCulture));
+                publishedAt.Ticks.ToString(CultureInfo.InvariantCulture));
         }
         catch (SqliteException ex)
         {
@@ -235,6 +217,13 @@ public class ResultPublicationService
 
             if (winners.IsError)
                 return winners.Error;
+
+            var publicAuthorIds = await _publicationQueries.GetPublicResults(DateTime.UtcNow, publishedAt)
+                .Where(row => row.Place <= 3 && row.UserName != null && row.UserName.Trim() != "")
+                .Select(row => row.Id)
+                .ToListAsync(cancellationToken);
+            foreach (var winner in winners.Value)
+                winner.NameShown = publicAuthorIds.Contains(winner.Id);
 
             return new AdminResultsDto
             {

@@ -177,6 +177,9 @@ namespace MidiMemeGame.Api.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("GalleryPublicationAccepted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");
 
@@ -189,6 +192,18 @@ namespace MidiMemeGame.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(0L);
+
+                    b.Property<DateTime?>("MemePublicationConsentedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NamePublicationConsentedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("MemePublicationWithdrawnAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("NamePublicationWithdrawnAtUtc")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("SourcePhotoId")
                         .IsRequired()

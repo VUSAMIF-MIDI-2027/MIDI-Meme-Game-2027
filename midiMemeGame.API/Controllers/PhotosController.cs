@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using MidiMemeGame.Api.Common.Models;
 using MidiMemeGame.Api.Data.Queries;
@@ -16,16 +17,19 @@ namespace MidiMemeGame.Api.Controllers
     {
         private readonly SourcePhotoQueries _sourcePhotoQueries;
         private readonly PhotoFileService _photoFiles;
+        private readonly ResultPublicationQueries _resultPublicationQueries;
         private readonly EventPhaseService _eventScheduleService;
 
         public PhotosController(
             SourcePhotoQueries sourcePhotoQueries, 
             PhotoFileService photoFiles,
-            EventPhaseService eventPhaseService)
+            EventPhaseService eventPhaseService,
+            ResultPublicationQueries resultPublicationQueries)
         {
             _sourcePhotoQueries = sourcePhotoQueries;
             _photoFiles = photoFiles;
             _eventScheduleService = eventPhaseService;
+            _resultPublicationQueries = resultPublicationQueries;
         }
 
         [HttpGet]
@@ -64,6 +68,11 @@ namespace MidiMemeGame.Api.Controllers
                         StatusCodes.Status403Forbidden,
                         ErrorResponse.Create(eventResult.Error));
                 }
+
+                var isPublic = await _resultPublicationQueries.GetPublicResults(DateTime.UtcNow)
+                    .AnyAsync(row => row.SourcePhotoId == id, cancellationToken);
+                if (!isPublic)
+                    return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
             }
 
             var photoResult = await _sourcePhotoQueries.GetByIdAsync(id, cancellationToken);

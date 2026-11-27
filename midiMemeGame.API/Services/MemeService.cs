@@ -99,6 +99,9 @@ public class MemeService
         if (submissions.IsError)
             return submissions.Error;
 
+        if (!request.AcceptGalleryPublication)
+            return ErrorType.BAD_REQUEST;
+
         var caption = request.Caption.Trim();
         if (caption.Length > _settings.MaxCaptionLength)
             return ErrorType.BAD_REQUEST;
@@ -129,7 +132,7 @@ public class MemeService
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var result = await _memeQueries.CreateAsync(
-            sourcePhotoId, userId, caption, cancellationToken);
+            sourcePhotoId, userId, caption, request.PublishName, cancellationToken);
 
         if (result.Error == ErrorType.MEME_LIMIT_REACHED)
             _logger.LogWarning(LogMessages.Memes.SUBMISSION_LIMIT_REACHED, user.Value);
@@ -177,7 +180,28 @@ public class MemeService
         return result;
     }
 
-    public async Task<Result<List<MemeResponseDto>>> GetMineMemesAsync(string clerkId, CancellationToken cancellationToken)
+    public Task<Result> WithdrawPublicationAsync(
+        int memeId, string clerkId, bool nameOnly, CancellationToken cancellationToken) =>
+        UpdatePublicationAsync(memeId, clerkId, withdrawMeme: !nameOnly, publishName: false, cancellationToken);
+
+    public Task<Result> SetNamePublicationAsync(
+        int memeId, string clerkId, bool publishName, CancellationToken cancellationToken) =>
+        UpdatePublicationAsync(memeId, clerkId, withdrawMeme: false, publishName, cancellationToken);
+
+    private async Task<Result> UpdatePublicationAsync(
+        int memeId, string clerkId, bool withdrawMeme, bool publishName, CancellationToken cancellationToken)
+    {
+        var user = await _userQueries.GetActiveIdByClerkIdAsync(clerkId, cancellationToken);
+        if (user.Error == ErrorType.NOT_FOUND)
+            return ErrorType.USER_ACCESS_DENIED;
+        if (user.IsError)
+            return user.Error;
+
+        return await _memeQueries.UpdatePublicationAsync(
+            memeId, user.Value.ToString(CultureInfo.InvariantCulture), withdrawMeme, publishName, cancellationToken);
+    }
+
+    public async Task<Result<List<OwnMemeResponseDto>>> GetMineMemesAsync(string clerkId, CancellationToken cancellationToken)
     {
         var user = await _userQueries.GetActiveIdByClerkIdAsync(
             clerkId, cancellationToken);

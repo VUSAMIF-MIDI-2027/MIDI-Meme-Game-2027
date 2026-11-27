@@ -41,6 +41,8 @@ namespace MidiMemeGame.Api.Controllers
         private async Task<IActionResult> ReadResultsAsync(
             int afterPlace, int? limit, CancellationToken cancellationToken)
         {
+            Response.Headers.CacheControl = "no-store";
+
             var phase = await _eventPhase.EnsureEventEndedAsync(cancellationToken);
 
             if (phase.Error == ErrorType.EVENT_SCHEDULE_NOT_FOUND)

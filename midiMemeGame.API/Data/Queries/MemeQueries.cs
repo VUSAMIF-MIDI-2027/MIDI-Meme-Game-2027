@@ -59,7 +59,8 @@ public class MemeQueries
                 RETURNING
                     "Id", "SourcePhotoId", "UserId", "StatusId", "Caption",
                     "CreatedAtUtc", "UpdatedAtUtc", "IsDeleted", "Score",
-                    "IsInvalidatedBySourcePhoto";
+                    "IsInvalidatedBySourcePhoto",
+                    "MemePublicationConsentedAtUtc", "NamePublicationConsentedAtUtc", "MemePublicationWithdrawnAtUtc", "NamePublicationWithdrawnAtUtc", "GalleryPublicationAccepted";
                 """;
 
             var memes = await _db.Memes
@@ -87,21 +88,24 @@ public class MemeQueries
         string sourcePhotoId,
         string userId,
         string caption,
+        bool publishName,
         CancellationToken cancellationToken)
     {
         try
         {
             var now = DateTime.UtcNow;
 
+            DateTime? nameConsentAt = publishName ? now : null;
             FormattableString query = $"""
                 INSERT INTO "Memes" (
                     "SourcePhotoId", "UserId", "StatusId", "Caption",
                     "CreatedAtUtc", "UpdatedAtUtc", "IsDeleted", "Score",
-                    "IsInvalidatedBySourcePhoto"
+                    "IsInvalidatedBySourcePhoto",
+                    "MemePublicationConsentedAtUtc", "NamePublicationConsentedAtUtc", "GalleryPublicationAccepted"
                 )
                 SELECT
                     {sourcePhotoId}, {userId}, {(int)MemeStatus.Pending}, {caption},
-                    {now}, {now}, 0, 0, 0
+                    {now}, {now}, 0, 0, 0, {now}, {nameConsentAt}, 1
                 WHERE EXISTS (
                     SELECT 1
                     FROM "SourcePhotos"
@@ -119,7 +123,8 @@ public class MemeQueries
                 RETURNING
                     "Id", "SourcePhotoId", "UserId", "StatusId", "Caption",
                     "CreatedAtUtc", "UpdatedAtUtc", "IsDeleted", "Score",
-                    "IsInvalidatedBySourcePhoto";
+                    "IsInvalidatedBySourcePhoto",
+                    "MemePublicationConsentedAtUtc", "NamePublicationConsentedAtUtc", "MemePublicationWithdrawnAtUtc", "NamePublicationWithdrawnAtUtc", "GalleryPublicationAccepted";
                 """;
 
             var memes = await _db.Memes
@@ -200,7 +205,8 @@ public class MemeQueries
                 RETURNING
                     "Id", "SourcePhotoId", "UserId", "StatusId", "Caption",
                     "CreatedAtUtc", "UpdatedAtUtc", "IsDeleted", "Score",
-                    "IsInvalidatedBySourcePhoto";
+                    "IsInvalidatedBySourcePhoto",
+                    "MemePublicationConsentedAtUtc", "NamePublicationConsentedAtUtc", "MemePublicationWithdrawnAtUtc", "NamePublicationWithdrawnAtUtc", "GalleryPublicationAccepted";
                 """;
 
             var memes = await _db.Memes
@@ -257,7 +263,47 @@ public class MemeQueries
             return ErrorType.DB_EXCEPTION;
         }
     }
-    public async Task<Result<List<MemeResponseDto>>> GetByUserIdAsync(string userId, CancellationToken cancellationToken)
+    public async Task<Result> UpdatePublicationAsync(
+        int memeId, string userId, bool withdrawMeme, bool publishName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var now = DateTime.UtcNow;
+            var changed = await _db.Memes
+                .Where(meme => meme.Id == memeId && meme.UserId == userId && !meme.IsDeleted
+                    && (!withdrawMeme || !meme.GalleryPublicationAccepted)
+                    && (!publishName || (meme.MemePublicationConsentedAtUtc != null
+                        && meme.MemePublicationWithdrawnAtUtc == null)))
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(meme => meme.MemePublicationWithdrawnAtUtc,
+                        meme => withdrawMeme && meme.MemePublicationConsentedAtUtc != null
+                            ? meme.MemePublicationWithdrawnAtUtc ?? now
+                            : meme.MemePublicationWithdrawnAtUtc)
+                    .SetProperty(meme => meme.NamePublicationConsentedAtUtc,
+                        meme => publishName && (meme.NamePublicationConsentedAtUtc == null
+                            || meme.NamePublicationWithdrawnAtUtc != null)
+                            ? now : meme.NamePublicationConsentedAtUtc)
+                    .SetProperty(meme => meme.NamePublicationWithdrawnAtUtc,
+                        meme => publishName ? (DateTime?)null
+                            : meme.NamePublicationConsentedAtUtc != null
+                                ? meme.NamePublicationWithdrawnAtUtc ?? now
+                                : meme.NamePublicationWithdrawnAtUtc),
+                    cancellationToken);
+            return changed == 0 ? Result.Fail(ErrorType.NOT_FOUND) : Result.Ok();
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogError(ex, LogMessages.DB_SQL_EXCEPTION, ex.Message);
+            return ErrorType.DB_SQL_EXCEPTION;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, LogMessages.DB_EXCEPTION, ex.Message);
+            return ErrorType.DB_EXCEPTION;
+        }
+    }
+
+    public async Task<Result<List<OwnMemeResponseDto>>> GetByUserIdAsync(string userId, CancellationToken cancellationToken)
     {
         try
         {
@@ -268,6 +314,10 @@ public class MemeQueries
                     "Caption",
                     "StatusId",
                     "IsInvalidatedBySourcePhoto",
+                    "GalleryPublicationAccepted",
+                    ("MemePublicationConsentedAtUtc" IS NOT NULL AND "MemePublicationWithdrawnAtUtc" IS NULL) AS "PublishMeme",
+                    ("NamePublicationConsentedAtUtc" IS NOT NULL AND "NamePublicationWithdrawnAtUtc" IS NULL
+                        AND "MemePublicationWithdrawnAtUtc" IS NULL) AS "PublishName",
                     "Score",
                     "CreatedAtUtc",
                     "UpdatedAtUtc",
@@ -279,7 +329,7 @@ public class MemeQueries
                 """;
 
             return await _db.Database
-                .SqlQuery<MemeResponseDto>(query)
+                .SqlQuery<OwnMemeResponseDto>(query)
                 .ToListAsync(cancellationToken);
         }
         catch (SqliteException ex)
@@ -360,7 +410,7 @@ public class MemeQueries
                     CASE WHEN u."IsDeleted" = 0 THEN u."Email" END AS "AuthorEmail"
                 FROM "Memes" AS m
                 LEFT JOIN "Users" AS u ON u."Id" = m."UserId"
-                WHERE (m."IsDeleted" = 0 OR m."StatusId" = {(int)MemeStatus.Approved})
+                WHERE m."IsDeleted" = 0
                     AND ({statusFilter} IS NULL OR m."StatusId" = {statusFilter})
                 ORDER BY m."CreatedAtUtc" DESC, m."Id" DESC
                 """;
@@ -488,7 +538,12 @@ public class MemeQueries
                 m."Score",
                 m."CreatedAtUtc",
                 m."UpdatedAtUtc",
-                u."Email" AS "Email"
+                u."Email" AS "Email",
+                (m."MemePublicationConsentedAtUtc" IS NOT NULL
+                    AND m."MemePublicationWithdrawnAtUtc" IS NULL) AS "PublicationAllowed",
+                m."GalleryPublicationAccepted",
+                (m."NamePublicationConsentedAtUtc" IS NOT NULL
+                    AND m."NamePublicationWithdrawnAtUtc" IS NULL) AS "NamePublicationAllowed"
             FROM "Memes" AS m
             INNER JOIN "SourcePhotos" AS p
                 ON p."Id" = CAST(m."SourcePhotoId" AS INTEGER)

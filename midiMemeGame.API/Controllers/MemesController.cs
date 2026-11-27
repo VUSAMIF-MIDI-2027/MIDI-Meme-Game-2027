@@ -37,11 +37,15 @@ namespace MidiMemeGame.Api.Controllers
             if (!result.TryGetResult(out var meme))
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
-            return Ok(new MemeResponseDto
+            return Ok(new OwnMemeResponseDto
             {
                 Id = meme.Id,
                 SourcePhotoId = int.Parse(meme.SourcePhotoId, CultureInfo.InvariantCulture),
                 Caption = meme.Caption,
+                GalleryPublicationAccepted = meme.GalleryPublicationAccepted,
+                PublishMeme = meme.MemePublicationConsentedAtUtc != null && meme.MemePublicationWithdrawnAtUtc == null,
+                PublishName = meme.NamePublicationConsentedAtUtc != null && meme.NamePublicationWithdrawnAtUtc == null
+                    && meme.MemePublicationWithdrawnAtUtc == null,
                 StatusId = (int)meme.StatusId,
                 Score = meme.Score,
                 CreatedAtUtc = meme.CreatedAtUtc,
@@ -69,11 +73,15 @@ namespace MidiMemeGame.Api.Controllers
             if (!result.TryGetResult(out var meme))
                 return NotFound(ErrorResponse.Create(ErrorType.NOT_FOUND));
 
-            return Ok(new MemeResponseDto
+            return Ok(new OwnMemeResponseDto
             {
                 Id = meme.Id,
                 SourcePhotoId = int.Parse(meme.SourcePhotoId, CultureInfo.InvariantCulture),
                 Caption = meme.Caption,
+                GalleryPublicationAccepted = meme.GalleryPublicationAccepted,
+                PublishMeme = meme.MemePublicationConsentedAtUtc != null && meme.MemePublicationWithdrawnAtUtc == null,
+                PublishName = meme.NamePublicationConsentedAtUtc != null && meme.NamePublicationWithdrawnAtUtc == null
+                    && meme.MemePublicationWithdrawnAtUtc == null,
                 StatusId = (int)meme.StatusId,
                 Score = meme.Score,
                 CreatedAtUtc = meme.CreatedAtUtc,
@@ -99,6 +107,30 @@ namespace MidiMemeGame.Api.Controllers
 
             return Ok();
         }
+        [HttpDelete("{id:int}/publication")]
+        public async Task<IActionResult> WithdrawPublication(
+            int id, CancellationToken cancellationToken, [FromQuery] bool nameOnly = false)
+        {
+            var clerkId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrWhiteSpace(clerkId))
+                return Unauthorized(ErrorResponse.Create(ErrorType.USER_ACCESS_DENIED));
+
+            var result = await _memeService.WithdrawPublicationAsync(id, clerkId, nameOnly, cancellationToken);
+            return result.IsError ? MapMemeMutationError(result.Error) : NoContent();
+        }
+
+        [HttpPut("{id:int}/publication/name")]
+        public async Task<IActionResult> SetNamePublication(
+            int id, [FromBody] bool publishName, CancellationToken cancellationToken)
+        {
+            var clerkId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrWhiteSpace(clerkId))
+                return Unauthorized(ErrorResponse.Create(ErrorType.USER_ACCESS_DENIED));
+
+            var result = await _memeService.SetNamePublicationAsync(id, clerkId, publishName, cancellationToken);
+            return result.IsError ? MapMemeMutationError(result.Error) : NoContent();
+        }
+
         [HttpGet("mine")]
         public async Task<IActionResult> GetMyMemes(CancellationToken cancellationToken)
         {
