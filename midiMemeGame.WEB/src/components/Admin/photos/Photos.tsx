@@ -87,9 +87,6 @@ export function Photos() {
         if (validated && !UPLOAD_LIMITS.types.includes(validated.type)) {
             setNotice({ type: "error", text: t.badType });
             validated = null;
-        } else if (validated && validated.size > UPLOAD_LIMITS.maxBytes) {
-            setNotice({ type: "error", text: t.tooBig });
-            validated = null;
         }
 
         if (!validated && inputRef.current) {
@@ -106,8 +103,8 @@ export function Photos() {
         setSelection(nextSelection);
     }
 
-    async function handleUpload() {
-        if (!selection?.file || uploading) return;
+    async function handleUpload(file: File) {
+        if (uploading) return;
 
         const controller = new AbortController();
         requestRef.current = controller;
@@ -124,7 +121,7 @@ export function Photos() {
             if (!token) throw ApiError.unauthorized();
 
             const created = await uploadAdminPhoto(
-                selection.file,
+                file,
                 token,
                 (pct) => {
                     if (!controller.signal.aborted) setProgress(pct);
@@ -144,8 +141,8 @@ export function Photos() {
                     writeStoredPhotos(next);
                     return next;
                 });
-                setNotice({ type: "success", text: t.uploadSuccess });
                 handlePick(null);
+                setNotice({ type: "success", text: t.uploadSuccess });
             }
         } catch (cause) {
             if (!controller.signal.aborted) {
@@ -192,6 +189,7 @@ export function Photos() {
     return (
         <div className="space-y-8">
             <PhotoUploadSection
+                key={selection?.preview ?? "empty"}
                 t={t}
                 inputRef={inputRef}
                 file={selection?.file ?? null}
@@ -199,7 +197,7 @@ export function Photos() {
                 progress={progress}
                 notice={notice}
                 onPick={handlePick}
-                onUpload={() => void handleUpload()}
+                onUpload={handleUpload}
             />
 
             {loading && photos.length === 0 ? (
